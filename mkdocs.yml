@@ -1,0 +1,22 @@
+site_name: MCF Pipe
+
+nav:
+  - Home: index.md
+  - Enhancements: enhancements.md
+
+theme:
+  name: material
+  palette:
+    scheme: default
+    primary: custom
+    accent: custom
+
+extra_css:
+  - stylesheets/overrides.css
+
+markdown_extensions:
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
