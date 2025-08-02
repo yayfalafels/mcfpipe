@@ -1,0 +1,7 @@
+:root {
+  --md-primary-fg-color:        #800000; /* Maroon */
+  --md-primary-fg-color--light: #993333;
+  --md-primary-fg-color--dark:  #660000;
+
+  --md-accent-fg-color:         #800000;
+}
