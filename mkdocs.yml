@@ -3,6 +3,8 @@ site_name: MCF Pipe
 nav:
   - Home: index.md
   - Enhancements: enhancements.md
+  - Releases:
+      - 0.1.0: releases/010_cloud_infra.md
 
 theme:
   name: material
