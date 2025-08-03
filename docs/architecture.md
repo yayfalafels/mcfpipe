@@ -1,15 +1,5 @@
-# Cloud Infrastructure
-This release covers the setup of Cloud infrastructure on AWS for the MCF pipe serverless backend API and database
-
-## Situation
-The current version of the app `jobsearch` runs locally on PC.  Migrating to the cloud improves maintainability and pathway for full automation, with some drawback in development and small cloud operating costs.
-
-## Objectives and aims
-Migrate current functionality to AWS Cloud.
-
-
-## System architecture
-There are several components of the app
+# Architecture
+System architecture for the serverless App
 
 __Data__
 
