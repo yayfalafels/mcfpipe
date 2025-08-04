@@ -4,6 +4,7 @@ nav:
   - Home: index.md
   - Workflows: workflows.md
   - Architecture: architecture.md
+  - CICD: cicd.md
   - Enhancements: enhancements.md
   - Releases:
       - 0.1.0: releases/010_cloud_infra.md

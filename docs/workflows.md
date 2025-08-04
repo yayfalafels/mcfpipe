@@ -8,8 +8,8 @@ __App workflows__
 | 02 | jobs screen | score and screen jobs for curated report jobs to apply |
 | 03 | jobs apply | apply jobs through MCF website from shortlisted jobs to apply |
 | 04 | CRM API | CRUD operational actions to manage search and move leads through pipeline |
-| 05 | Analytics ETL | update SQLite DB from data sources DynamoDB tables and refresh PowerBI report |
-| 06 | Config sync | update config settings |
+| 05 | analytics ETL | update SQLite DB from data sources DynamoDB tables and refresh PowerBI report |
+| 06 | config sync | update config settings |
 
 ## Jobs search
 
