@@ -16,8 +16,8 @@ __Enhancement categories__
 | 01 | open | Migrate to AWS using CloudFormation | Cloud and Infrastructure | 0.1.0 |
 | 02 | open | CICD pipeline setup | Cloud and Infrastructure |0.1.0 |
 | 03 | backlog | Modularize front-end and back-end with API support for agent integration | Cloud and Infrastructure  ||
-| 04 | backlog | Migrate from SQLite to Aurora SQL warehouse | Database and Backend ||
-| 05 | backlog | Implement batching with intermediate DB writes (currently all-or-nothing) | Database and Backend ||
+| 04 | backlog | Migrate from SQLite to DynamoDB | Database and Backend ||
+| 05 | open | Implement batching with intermediate DB writes (currently all-or-nothing) | Database and Backend | 0.1.0 |
 | 06 | backlog | Add async support to reduce script latency (cards: 15 min, profiles: 3–5 min) | Database and Backend ||
 | 07 | backlog | Expand data model to include front-end operational tables (currently in Google Sheets) | Data Model and ETL ||
 | 08 | backlog | Build ETL pipeline to feed into PowerBI dashboard | Data Model and ETL ||

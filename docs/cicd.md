@@ -36,11 +36,39 @@ docs/                   # app documentation
   ...
 jobsearch/              # legacy app source code
   ...
-mcfpipe/                # scrape, search score, screen, analyze ETL pipeline
-  __init__.py
-  ...
+gsheetui/               # Gsheet connector using Google Sheets API
+  gsheet/
+    __init__.py
+    ...
+  gsheet_schema.json
+  api_config.json
+  requirements.txt
+mcfparse/              # HTML Parser python module source code
+  mcfparse/
+    __init__.py
+    parser.py
+    ...
+  requirements.txt
+mcfscrape/              # Webscraper python module source code
+  mcfscrape/
+    __init__.py
+    webscraper.py
+    ...
+  requirements.txt
 jobcrm/                 # CRM Backend API
-  __init__.py
+  app/
+    __init__.py
+  requirements.txt
+  ...
+jobmatch/                 # Job recommendation python module
+  jobmatch/
+    __init__.py
+  requirements.txt
+  ...
+jobpipe/                 # Analytics ETL python module
+  jobpipe/
+    __init__.py
+  requirements.txt
   ...
 storage/                # schema and config for storage resources
   search_profile/

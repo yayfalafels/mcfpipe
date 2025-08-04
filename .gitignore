@@ -1,3 +1,4 @@
 env
 site
 .env
+*client_secret.json

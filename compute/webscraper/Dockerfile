@@ -1,16 +1,20 @@
 FROM python:3.11-slim
 
-# Set working directory
-WORKDIR /app
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    wget unzip curl gnupg ca-certificates \
+    chromium chromium-driver \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install OS-level deps (optional)
-RUN apt-get update && apt-get install -y curl unzip chromium-driver chromium
+# Set environment variable to let Selenium find Chromium
+ENV PATH="/usr/lib/chromium/:$PATH"
 
-# Copy app source code
-COPY . /app
-
-# Install Python deps
+# Install Python packages
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Entry point allows task selection
-ENTRYPOINT ["python", "main.py"]
+# Copy your source code
+COPY . /mcfscrape
+WORKDIR /mcfscrape
+
+ENTRYPOINT ["python", "handler.py"]
