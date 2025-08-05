@@ -9,10 +9,10 @@
       
       
       
-        <link rel="prev" href="../database_api/">
+        <link rel="prev" href="../data_model/">
       
       
-        <link rel="next" href="../releases/010_cloud_infra/">
+        <link rel="next" href="../enhancements/">
       
       
       <link rel="icon" href="../assets/images/favicon.png">
@@ -20,7 +20,7 @@
     
     
       
-        <title>Enhancements - MCF Pipe</title>
+        <title>Database API - MCF Pipe</title>
       
     
     
@@ -72,7 +72,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#enhancements" class="md-skip">
+        <a href="#database-api" class="md-skip">
           Skip to content
         </a>
       
@@ -108,7 +108,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Enhancements
+              Database API
             
           </span>
         </div>
@@ -333,28 +333,6 @@
       
   
   
-  
-  
-    <li class="md-nav__item">
-      <a href="../database_api/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Database API
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
     
   
   
@@ -372,7 +350,7 @@
   
   
   <span class="md-ellipsis">
-    Enhancements
+    Database API
     
   </span>
   
@@ -385,7 +363,7 @@
   
   
   <span class="md-ellipsis">
-    Enhancements
+    Database API
     
   </span>
   
@@ -408,11 +386,53 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#status" class="md-nav__link">
+  <a href="#design-principles" class="md-nav__link">
     <span class="md-ellipsis">
-      Status
+      Design Principles
     </span>
   </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#route-definitions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Route Definitions
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#path-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      Path Parameters
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#body-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      Body Format
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Body Format">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#post-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      POST /[table]
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -420,6 +440,28 @@
   
 </nav>
       
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../enhancements/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Enhancements
+    
+  </span>
+  
+
+      </a>
     </li>
   
 
@@ -519,11 +561,53 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#status" class="md-nav__link">
+  <a href="#design-principles" class="md-nav__link">
     <span class="md-ellipsis">
-      Status
+      Design Principles
     </span>
   </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#route-definitions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Route Definitions
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#path-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      Path Parameters
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#body-format" class="md-nav__link">
+    <span class="md-ellipsis">
+      Body Format
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Body Format">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#post-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      POST /[table]
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -543,149 +627,116 @@
 
 
 
-<h1 id="enhancements">Enhancements</h1>
-<p><strong>Enhancement categories</strong></p>
+<h1 id="database-api">Database API</h1>
+<p>The <code>Database API</code> provides a RESTful interface for CRUD operations on DynamoDB tables defined in the system data model. The API is implemented as a <strong>generic Lambda function</strong> behind API Gateway, supporting dynamic routing based on path parameters and validating requests using the canonical schema file <code>db_schema.json</code>.</p>
+<p>This service is designed to act as a <strong>thin, schema-aware wrapper</strong> over the DynamoDB backend to enable flexible, centralized, and secure access to all operational data in the jobsearch system.</p>
+<h2 id="design-principles">Design Principles</h2>
 <ul>
-<li>Cloud and Infrastructure</li>
-<li>Database and Backend</li>
-<li>Data Model and ETL</li>
-<li>Application Logic </li>
-<li>Match Scoring &amp; Intelligence</li>
-<li>UI &amp; Front-End</li>
+<li><strong>Generic Routing</strong>: Dynamic table access via path parameters.</li>
+<li><strong>Schema Enforcement</strong>: All incoming payloads are validated against <code>db_schema.json</code>.</li>
+<li><strong>Minimal Endpoints</strong>: A small set of HTTP routes supports all CRUD and batch operations.</li>
+<li><strong>Modular</strong>: Tables can be added/updated without code changes.</li>
+<li><strong>Internal Use</strong>: This API is intended for trusted internal services (e.g., ingestion, screening, CRM).</li>
 </ul>
-<h2 id="status">Status</h2>
+<h2 id="route-definitions">Route Definitions</h2>
+<p><strong>Single Record Operations</strong></p>
 <table>
 <thead>
 <tr>
-<th>id</th>
-<th>status</th>
-<th>enhancement</th>
-<th>category</th>
-<th>release</th>
+<th>Method</th>
+<th>Path</th>
+<th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>01</td>
-<td>open</td>
-<td>Migrate to AWS using CloudFormation</td>
-<td>Cloud and Infrastructure</td>
-<td>0.1.0</td>
+<td>GET</td>
+<td><code>/[table]/{id}</code></td>
+<td>Fetch item by primary key</td>
 </tr>
 <tr>
-<td>02</td>
-<td>open</td>
-<td>CICD pipeline setup</td>
-<td>Cloud and Infrastructure</td>
-<td>0.1.0</td>
+<td>PUT</td>
+<td><code>/[table]/{id}</code></td>
+<td>Replace existing item</td>
 </tr>
 <tr>
-<td>03</td>
-<td>backlog</td>
-<td>Modularize front-end and back-end with API support for agent integration</td>
-<td>Cloud and Infrastructure</td>
-<td></td>
-</tr>
-<tr>
-<td>04</td>
-<td>backlog</td>
-<td>Migrate from SQLite to DynamoDB</td>
-<td>Database and Backend</td>
-<td></td>
-</tr>
-<tr>
-<td>05</td>
-<td>open</td>
-<td>Implement batching with intermediate DB writes (currently all-or-nothing)</td>
-<td>Database and Backend</td>
-<td>0.1.0</td>
-</tr>
-<tr>
-<td>06</td>
-<td>backlog</td>
-<td>Add async support to reduce script latency (cards: 15 min, profiles: 3–5 min)</td>
-<td>Database and Backend</td>
-<td></td>
-</tr>
-<tr>
-<td>07</td>
-<td>backlog</td>
-<td>Expand data model to include front-end operational tables (currently in Google Sheets)</td>
-<td>Data Model and ETL</td>
-<td></td>
-</tr>
-<tr>
-<td>08</td>
-<td>backlog</td>
-<td>Build ETL pipeline to feed into PowerBI dashboard</td>
-<td>Data Model and ETL</td>
-<td></td>
-</tr>
-<tr>
-<td>09</td>
-<td>backlog</td>
-<td>Combine cards and profiles components</td>
-<td>Application Logic</td>
-<td></td>
-</tr>
-<tr>
-<td>10</td>
-<td>backlog</td>
-<td>Streamline manual lead addition</td>
-<td>Application Logic</td>
-<td></td>
-</tr>
-<tr>
-<td>11</td>
-<td>backlog</td>
-<td>Automate track assignment</td>
-<td>Application Logic</td>
-<td></td>
-</tr>
-<tr>
-<td>12</td>
-<td>backlog</td>
-<td>Improve SingPass MFA session cookie handling</td>
-<td>Application Logic</td>
-<td></td>
-</tr>
-<tr>
-<td>13</td>
-<td>backlog</td>
-<td>Move beyond keyword-only title matching</td>
-<td>Match Scoring and Intelligence</td>
-<td></td>
-</tr>
-<tr>
-<td>14</td>
-<td>backlog</td>
-<td>Incorporate job description</td>
-<td>Match Scoring and Intelligence</td>
-<td></td>
-</tr>
-<tr>
-<td>15</td>
-<td>backlog</td>
-<td>Use BERT or other ML models</td>
-<td>Match Scoring and Intelligence</td>
-<td></td>
-</tr>
-<tr>
-<td>16</td>
-<td>backlog</td>
-<td>Migrate from Google Sheets UI to React.js or Django app</td>
-<td>UI and Front End</td>
-<td></td>
-</tr>
-<tr>
-<td>17</td>
-<td>backlog</td>
-<td>Optionally keep GS integration for tabular views</td>
-<td>UI and Front End</td>
-<td></td>
+<td>DELETE</td>
+<td><code>/[table]/{id}</code></td>
+<td>Delete item by primary key</td>
 </tr>
 </tbody>
 </table>
+<p><strong>Bulk Operations</strong></p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>POST</td>
+<td><code>/[table]</code></td>
+<td>Create a new item</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/[table]/batch</code></td>
+<td>Create or update multiple items</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/[table]/search</code></td>
+<td>Query items using secondary keys</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/[table]/delete</code></td>
+<td>Delete multiple items (by key list)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="path-parameters">Path Parameters</h2>
+<table>
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>table</code></td>
+<td>string</td>
+<td>Target table name from schema</td>
+</tr>
+<tr>
+<td><code>id</code></td>
+<td>string</td>
+<td>Primary key value</td>
+</tr>
+</tbody>
+</table>
+<h2 id="body-format">Body Format</h2>
+<h3 id="post-table">POST /[table]</h3>
+<p>sample body for POST <code>/{job}</code> request</p>
+<p>request
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;posted_date&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2025-08-01&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;position&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Data Engineer&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://example.com/jobs/abc123&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="err">...</span>
+<span class="p">}</span>
+</code></pre></div></p>
+<p>response body
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;ids&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;abc123&quot;</span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div></p>
 
 
 

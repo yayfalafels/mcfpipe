@@ -9,10 +9,10 @@
       
       
       
-        <link rel="prev" href="../database_api/">
+        <link rel="prev" href="../architecture/">
       
       
-        <link rel="next" href="../releases/010_cloud_infra/">
+        <link rel="next" href="../network/">
       
       
       <link rel="icon" href="../assets/images/favicon.png">
@@ -20,7 +20,7 @@
     
     
       
-        <title>Enhancements - MCF Pipe</title>
+        <title>CICD - MCF Pipe</title>
       
     
     
@@ -72,7 +72,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#enhancements" class="md-skip">
+        <a href="#cicd" class="md-skip">
           Skip to content
         </a>
       
@@ -108,7 +108,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Enhancements
+              CICD
             
           </span>
         </div>
@@ -267,10 +267,32 @@
       
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../cicd/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    CICD
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -281,6 +303,53 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#cicd-resources" class="md-nav__link">
+    <span class="md-ellipsis">
+      CICD resources
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#repository-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      repository layout
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#s3-bucket-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      S3 bucket layout
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -355,32 +424,10 @@
       
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    Enhancements
-    
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../enhancements/" class="md-nav__link">
         
   
   
@@ -391,35 +438,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#status" class="md-nav__link">
-    <span class="md-ellipsis">
-      Status
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -519,9 +537,27 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#status" class="md-nav__link">
+  <a href="#cicd-resources" class="md-nav__link">
     <span class="md-ellipsis">
-      Status
+      CICD resources
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#repository-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      repository layout
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#s3-bucket-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      S3 bucket layout
     </span>
   </a>
   
@@ -543,149 +579,114 @@
 
 
 
-<h1 id="enhancements">Enhancements</h1>
-<p><strong>Enhancement categories</strong></p>
+<h1 id="cicd">CICD</h1>
+<p>Deployment from source code</p>
+<h2 id="cicd-resources">CICD resources</h2>
 <ul>
-<li>Cloud and Infrastructure</li>
-<li>Database and Backend</li>
-<li>Data Model and ETL</li>
-<li>Application Logic </li>
-<li>Match Scoring &amp; Intelligence</li>
-<li>UI &amp; Front-End</li>
+<li><strong>Github repository</strong>: <a href="https://github.com/yayfalafels/mcfpipe">mcfpipe</a> source code storage</li>
+<li><strong>Github Actions</strong>: deployment engine</li>
+<li><strong>AWS CloudFormation</strong>: IaC templates for managing cloud infrastructure on AWS</li>
 </ul>
-<h2 id="status">Status</h2>
-<table>
-<thead>
-<tr>
-<th>id</th>
-<th>status</th>
-<th>enhancement</th>
-<th>category</th>
-<th>release</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>01</td>
-<td>open</td>
-<td>Migrate to AWS using CloudFormation</td>
-<td>Cloud and Infrastructure</td>
-<td>0.1.0</td>
-</tr>
-<tr>
-<td>02</td>
-<td>open</td>
-<td>CICD pipeline setup</td>
-<td>Cloud and Infrastructure</td>
-<td>0.1.0</td>
-</tr>
-<tr>
-<td>03</td>
-<td>backlog</td>
-<td>Modularize front-end and back-end with API support for agent integration</td>
-<td>Cloud and Infrastructure</td>
-<td></td>
-</tr>
-<tr>
-<td>04</td>
-<td>backlog</td>
-<td>Migrate from SQLite to DynamoDB</td>
-<td>Database and Backend</td>
-<td></td>
-</tr>
-<tr>
-<td>05</td>
-<td>open</td>
-<td>Implement batching with intermediate DB writes (currently all-or-nothing)</td>
-<td>Database and Backend</td>
-<td>0.1.0</td>
-</tr>
-<tr>
-<td>06</td>
-<td>backlog</td>
-<td>Add async support to reduce script latency (cards: 15 min, profiles: 3–5 min)</td>
-<td>Database and Backend</td>
-<td></td>
-</tr>
-<tr>
-<td>07</td>
-<td>backlog</td>
-<td>Expand data model to include front-end operational tables (currently in Google Sheets)</td>
-<td>Data Model and ETL</td>
-<td></td>
-</tr>
-<tr>
-<td>08</td>
-<td>backlog</td>
-<td>Build ETL pipeline to feed into PowerBI dashboard</td>
-<td>Data Model and ETL</td>
-<td></td>
-</tr>
-<tr>
-<td>09</td>
-<td>backlog</td>
-<td>Combine cards and profiles components</td>
-<td>Application Logic</td>
-<td></td>
-</tr>
-<tr>
-<td>10</td>
-<td>backlog</td>
-<td>Streamline manual lead addition</td>
-<td>Application Logic</td>
-<td></td>
-</tr>
-<tr>
-<td>11</td>
-<td>backlog</td>
-<td>Automate track assignment</td>
-<td>Application Logic</td>
-<td></td>
-</tr>
-<tr>
-<td>12</td>
-<td>backlog</td>
-<td>Improve SingPass MFA session cookie handling</td>
-<td>Application Logic</td>
-<td></td>
-</tr>
-<tr>
-<td>13</td>
-<td>backlog</td>
-<td>Move beyond keyword-only title matching</td>
-<td>Match Scoring and Intelligence</td>
-<td></td>
-</tr>
-<tr>
-<td>14</td>
-<td>backlog</td>
-<td>Incorporate job description</td>
-<td>Match Scoring and Intelligence</td>
-<td></td>
-</tr>
-<tr>
-<td>15</td>
-<td>backlog</td>
-<td>Use BERT or other ML models</td>
-<td>Match Scoring and Intelligence</td>
-<td></td>
-</tr>
-<tr>
-<td>16</td>
-<td>backlog</td>
-<td>Migrate from Google Sheets UI to React.js or Django app</td>
-<td>UI and Front End</td>
-<td></td>
-</tr>
-<tr>
-<td>17</td>
-<td>backlog</td>
-<td>Optionally keep GS integration for tabular views</td>
-<td>UI and Front End</td>
-<td></td>
-</tr>
-</tbody>
-</table>
+<h2 id="repository-layout">repository layout</h2>
+<p>the repository files are organized in the following structure</p>
+<p>/root
+<div class="highlight"><pre><span></span><code>.github/
+  workflows/            # github deploy actions
+     ...
+aws/                    # cloudformation templates and specifications for AWS infrastructure
+  dynamodb/
+    ...
+  ecr/
+    ...
+  fargate/
+    ...
+  lambda/
+    ...
+  s3/
+    ...
+compute/                # source code and config for compute resources
+  webscraper/
+    ...
+dev/
+  releases/             # documentation for each release
+    ...
+docs/                   # app documentation
+  ...
+jobsearch/              # legacy app source code
+  ...
+gsheetui/               # Gsheet connector using Google Sheets API
+  gsheet/
+    __init__.py
+    ...
+  gsheet_schema.json
+  api_config.json
+  requirements.txt
+mcfparse/              # HTML Parser python module source code
+  mcfparse/
+    __init__.py
+    parser.py
+    ...
+  requirements.txt
+mcfscrape/              # Webscraper python module source code
+  mcfscrape/
+    __init__.py
+    webscraper.py
+    ...
+  requirements.txt
+jobcrm/                 # CRM Backend API
+  app/
+    __init__.py
+  requirements.txt
+  ...
+jobdb/                   # Database API
+  db/
+    __init__.py
+  requirements.txt
+jobmatch/                 # Job recommendation python module
+  jobmatch/
+    __init__.py
+  requirements.txt
+  ...
+jobpipe/                 # Analytics ETL python module
+  jobpipe/
+    __init__.py
+  requirements.txt
+  ...
+storage/                # schema and config for storage resources
+  search_profile/
+    ...
+  jobs/
+    ...  
+.gitignore
+AGENTS.md               # instructions for Developer AI assistants
+LICENSE
+mkdocs.yml
+requirements.txt
+VERSION
+</code></pre></div></p>
+<p><strong>excluded</strong>
+files and directories excluded from the source code from <code>.gitignore</code></p>
+<p>.gitignore
+<div class="highlight"><pre><span></span><code>env
+site
+.env
+</code></pre></div></p>
+<h2 id="s3-bucket-layout">S3 bucket layout</h2>
+<p>S3 bucket: <code>mcfpipe</code>
+<div class="highlight"><pre><span></span><code>apps/                     # source code for apps
+config/                   # setup infrastructure and app configuration
+aws/                      # information for the AWS infrastructure
+  network/
+    network_config.json
+  ecr/
+    containers.json
+storage/
+  db_api.json             # endpoint access for database API
+  db_schema.json
+user_data/                # user-specific settings and configuration data
+  user_#####/
+    ...
+</code></pre></div></p>
 
 
 

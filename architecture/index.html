@@ -9,10 +9,10 @@
       
       
       
-        <link rel="prev" href="../database_api/">
+        <link rel="prev" href="../workflows/">
       
       
-        <link rel="next" href="../releases/010_cloud_infra/">
+        <link rel="next" href="../cicd/">
       
       
       <link rel="icon" href="../assets/images/favicon.png">
@@ -20,7 +20,7 @@
     
     
       
-        <title>Enhancements - MCF Pipe</title>
+        <title>Architecture - MCF Pipe</title>
       
     
     
@@ -72,7 +72,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#enhancements" class="md-skip">
+        <a href="#system-architecture" class="md-skip">
           Skip to content
         </a>
       
@@ -108,7 +108,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Enhancements
+              Architecture
             
           </span>
         </div>
@@ -245,10 +245,30 @@
       
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../architecture/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Architecture
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -259,6 +279,69 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#system-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      System architecture
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#aws-infrastructure" class="md-nav__link">
+    <span class="md-ellipsis">
+      AWS Infrastructure
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#network" class="md-nav__link">
+    <span class="md-ellipsis">
+      Network
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#database-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      Database API
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#webscraper-container" class="md-nav__link">
+    <span class="md-ellipsis">
+      Webscraper container
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -355,32 +438,10 @@
       
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    Enhancements
-    
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../enhancements/" class="md-nav__link">
         
   
   
@@ -391,35 +452,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#status" class="md-nav__link">
-    <span class="md-ellipsis">
-      Status
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -509,8 +541,6 @@
   
   
   
-    
-  
   
     <label class="md-nav__title" for="__toc">
       <span class="md-nav__icon md-icon"></span>
@@ -519,9 +549,45 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#status" class="md-nav__link">
+  <a href="#system-architecture" class="md-nav__link">
     <span class="md-ellipsis">
-      Status
+      System architecture
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#aws-infrastructure" class="md-nav__link">
+    <span class="md-ellipsis">
+      AWS Infrastructure
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#network" class="md-nav__link">
+    <span class="md-ellipsis">
+      Network
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#database-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      Database API
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#webscraper-container" class="md-nav__link">
+    <span class="md-ellipsis">
+      Webscraper container
     </span>
   </a>
   
@@ -543,146 +609,314 @@
 
 
 
-<h1 id="enhancements">Enhancements</h1>
-<p><strong>Enhancement categories</strong></p>
-<ul>
-<li>Cloud and Infrastructure</li>
-<li>Database and Backend</li>
-<li>Data Model and ETL</li>
-<li>Application Logic </li>
-<li>Match Scoring &amp; Intelligence</li>
-<li>UI &amp; Front-End</li>
-</ul>
-<h2 id="status">Status</h2>
+  <h1>Architecture</h1>
+
+<h2 id="system-architecture">System architecture</h2>
+<p>There are several components of the app, broadly grouped into <strong>storage</strong> and <strong>compute</strong></p>
+<p><strong>Storage</strong></p>
 <table>
 <thead>
 <tr>
 <th>id</th>
-<th>status</th>
-<th>enhancement</th>
-<th>category</th>
-<th>release</th>
+<th>component</th>
+<th>description</th>
+<th>current</th>
+<th>AWS Infra</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>01</td>
-<td>open</td>
-<td>Migrate to AWS using CloudFormation</td>
-<td>Cloud and Infrastructure</td>
-<td>0.1.0</td>
+<td>job posts data</td>
+<td>jobs and job posts</td>
+<td>local SQLite database</td>
+<td>DynamoDB</td>
 </tr>
 <tr>
 <td>02</td>
-<td>open</td>
-<td>CICD pipeline setup</td>
-<td>Cloud and Infrastructure</td>
-<td>0.1.0</td>
+<td>dimension tables</td>
+<td>config, tracks, keyword libraries</td>
+<td>GSheet tables</td>
+<td>DynamoDB</td>
 </tr>
 <tr>
 <td>03</td>
-<td>backlog</td>
-<td>Modularize front-end and back-end with API support for agent integration</td>
-<td>Cloud and Infrastructure</td>
-<td></td>
+<td>CRM data</td>
+<td>screened, applied, closed, responses, track assignment</td>
+<td>GSheet tables</td>
+<td>DynamoDB</td>
 </tr>
 <tr>
 <td>04</td>
-<td>backlog</td>
-<td>Migrate from SQLite to DynamoDB</td>
-<td>Database and Backend</td>
-<td></td>
+<td>jobs applied status</td>
+<td>jobs applied status from MCF apply</td>
+<td>Gsheet table</td>
+<td>DynamoDB</td>
 </tr>
 <tr>
 <td>05</td>
-<td>open</td>
-<td>Implement batching with intermediate DB writes (currently all-or-nothing)</td>
-<td>Database and Backend</td>
-<td>0.1.0</td>
+<td>reports</td>
+<td>jobs by stage CRM performance analysis</td>
+<td>Gsheet table</td>
+<td>SQLite on S3</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Compute</strong></p>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>component</th>
+<th>description</th>
+<th>current</th>
+<th>AWS Infra</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>01</td>
+<td>Webscraper</td>
+<td>get MCF search results and job post pages</td>
+<td>local python scripts</td>
+<td>Fargate container</td>
+</tr>
+<tr>
+<td>02</td>
+<td>HTML Parser</td>
+<td>HTML parse and write to DB</td>
+<td>local python scripts</td>
+<td>Lambda + SQS</td>
+</tr>
+<tr>
+<td>03</td>
+<td>Job Recommender</td>
+<td>score the posts</td>
+<td>local python scripts</td>
+<td>Fargate container</td>
+</tr>
+<tr>
+<td>04</td>
+<td>GSheet Connector</td>
+<td>GSheet UI interface</td>
+<td>local python scripts</td>
+<td>Lambda</td>
+</tr>
+<tr>
+<td>05</td>
+<td>MCF Login</td>
+<td>refresh session cookie</td>
+<td>manual</td>
+<td>S3 + Lambda</td>
 </tr>
 <tr>
 <td>06</td>
-<td>backlog</td>
-<td>Add async support to reduce script latency (cards: 15 min, profiles: 3–5 min)</td>
-<td>Database and Backend</td>
-<td></td>
+<td>MCF Apply</td>
+<td>apply jobs</td>
+<td>local python scripts</td>
+<td>container Fargate + ECR</td>
 </tr>
 <tr>
 <td>07</td>
-<td>backlog</td>
-<td>Expand data model to include front-end operational tables (currently in Google Sheets)</td>
-<td>Data Model and ETL</td>
-<td></td>
+<td>CRM API</td>
+<td>write-back, status updates, select jobs to apply, config update</td>
+<td>GSheet</td>
+<td>CRM API on EC2</td>
 </tr>
 <tr>
 <td>08</td>
-<td>backlog</td>
-<td>Build ETL pipeline to feed into PowerBI dashboard</td>
-<td>Data Model and ETL</td>
-<td></td>
+<td>Analytics ETL</td>
+<td>Denormalize from DynamoDB to Parquet</td>
+<td>GSheet</td>
+<td>Lambda, Glue, Athena</td>
 </tr>
 <tr>
 <td>09</td>
-<td>backlog</td>
-<td>Combine cards and profiles components</td>
-<td>Application Logic</td>
-<td></td>
+<td>Dashboard</td>
+<td>Reports and data visualization</td>
+<td>GSheet</td>
+<td>PowerBI connect to SQLite on S3</td>
 </tr>
 <tr>
 <td>10</td>
-<td>backlog</td>
-<td>Streamline manual lead addition</td>
-<td>Application Logic</td>
-<td></td>
+<td>DynamoDB API</td>
+<td>DynamoDB interface API</td>
+<td>-</td>
+<td>API Gateway + Lambda</td>
 </tr>
 <tr>
 <td>11</td>
-<td>backlog</td>
-<td>Automate track assignment</td>
-<td>Application Logic</td>
-<td></td>
+<td>Network</td>
+<td>VPC and network infrastructure</td>
+<td>-</td>
+<td>Networking</td>
+</tr>
+</tbody>
+</table>
+<h2 id="aws-infrastructure">AWS Infrastructure</h2>
+<p>The AWS infrastructure is organized into layered CloudFormation stacks, segregated by function and coupled through the repository via parameters and configuration files.</p>
+<p><strong>Cloudformation stacks</strong>
+Cloudformation stack layers</p>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>stack</th>
+<th>purpose</th>
+<th>resources</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>01</td>
+<td>networking</td>
+<td>network and VPC for public and private subnets</td>
+<td>VPC, subnets, security groups, internet gateway</td>
 </tr>
 <tr>
-<td>12</td>
-<td>backlog</td>
-<td>Improve SingPass MFA session cookie handling</td>
-<td>Application Logic</td>
-<td></td>
+<td>02</td>
+<td>database</td>
+<td>storage database and connector API</td>
+<td>DynamoDB tables</td>
 </tr>
 <tr>
-<td>13</td>
-<td>backlog</td>
-<td>Move beyond keyword-only title matching</td>
-<td>Match Scoring and Intelligence</td>
-<td></td>
+<td>03</td>
+<td>webscraper</td>
+<td>serverless Fargate compute resource for Webscraper</td>
+<td>Fargate compute tasks</td>
+</tr>
+</tbody>
+</table>
+<p><strong>AWS CLI</strong>
+Additional resources created outside of the cloudformation stack either manually from local PC or via Github actions. </p>
+<p>These resources must be deleted in a separate cleanup workflow.</p>
+<p><em>manual setup resources</em></p>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>resource</th>
+<th>executor</th>
+<th>sequence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>01</td>
+<td>S3 bucket</td>
+<td>Github Action</td>
+<td>initial setup</td>
 </tr>
 <tr>
-<td>14</td>
-<td>backlog</td>
-<td>Incorporate job description</td>
-<td>Match Scoring and Intelligence</td>
-<td></td>
+<td>02</td>
+<td>S3 config</td>
+<td>Github Action</td>
+<td>initial setup after s3 bucket creation</td>
 </tr>
 <tr>
-<td>15</td>
-<td>backlog</td>
-<td>Use BERT or other ML models</td>
-<td>Match Scoring and Intelligence</td>
-<td></td>
+<td>03</td>
+<td>ECR Dockerimage</td>
+<td>Github Action</td>
+<td>before Webscraper stack deploy</td>
+</tr>
+</tbody>
+</table>
+<h2 id="network">Network</h2>
+<p>Network access control requirements for AWS-based components in the application architecture. </p>
+<ul>
+<li>All public subnets must be associated with an <strong>Internet Gateway</strong>.</li>
+<li>VPC endpoints are required for private subnets that need to reach the internet</li>
+<li>Security groups should be tightly scoped to match access intent (SSH only, HTTP only, etc.).</li>
+<li>Where possible, use <strong>least privilege IAM roles</strong> and <strong>environment-specific configuration</strong>.</li>
+</ul>
+<p><strong>Access Groups</strong></p>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>access group</th>
+<th>access control</th>
+<th>resources</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>01</td>
+<td>global AWS managed</td>
+<td>IAM credentials</td>
+<td>S3, Athena, Glue Catalog</td>
 </tr>
 <tr>
-<td>16</td>
-<td>backlog</td>
-<td>Migrate from Google Sheets UI to React.js or Django app</td>
-<td>UI and Front End</td>
-<td></td>
+<td>02</td>
+<td>private subnet</td>
+<td>VPC + IAM</td>
+<td>Lambda ETL, DB API, Glue jobs</td>
 </tr>
 <tr>
-<td>17</td>
-<td>backlog</td>
-<td>Optionally keep GS integration for tabular views</td>
-<td>UI and Front End</td>
-<td></td>
+<td>03</td>
+<td>public subnet: outbound only + SSH</td>
+<td>IAM + SSH key, no inbound HTTP allowed</td>
+<td>Webscraper, Sheets UI, test EC2</td>
+</tr>
+<tr>
+<td>04</td>
+<td>public subnet: inbound/outbound HTTP</td>
+<td>IAM + app-level authentication</td>
+<td>CRM API (e.g., Flask on EC2/ALB/Fargate)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="database-api">Database API</h2>
+<p>The Database API is a single interface point to the backend DynamoDB database</p>
+<h2 id="webscraper-container">Webscraper container</h2>
+<p>The webscraper runs on a <strong>Fargate</strong> container and runs the following tasks.
+The scope of the webscraper is interface with the MCF website using selenium webdriver.
+The webscraper uses the python library <code>mcfscrape</code>.</p>
+<p><strong>Base image</strong>
+Base image: <code>python:3.11-slim</code></p>
+<p><strong>Requirements</strong></p>
+<p><em>docker environment</em></p>
+<ul>
+<li>apt-get update (standard)</li>
+<li>ca-certificates</li>
+<li>chromium chromium-driver</li>
+</ul>
+<p><em>python dependencies</em></p>
+<ul>
+<li>selenium &gt;= 4.6</li>
+<li>boto3</li>
+<li>BeautifulSoup (bs4)</li>
+<li>requests (optional)</li>
+</ul>
+<p><strong>Tasks</strong></p>
+<p>Tasks include either</p>
+<ol>
+<li><strong>POST</strong> to apply for selected jobs</li>
+<li><strong>GET</strong> content and save into raw HTML source code files for downstream processing.</li>
+</ol>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>task</th>
+<th>description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>01</td>
+<td>keyword search</td>
+<td>search by keyword and paginate search results to html files by page</td>
+</tr>
+<tr>
+<td>02</td>
+<td>job pages fetch</td>
+<td>fetch job post page save to html file</td>
+</tr>
+<tr>
+<td>03</td>
+<td>jobs apply</td>
+<td>use stored session cookie from S3, submit job application from job toapply config and navigate through apply pages</td>
 </tr>
 </tbody>
 </table>

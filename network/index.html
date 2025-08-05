@@ -9,10 +9,10 @@
       
       
       
-        <link rel="prev" href="../database_api/">
+        <link rel="prev" href="../cicd/">
       
       
-        <link rel="next" href="../releases/010_cloud_infra/">
+        <link rel="next" href="../data_model/">
       
       
       <link rel="icon" href="../assets/images/favicon.png">
@@ -20,7 +20,7 @@
     
     
       
-        <title>Enhancements - MCF Pipe</title>
+        <title>Network - MCF Pipe</title>
       
     
     
@@ -72,7 +72,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#enhancements" class="md-skip">
+        <a href="#network" class="md-skip">
           Skip to content
         </a>
       
@@ -108,7 +108,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Enhancements
+              Network
             
           </span>
         </div>
@@ -289,10 +289,32 @@
       
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../network/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Network
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -303,6 +325,62 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#01-global-aws-managed-services" class="md-nav__link">
+    <span class="md-ellipsis">
+      01. Global AWS Managed Services
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#02-private-subnet-vpc-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      02. Private Subnet (VPC-Only)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#03-public-subnet-outbound-ssh" class="md-nav__link">
+    <span class="md-ellipsis">
+      03. Public Subnet: Outbound + SSH
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#04-public-subnet-inboundoutbound-http" class="md-nav__link">
+    <span class="md-ellipsis">
+      04. Public Subnet: Inbound/Outbound HTTP
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -355,32 +433,10 @@
       
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    Enhancements
-    
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../enhancements/" class="md-nav__link">
         
   
   
@@ -391,35 +447,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#status" class="md-nav__link">
-    <span class="md-ellipsis">
-      Status
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -519,9 +546,36 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#status" class="md-nav__link">
+  <a href="#01-global-aws-managed-services" class="md-nav__link">
     <span class="md-ellipsis">
-      Status
+      01. Global AWS Managed Services
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#02-private-subnet-vpc-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      02. Private Subnet (VPC-Only)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#03-public-subnet-outbound-ssh" class="md-nav__link">
+    <span class="md-ellipsis">
+      03. Public Subnet: Outbound + SSH
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#04-public-subnet-inboundoutbound-http" class="md-nav__link">
+    <span class="md-ellipsis">
+      04. Public Subnet: Inbound/Outbound HTTP
     </span>
   </a>
   
@@ -543,149 +597,96 @@
 
 
 
-<h1 id="enhancements">Enhancements</h1>
-<p><strong>Enhancement categories</strong></p>
+<h1 id="network">Network</h1>
+<p>Network access control requirements for AWS-based components in the application architecture. </p>
 <ul>
-<li>Cloud and Infrastructure</li>
-<li>Database and Backend</li>
-<li>Data Model and ETL</li>
-<li>Application Logic </li>
-<li>Match Scoring &amp; Intelligence</li>
-<li>UI &amp; Front-End</li>
+<li>All public subnets must be associated with an <strong>Internet Gateway</strong>.</li>
+<li>VPC endpoints are required for private subnets that need to reach the internet</li>
+<li>Security groups should be tightly scoped to match access intent (SSH only, HTTP only, etc.).</li>
+<li>Where possible, use <strong>least privilege IAM roles</strong> and <strong>environment-specific configuration</strong>.</li>
 </ul>
-<h2 id="status">Status</h2>
+<p><strong>Access Groups</strong></p>
 <table>
 <thead>
 <tr>
 <th>id</th>
-<th>status</th>
-<th>enhancement</th>
-<th>category</th>
-<th>release</th>
+<th>access group</th>
+<th>access control</th>
+<th>resources</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>01</td>
-<td>open</td>
-<td>Migrate to AWS using CloudFormation</td>
-<td>Cloud and Infrastructure</td>
-<td>0.1.0</td>
+<td>global AWS managed</td>
+<td>IAM credentials</td>
+<td>S3, Athena, Glue Catalog</td>
 </tr>
 <tr>
 <td>02</td>
-<td>open</td>
-<td>CICD pipeline setup</td>
-<td>Cloud and Infrastructure</td>
-<td>0.1.0</td>
+<td>private subnet</td>
+<td>VPC + IAM</td>
+<td>Lambda ETL, DB API, Glue jobs</td>
 </tr>
 <tr>
 <td>03</td>
-<td>backlog</td>
-<td>Modularize front-end and back-end with API support for agent integration</td>
-<td>Cloud and Infrastructure</td>
-<td></td>
+<td>public subnet: outbound only + SSH</td>
+<td>IAM + SSH key, no inbound HTTP allowed</td>
+<td>Webscraper, Sheets UI, test EC2</td>
 </tr>
 <tr>
 <td>04</td>
-<td>backlog</td>
-<td>Migrate from SQLite to DynamoDB</td>
-<td>Database and Backend</td>
-<td></td>
-</tr>
-<tr>
-<td>05</td>
-<td>open</td>
-<td>Implement batching with intermediate DB writes (currently all-or-nothing)</td>
-<td>Database and Backend</td>
-<td>0.1.0</td>
-</tr>
-<tr>
-<td>06</td>
-<td>backlog</td>
-<td>Add async support to reduce script latency (cards: 15 min, profiles: 3–5 min)</td>
-<td>Database and Backend</td>
-<td></td>
-</tr>
-<tr>
-<td>07</td>
-<td>backlog</td>
-<td>Expand data model to include front-end operational tables (currently in Google Sheets)</td>
-<td>Data Model and ETL</td>
-<td></td>
-</tr>
-<tr>
-<td>08</td>
-<td>backlog</td>
-<td>Build ETL pipeline to feed into PowerBI dashboard</td>
-<td>Data Model and ETL</td>
-<td></td>
-</tr>
-<tr>
-<td>09</td>
-<td>backlog</td>
-<td>Combine cards and profiles components</td>
-<td>Application Logic</td>
-<td></td>
-</tr>
-<tr>
-<td>10</td>
-<td>backlog</td>
-<td>Streamline manual lead addition</td>
-<td>Application Logic</td>
-<td></td>
-</tr>
-<tr>
-<td>11</td>
-<td>backlog</td>
-<td>Automate track assignment</td>
-<td>Application Logic</td>
-<td></td>
-</tr>
-<tr>
-<td>12</td>
-<td>backlog</td>
-<td>Improve SingPass MFA session cookie handling</td>
-<td>Application Logic</td>
-<td></td>
-</tr>
-<tr>
-<td>13</td>
-<td>backlog</td>
-<td>Move beyond keyword-only title matching</td>
-<td>Match Scoring and Intelligence</td>
-<td></td>
-</tr>
-<tr>
-<td>14</td>
-<td>backlog</td>
-<td>Incorporate job description</td>
-<td>Match Scoring and Intelligence</td>
-<td></td>
-</tr>
-<tr>
-<td>15</td>
-<td>backlog</td>
-<td>Use BERT or other ML models</td>
-<td>Match Scoring and Intelligence</td>
-<td></td>
-</tr>
-<tr>
-<td>16</td>
-<td>backlog</td>
-<td>Migrate from Google Sheets UI to React.js or Django app</td>
-<td>UI and Front End</td>
-<td></td>
-</tr>
-<tr>
-<td>17</td>
-<td>backlog</td>
-<td>Optionally keep GS integration for tabular views</td>
-<td>UI and Front End</td>
-<td></td>
+<td>public subnet: inbound/outbound HTTP</td>
+<td>IAM + app-level authentication</td>
+<td>CRM API (e.g., Flask on EC2/ALB/Fargate)</td>
 </tr>
 </tbody>
 </table>
+<h2 id="01-global-aws-managed-services">01. Global AWS Managed Services</h2>
+<ul>
+<li>These services are accessed over the public AWS network.</li>
+<li>No subnet or VPC routing is required.</li>
+<li>Access is controlled entirely via IAM permissions.</li>
+</ul>
+<p><strong>Includes</strong>:</p>
+<ul>
+<li>S3 (data lake, Parquet storage)</li>
+<li>Athena (SQL query interface)</li>
+<li>Glue Catalog (metadata management)</li>
+</ul>
+<h2 id="02-private-subnet-vpc-only">02. Private Subnet (VPC-Only)</h2>
+<ul>
+<li>Resources are <strong>not publicly accessible</strong>.</li>
+<li>Outbound access is granted via VPC endpoints.</li>
+<li>Designed for secure backend tasks and services.</li>
+</ul>
+<p><strong>Includes</strong>:</p>
+<ul>
+<li>Lambda ETL functions</li>
+<li>Glue transformation jobs</li>
+<li>Internal-facing Database API</li>
+</ul>
+<h2 id="03-public-subnet-outbound-ssh">03. Public Subnet: Outbound + SSH</h2>
+<ul>
+<li>Public subnet with <strong>internet access for outbound requests</strong>.</li>
+<li>Allows <strong>SSH inbound</strong>, but blocks HTTP traffic (ports 80/443).</li>
+<li>Public IPs are assigned automatically (Fargate or EC2).</li>
+<li>Useful for browser automation, debugging, or interactive tools.</li>
+</ul>
+<p><strong>Includes</strong>:
+- Webscraper (e.g., Selenium headless on Fargate)
+- Google Sheets UI connector
+- Temporary EC2 debug instances</p>
+<h2 id="04-public-subnet-inboundoutbound-http">04. Public Subnet: Inbound/Outbound HTTP</h2>
+<ul>
+<li>Public-facing APIs with full internet access.</li>
+<li>Allows <strong>inbound HTTP/S</strong> via security group.</li>
+<li>Should include <strong>authentication</strong> to protect API endpoints.</li>
+<li>Can be hosted on EC2, Fargate, or fronted with ALB.</li>
+</ul>
+<p><strong>Includes</strong>:
+- CRM API (Flask or Django)
+- Optional: ALB if scaling to multiple instances</p>
 
 
 
