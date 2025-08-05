@@ -70,7 +70,7 @@ Cloudformation stack layers
 | id | stack | purpose | resources |
 | - | - | - | - |
 | 01 | networking | network and VPC for public and private subnets | VPC, subnets, security groups, internet gateway |
-| 02 | database | storage database | DynamoDB tables |
+| 02 | database | storage database and connector API | DynamoDB tables |
 | 03 | webscraper | serverless Fargate compute resource for Webscraper | Fargate compute tasks |
 
 __AWS CLI__
@@ -78,10 +78,14 @@ Additional resources created outside of the cloudformation stack either manually
 
 These resources must be deleted in a separate cleanup workflow.
 
-__manual setup resources__
+_manual setup resources_
 
 | id | resource | executor | sequence |
 | - | - | - | - |
 | 01 | S3 bucket | Github Action | initial setup |
 | 02 | S3 config | Github Action | initial setup after s3 bucket creation |
 | 03 | ECR Dockerimage | Github Action | before Webscraper stack deploy |
+
+## Database API
+The Database API is a single interface point to the backend DynamoDB database
+

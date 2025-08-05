@@ -8,7 +8,10 @@ The current version of the app `jobsearch` runs locally on PC.  Migrating to the
 Migrate current functionality to AWS Cloud. 
 
 ## Scope
-The current scope includes the `jobs search` workflow
+The current scope includes 
+
+- DynamoDB database API
+- `jobs search` workflow
 
 __Jobs search__
 Scrape data from MCF website parse and store into cloud AWS DynamoDB database
@@ -39,6 +42,7 @@ __Compute__
 | 07 | CRM API | write-back, status updates, select jobs to apply, config update | GSheet | CRM API on EC2 |
 | 08 | Analytics ETL | Denormalize from DynamoDB to SQlite | GSheet | Lambda |
 | 09 | Dashboard | Reports and data visualization | GSheet | PowerBI connect to SQLite on S3 |
+| 10 | DynamoDB API | DynamoDB interface API | - | API Gateway + Lambda |
 
 ## App libraries
 The source code is modularlized into app libraries since they have unique dependency and environment requirements
@@ -51,3 +55,5 @@ The source code is modularlized into app libraries since they have unique depend
 | CRM API | TBD Flask/Django | API Gateway + Lambda | jobcrm |
 | Analytics ETL | pandas, boto3, sqlite3 | Lambda | jobpipe |
 | Gsheet Connector | pandas, google api, boto3 | Lambda | gsheetui |
+| Database API | boto3 | API Gateway + Lambda | jobdb |
+

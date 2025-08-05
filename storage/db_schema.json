@@ -1,0 +1,215 @@
+{
+    "tables": [
+        {
+            "table_name": "job",
+            "primary_key": "id",
+            "sort_key": "posted_date",
+            "columns": [
+                {
+                    "column_name": "id",
+                    "data_type": "String",
+                    "nullable": false
+                },
+                {
+                    "column_name": "posted_date",
+                    "data_type": "String",
+                    "nullable": false
+                },
+                {
+                    "column_name": "position",
+                    "data_type": "String",
+                    "nullable": false
+                },
+                {
+                    "column_name": "company_name",
+                    "data_type": "String",
+                    "nullable": true
+                },
+                {
+                    "column_name": "url",
+                    "data_type": "String",
+                    "nullable": true
+                },
+                {
+                    "column_name": "card_position",
+                    "data_type": "String",
+                    "nullable": true
+                },
+                {
+                    "column_name": "card_company_name",
+                    "data_type": "String",
+                    "nullable": true
+                },
+                {
+                    "column_name": "load_status",
+                    "data_type": "Number",
+                    "nullable": false
+                },
+                {
+                    "column_name": "crm_status",
+                    "data_type": "Number",
+                    "nullable": true
+                },
+                {
+                    "column_name": "apply_status",
+                    "data_type": "Number",
+                    "nullable": true
+                }
+
+            ]
+        },
+        {
+            "table_name": "post_details",
+            "primary_key": "jobid",
+            "sort_key": "closing_date",
+            "columns": [
+                {
+                    "column_name": "jobid",
+                    "data_type": "String",
+                    "nullable": false
+                },
+                {
+                    "column_name": "closing_date",
+                    "data_type": "String",
+                    "nullable": false
+                },
+                {
+                    "column_name": "salary_high_sgd",
+                    "data_type": "Number",
+                    "nullable": true
+                },
+                {
+                    "column_name": "mcf_ref",
+                    "data_type": "String",
+                    "nullable": true
+                }
+            ]
+        },
+        {
+            "table_name": "user",
+            "primary_key": "id",
+            "columns": [
+                {
+                    "column_name": "id",
+                    "data_type": "String",
+                    "nullable": false
+                },
+                {
+                    "column_name": "email",
+                    "data_type": "String",
+                    "nullable": false
+                },
+                {
+                    "column_name": "username",
+                    "data_type": "String",
+                    "nullable": false
+                },
+                {
+                    "column_name": "name",
+                    "data_type": "String",
+                    "nullable": true
+                },
+                {
+                    "column_name": "created_date",
+                    "data_type": "String",
+                    "nullable": false
+                },
+                {
+                    "column_name": "deactivated_date",
+                    "data_type": "String",
+                    "nullable": true
+                },
+                {
+                    "column_name": "status",
+                    "data_type": "Number",
+                    "nullable": false
+                }
+            ]
+        },
+        {
+            "table_name": "user_config",
+            "primary_key": "userid",
+            "columns": [
+                {
+                    "column_name": "userid",
+                    "data_type": "String",
+                    "nullable": false
+                },
+                {
+                    "column_name": "email_notifications",
+                    "data_type": "Boolean",
+                    "nullable": true
+                }
+            ]
+        },
+        {
+            "table_name": "role",
+            "primary_key": "id",
+            "columns": [
+                {
+                    "column_name": "id",
+                    "data_type": "String",
+                    "nullable": false
+                },
+                {
+                    "column_name": "role_name",
+                    "data_type": "String",
+                    "nullable": false
+                },
+                {
+                    "column_name": "description",
+                    "data_type": "String",
+                    "nullable": true
+                }
+            ]
+        },
+        {
+            "table_name": "track",
+            "primary_key": "id",
+            "sort_key": "userid",
+            "columns": [
+                {
+                    "column_name": "id",
+                    "data_type": "String",
+                    "nullable": false
+                },
+                {
+                    "column_name": "userid",
+                    "data_type": "String",
+                    "nullable": false
+                },
+                {
+                    "column_name": "roleid",
+                    "data_type": "String",
+                    "nullable": false
+                },
+                {
+                    "column_name": "seniority",
+                    "data_type": "Number",
+                    "nullable": true
+                }
+            ]
+        },
+        {
+            "table_name": "search_profile",
+            "primary_key": "trackid",
+            "columns": [
+                {
+                    "column_name": "trackid",
+                    "data_type": "String",
+                    "nullable": false
+                },
+                {
+                    "column_name": "keywords",
+                    "data_type": "String",
+                    "nullable": true
+                },
+                {
+                    "column_name": "salary_target_sgd",
+                    "data_type": "Number",
+                    "nullable": true
+                }
+            ]
+        }
+    ]
+}

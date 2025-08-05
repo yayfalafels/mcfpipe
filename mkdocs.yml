@@ -5,6 +5,7 @@ nav:
   - Workflows: workflows.md
   - Architecture: architecture.md
   - CICD: cicd.md
+  - Data Model: data_model.md
   - Enhancements: enhancements.md
   - Releases:
       - 0.1.0: releases/010_cloud_infra.md
