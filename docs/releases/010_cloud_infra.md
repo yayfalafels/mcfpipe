@@ -10,6 +10,7 @@ Migrate current functionality to AWS Cloud.
 ## Scope
 The current scope includes 
 
+- Network infrastructure
 - DynamoDB database API
 - `jobs search` workflow
 
@@ -40,9 +41,10 @@ __Compute__
 | 05 | MCF Login | refresh session cookie | manual | S3 + Lambda |
 | 06 | MCF Apply | apply jobs | local python scripts | container Fargate + ECR  |
 | 07 | CRM API | write-back, status updates, select jobs to apply, config update | GSheet | CRM API on EC2 |
-| 08 | Analytics ETL | Denormalize from DynamoDB to SQlite | GSheet | Lambda |
+| 08 | Analytics ETL | Denormalize from DynamoDB to Parquet | GSheet | Lambda, Glue, Athena |
 | 09 | Dashboard | Reports and data visualization | GSheet | PowerBI connect to SQLite on S3 |
 | 10 | DynamoDB API | DynamoDB interface API | - | API Gateway + Lambda |
+| 11 | Network | VPC and network infrastructure | - | Networking |
 
 ## App libraries
 The source code is modularlized into app libraries since they have unique dependency and environment requirements

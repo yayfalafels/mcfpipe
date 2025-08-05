@@ -8,7 +8,7 @@ __App workflows__
 | 02 | jobs recommend | score and screen jobs for curated report jobs to apply |
 | 03 | jobs apply | apply jobs through MCF website from shortlisted jobs to apply |
 | 04 | CRM API | CRUD operational actions to manage search and move leads through pipeline |
-| 05 | analytics ETL | update SQLite DB from data sources DynamoDB tables and refresh PowerBI report |
+| 05 | analytics ETL | update parquet DB from data sources DynamoDB tables and refresh BI report |
 | 06 | config sync | update config settings |
 
 ## Jobs search
@@ -136,17 +136,25 @@ CRMAPI --> GsheetSync
 ```mermaid
 graph TB
 
-DynamoJobs["DynamoDB: Job Posts"]
-DynamoCRM["DynamoDB: CRM Data"]
-DynamoConfig["DynamoDB: Dimension Tables"]
-LambdaETL["Lambda ETL to SQLite"]
-BI["PowerBI: Analytics reports"]
+DBAPI["Database API"]
+LambdaETL["Lambda ETL to Parquet"]
+DB["Parquet DB in S3"]
+Glue["AWS Glue Catalog"]
+Athena["Athena SQL connector"]
+DF["Azure Data Factory"]
+SSQL["Synapse Serverless SQL"]
+PBI["PowerBI"]
+TBI["Tableau"]
 
 %% ETL flow
-DynamoJobs --> LambdaETL
-DynamoCRM --> LambdaETL
-DynamoConfig --> LambdaETL
-LambdaETL --> S3SQLite
-S3SQLite --> BI
+DBAPI --> LambdaETL
+LambdaETL --> DB
+DB --> Glue
+Glue --> Athena
+Athena --> TBI
+DB --> DF
+DF --> SSQL
+SSQL --> PBI
+
 ```
 

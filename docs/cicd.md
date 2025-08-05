@@ -60,6 +60,10 @@ jobcrm/                 # CRM Backend API
     __init__.py
   requirements.txt
   ...
+jobdb/                   # Database API
+  db/
+    __init__.py
+  requirements.txt
 jobmatch/                 # Job recommendation python module
   jobmatch/
     __init__.py
@@ -91,4 +95,23 @@ files and directories excluded from the source code from `.gitignore`
 env
 site
 .env
+```
+
+## S3 bucket layout
+
+S3 bucket: `mcfpipe`
+```
+apps/                     # source code for apps
+config/                   # setup infrastructure and app configuration
+aws/                      # information for the AWS infrastructure
+  network/
+    network_config.json
+  ecr/
+    containers.json
+storage/
+  db_api.json             # endpoint access for database API
+  db_schema.json
+user_data/                # user-specific settings and configuration data
+  user_#####/
+    ...
 ```
