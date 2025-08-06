@@ -8,6 +8,7 @@ nav:
   - Network: network.md
   - Data Model: data_model.md
   - Database API: database_api.md
+  - Validation: validation.md
   - Enhancements: enhancements.md
   - Releases:
       - 0.1.0: releases/010_cloud_infra.md

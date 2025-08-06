@@ -63,3 +63,40 @@ response body
 
 ```
 
+### POST /[table]/batch
+sample body for batch POST `/{job}/batch` request
+
+request
+```json
+[
+  {
+      "posted_date": "2025-08-02",
+      "position": "ML Engineer",
+      "load_status": 0
+  },
+  {
+      "posted_date": "2025-08-05",
+      "position": "Data Analyst",
+      "load_status": 0
+  }
+]
+```
+
+response body
+```json
+[
+  {
+      "id": "job_0000001",
+      "posted_date": "2025-08-02",
+      "position": "ML Engineer",
+      "load_status": 0
+  },
+  {
+      "id": "job_0000002",
+      "posted_date": "2025-08-05",
+      "position": "Data Analyst",
+      "load_status": 0
+  }
+]
+```
+

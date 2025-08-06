@@ -6,6 +6,7 @@ Deployment from source code
 - **Github repository**: [mcfpipe](https://github.com/yayfalafels/mcfpipe) source code storage
 - **Github Actions**: deployment engine
 - **AWS CloudFormation**: IaC templates for managing cloud infrastructure on AWS
+- **Tester App**: Tester module runs on a dedicated Fargate container in the public subnet
 
 ## repository layout
 the repository files are organized in the following structure
@@ -79,6 +80,11 @@ storage/                # schema and config for storage resources
     ...
   jobs/
     ...  
+tester/                # Tester app that runs on Fargate container
+  tester/
+    __init__.py
+  tests.py
+  requirements.txt
 .gitignore
 AGENTS.md               # instructions for Developer AI assistants
 LICENSE
@@ -115,3 +121,18 @@ user_data/                # user-specific settings and configuration data
   user_#####/
     ...
 ```
+
+## Tester
+The tester app uses the test module `tester` and runs on a dedicated Fargate container
+
+__docker image__
+
+
+__environment variables__
+environment variables are passed to the container by Github actions at the `run-task` cli command
+
+| id | variable | description |
+| - | - | - |
+| 01 | DB_API_URL | API endpoint |
+
+

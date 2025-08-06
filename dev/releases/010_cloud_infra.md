@@ -73,7 +73,25 @@ Cloudformation stack layers
 
 session logs are timestamped to Singapore timezone in reverse chronological order, with latest entries at the top, and earlier entries at the bottom.
 
-### Database API [Data Engineer]  2025-08-05 <HH>:<MM>
+### Database API [Data Engineer]  2025-08-05 21:15
+
+db schema revisions: user-specific `job_search`
+
+- create new user-specific table `job_search` which tags a user to a user-independent `job_id`
+- all downstream processes, scoring, CRM are all keyed to the `job_s_id` FK to the `job_search` table
+- remove `crm_status`, `apply_status` from the `job` table
+
+data model
+
+- standardize `created` and `last_modified` fields for all tables
+- standardize id with underscore "_" `job_id`
+- add date format `ISO_TIMESTAMP`: YYYY-MM-DD HH:MM and `ISO_DATE`: YYYY-MM-DD
+
+tester
+
+ - validation doc `docs/validation.md`, tester app `tester/*` and tester CF stack `aws/cloudformation/tester_stack.yaml`
+ - scope for tester to test DB API, and extend to other features as they are developed
+ - run on fargate container
 
 
 ### Webscraper [Data Engineer] design and AWS Infra 2025-08-04 18:21
