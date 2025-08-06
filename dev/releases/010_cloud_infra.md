@@ -73,7 +73,18 @@ Cloudformation stack layers
 
 session logs are timestamped to Singapore timezone in reverse chronological order, with latest entries at the top, and earlier entries at the bottom.
 
-### Database API [Data Engineer]  2025-08-05 21:15
+### Data model [Codex] 2025-08-06 <HH>:<MM>
+
+
+### Data model [Data Engineer]  Codex prompt 2025-08-06 18:48
+for context, refer to release doc `dev/releases/010_cloud_infra.md`, data model doc `docs/data_model.md` and DB schema `storage/db_schema.json`
+
+your task
+- update DB schema according to the specifications in the data model doc
+- record your session activity as a timestamped entry in the release doc in the section 
+- create a PR for the changes to the DB schema and your session log
+
+### Data model [Data Engineer]  2025-08-06 18:38
 
 db schema revisions: user-specific `job_search`
 
@@ -87,12 +98,43 @@ data model
 - standardize id with underscore "_" `job_id`
 - add date format `ISO_TIMESTAMP`: YYYY-MM-DD HH:MM and `ISO_DATE`: YYYY-MM-DD
 
+
+### Database API [Data Engineer]  2025-08-05 21:15
+
 tester
 
  - validation doc `docs/validation.md`, tester app `tester/*` and tester CF stack `aws/cloudformation/tester_stack.yaml`
  - scope for tester to test DB API, and extend to other features as they are developed
  - run on fargate container
+ - `DB_API_URL` injected as env variable at ECS task-run by Github Action workflow 
+ - listed 12x test cases positive and negative
 
+stack segregation
+
+ - separate stacks for setup, networking, Database API
+ - some resources more expedient to setup via Github Action runner CLI outside of CF stack
+    - ex: docker image builds
+
+network infrastructure
+
+ - CF stack `aws/cloudformation/network_stack.yaml` 
+ - VPC with private endpoints, no NAT gateway ($30 per month)
+ - multiple access groups identified for specific use cases
+    - 01 global AWS managed - S3, Athena managed via IAM credentials
+    - 02 private subnet - most applications Lambda ETL, DB API
+    - 03 public subnet: outbound only + SSH - Tester, Webscraper
+    - 04 public subnet: public subnet: inbound/outbound HTTP handled via app-level authentication, CRM API
+
+database API
+
+ - app `jobdb/*`
+ - CF stack `aws/cloudformation/db_api_stack.yaml`
+ - couple the DynamoDB tables + API Gateway, Lambda handler definitions in the same stack
+ - generic route `/{table}/{id}` and let the lambda handler handle table-specific details
+ - Lambda handler is aware of `db_schema.json`.  
+    - responsible for enforcing schema data types and other constraints
+ - uses base stack `aws/cloudformation/db_api_base.yaml` for the API resources
+ - uses app script `jobdb/cf_template_constructor.py` to build the DynamoDB resources dynamically at runtime with the Github Action workflow
 
 ### Webscraper [Data Engineer] design and AWS Infra 2025-08-04 18:21
 
