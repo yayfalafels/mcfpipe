@@ -1,286 +1,541 @@
 {
-    "tables": [
+  "tables": [
+    {
+      "table_name": "apply_status",
+      "primary_key": "job_id",
+      "columns": [
         {
-            "table_name": "post",
-            "primary_key": "id",
-            "sort_key": "posted_date",
-            "columns": [
-                {
-                    "column_name": "id",
-                    "data_type": "String",
-                    "nullable": false
-                },
-                {
-                    "column_name": "posted_date",
-                    "data_type": "String",
-                    "date_format": "ISO_DATE",
-                    "nullable": false
-                },
-                {
-                    "column_name": "position",
-                    "data_type": "String",
-                    "nullable": false
-                },
-                {
-                    "column_name": "company_name",
-                    "data_type": "String",
-                    "nullable": true
-                },
-                {
-                    "column_name": "url",
-                    "data_type": "String",
-                    "nullable": true
-                },
-                {
-                    "column_name": "status",
-                    "data_type": "Number",
-                    "nullable": false
-                },
-                {
-                    "column_name": "created",
-                    "data_type": "String",
-                    "date_format": "ISO_TIMESTAMP",
-                    "nullable": false
-                },
-                {
-                    "column_name": "last_modified",
-                    "data_type": "String",
-                    "date_format": "ISO_TIMESTAMP",
-                    "nullable": false
-                }
-
-            ]
+          "column_name": "job_id",
+          "data_type": "String",
+          "nullable": false
         },
         {
-            "table_name": "post_details",
-            "primary_key": "post_id",
-            "sort_key": "closing_date",
-            "columns": [
-                {
-                    "column_name": "post_id",
-                    "data_type": "String",
-                    "nullable": false
-                },
-                {
-                    "column_name": "closing_date",
-                    "data_type": "String",
-                    "date_format": "ISO_DATE",
-                    "nullable": false
-                },
-                {
-                    "column_name": "post_source_id",
-                    "data_type": "String",
-                    "nullable": false
-                },
-                {
-                    "column_name": "salary_high_sgd",
-                    "data_type": "Number",
-                    "nullable": true
-                },
-                {
-                    "column_name": "url_slug",
-                    "data_type": "String",
-                    "nullable": true
-                },
-                {
-                    "column_name": "mcf_ref",
-                    "data_type": "String",
-                    "nullable": true
-                },
-                {
-                    "column_name": "created",
-                    "data_type": "String",
-                    "date_format": "ISO_TIMESTAMP",
-                    "nullable": false
-                },
-                {
-                    "column_name": "last_modified",
-                    "data_type": "String",
-                    "date_format": "ISO_TIMESTAMP",
-                    "nullable": false
-                }
-            ]
+          "column_name": "status",
+          "data_type": "Number",
+          "nullable": false
         },
         {
-            "table_name": "user",
-            "primary_key": "id",
-            "columns": [
-                {
-                    "column_name": "id",
-                    "data_type": "String",
-                    "nullable": false
-                },
-                {
-                    "column_name": "email",
-                    "data_type": "String",
-                    "nullable": false
-                },
-                {
-                    "column_name": "username",
-                    "data_type": "String",
-                    "nullable": false
-                },
-                {
-                    "column_name": "name",
-                    "data_type": "String",
-                    "nullable": true
-                },
-                {
-                    "column_name": "deactivated_date",
-                    "data_type": "String",
-                    "nullable": true
-                },
-                {
-                    "column_name": "status",
-                    "data_type": "Number",
-                    "nullable": false
-                },
-                {
-                    "column_name": "created",
-                    "data_type": "String",
-                    "date_format": "ISO_TIMESTAMP",
-                    "nullable": false
-                },
-                {
-                    "column_name": "last_modified",
-                    "data_type": "String",
-                    "date_format": "ISO_TIMESTAMP",
-                    "nullable": false
-                }
-            ]
+          "column_name": "created",
+          "data_type": "String",
+          "date_format": "ISO_TIMESTAMP",
+          "nullable": false
         },
         {
-            "table_name": "user_config",
-            "primary_key": "user_id",
-            "columns": [
-                {
-                    "column_name": "user_id",
-                    "data_type": "String",
-                    "nullable": false
-                },
-                {
-                    "column_name": "email_notifications",
-                    "data_type": "Boolean",
-                    "nullable": true
-                },
-                {
-                    "column_name": "created",
-                    "data_type": "String",
-                    "date_format": "ISO_TIMESTAMP",
-                    "nullable": false
-                },
-                {
-                    "column_name": "last_modified",
-                    "data_type": "String",
-                    "date_format": "ISO_TIMESTAMP",
-                    "nullable": false
-                }
-            ]
-        },
-        {
-            "table_name": "role",
-            "primary_key": "id",
-            "columns": [
-                {
-                    "column_name": "id",
-                    "data_type": "String",
-                    "nullable": false
-                },
-                {
-                    "column_name": "role_name",
-                    "data_type": "String",
-                    "nullable": false
-                },
-                {
-                    "column_name": "description",
-                    "data_type": "String",
-                    "nullable": true
-                },
-                {
-                    "column_name": "created",
-                    "data_type": "String",
-                    "date_format": "ISO_TIMESTAMP",
-                    "nullable": false
-                },
-                {
-                    "column_name": "last_modified",
-                    "data_type": "String",
-                    "date_format": "ISO_TIMESTAMP",
-                    "nullable": false
-                }
-            ]
-        },
-        {
-            "table_name": "track",
-            "primary_key": "id",
-            "sort_key": "userid",
-            "columns": [
-                {
-                    "column_name": "id",
-                    "data_type": "String",
-                    "nullable": false
-                },
-                {
-                    "column_name": "user_id",
-                    "data_type": "String",
-                    "nullable": false
-                },
-                {
-                    "column_name": "role_id",
-                    "data_type": "String",
-                    "nullable": false
-                },
-                {
-                    "column_name": "seniority",
-                    "data_type": "Number",
-                    "nullable": true
-                },
-                {
-                    "column_name": "created",
-                    "data_type": "String",
-                    "date_format": "ISO_TIMESTAMP",
-                    "nullable": false
-                },
-                {
-                    "column_name": "last_modified",
-                    "data_type": "String",
-                    "date_format": "ISO_TIMESTAMP",
-                    "nullable": false
-                }
-            ]
-        },
-        {
-            "table_name": "search_profile",
-            "primary_key": "track_id",
-            "columns": [
-                {
-                    "column_name": "track_id",
-                    "data_type": "String",
-                    "nullable": false
-                },
-                {
-                    "column_name": "keywords",
-                    "data_type": "String",
-                    "nullable": true
-                },
-                {
-                    "column_name": "salary_target_sgd",
-                    "data_type": "Number",
-                    "nullable": true
-                },
-                {
-                    "column_name": "created",
-                    "data_type": "String",
-                    "date_format": "ISO_TIMESTAMP",
-                    "nullable": false
-                },
-                {
-                    "column_name": "last_modified",
-                    "data_type": "String",
-                    "date_format": "ISO_TIMESTAMP",
-                    "nullable": false
-                }
-            ]
+          "column_name": "last_modified",
+          "data_type": "String",
+          "date_format": "ISO_TIMESTAMP",
+          "nullable": false
         }
-    ]
+      ]
+    },
+    {
+      "table_name": "crm_status",
+      "primary_key": "job_id",
+      "columns": [
+        {
+          "column_name": "job_id",
+          "data_type": "String",
+          "nullable": false
+        },
+        {
+          "column_name": "status",
+          "data_type": "Number",
+          "nullable": false
+        },
+        {
+          "column_name": "created",
+          "data_type": "String",
+          "date_format": "ISO_TIMESTAMP",
+          "nullable": false
+        },
+        {
+          "column_name": "last_modified",
+          "data_type": "String",
+          "date_format": "ISO_TIMESTAMP",
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "table_name": "job",
+      "primary_key": "id",
+      "sort_key": "user_id",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "String",
+          "nullable": false
+        },
+        {
+          "column_name": "user_id",
+          "data_type": "String",
+          "nullable": false
+        },
+        {
+          "column_name": "post_id",
+          "data_type": "String",
+          "nullable": false
+        },
+        {
+          "column_name": "created",
+          "data_type": "String",
+          "date_format": "ISO_TIMESTAMP",
+          "nullable": false
+        },
+        {
+          "column_name": "last_modified",
+          "data_type": "String",
+          "date_format": "ISO_TIMESTAMP",
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "table_name": "job_details",
+      "primary_key": "job_id",
+      "columns": [
+        {
+          "column_name": "job_id",
+          "data_type": "String",
+          "nullable": false
+        },
+        {
+          "column_name": "position",
+          "data_type": "String",
+          "nullable": true
+        },
+        {
+          "column_name": "company_name",
+          "data_type": "String",
+          "nullable": true
+        },
+        {
+          "column_name": "created",
+          "data_type": "String",
+          "date_format": "ISO_TIMESTAMP",
+          "nullable": false
+        },
+        {
+          "column_name": "last_modified",
+          "data_type": "String",
+          "date_format": "ISO_TIMESTAMP",
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "table_name": "job_track",
+      "primary_key": "id",
+      "sort_key": "track_id",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "String",
+          "nullable": false
+        },
+        {
+          "column_name": "track_id",
+          "data_type": "String",
+          "nullable": false
+        },
+        {
+          "column_name": "job_id",
+          "data_type": "String",
+          "nullable": false
+        },
+        {
+          "column_name": "search_match",
+          "data_type": "Boolean",
+          "nullable": true
+        },
+        {
+          "column_name": "assigned",
+          "data_type": "Boolean",
+          "nullable": true
+        },
+        {
+          "column_name": "created",
+          "data_type": "String",
+          "date_format": "ISO_TIMESTAMP",
+          "nullable": false
+        },
+        {
+          "column_name": "last_modified",
+          "data_type": "String",
+          "date_format": "ISO_TIMESTAMP",
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "table_name": "post",
+      "primary_key": "id",
+      "sort_key": "posted_date",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "String",
+          "nullable": false
+        },
+        {
+          "column_name": "posted_date",
+          "data_type": "String",
+          "date_format": "ISO_DATE",
+          "nullable": false
+        },
+        {
+          "column_name": "position",
+          "data_type": "String",
+          "nullable": false
+        },
+        {
+          "column_name": "company_name",
+          "data_type": "String",
+          "nullable": true
+        },
+        {
+          "column_name": "url",
+          "data_type": "String",
+          "nullable": true
+        },
+        {
+          "column_name": "status",
+          "data_type": "Number",
+          "nullable": false
+        },
+        {
+          "column_name": "created",
+          "data_type": "String",
+          "date_format": "ISO_TIMESTAMP",
+          "nullable": false
+        },
+        {
+          "column_name": "last_modified",
+          "data_type": "String",
+          "date_format": "ISO_TIMESTAMP",
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "table_name": "post_details",
+      "primary_key": "post_id",
+      "sort_key": "closing_date",
+      "columns": [
+        {
+          "column_name": "post_id",
+          "data_type": "String",
+          "nullable": false
+        },
+        {
+          "column_name": "closing_date",
+          "data_type": "String",
+          "date_format": "ISO_DATE",
+          "nullable": false
+        },
+        {
+          "column_name": "post_source_id",
+          "data_type": "String",
+          "nullable": false
+        },
+        {
+          "column_name": "salary_high_sgd",
+          "data_type": "Number",
+          "nullable": true
+        },
+        {
+          "column_name": "url_slug",
+          "data_type": "String",
+          "nullable": true
+        },
+        {
+          "column_name": "mcf_ref",
+          "data_type": "String",
+          "nullable": true
+        },
+        {
+          "column_name": "created",
+          "data_type": "String",
+          "date_format": "ISO_TIMESTAMP",
+          "nullable": false
+        },
+        {
+          "column_name": "last_modified",
+          "data_type": "String",
+          "date_format": "ISO_TIMESTAMP",
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "table_name": "post_source",
+      "primary_key": "id",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "Number",
+          "nullable": false
+        },
+        {
+          "column_name": "name",
+          "data_type": "String",
+          "nullable": false
+        },
+        {
+          "column_name": "created",
+          "data_type": "String",
+          "date_format": "ISO_TIMESTAMP",
+          "nullable": false
+        },
+        {
+          "column_name": "last_modified",
+          "data_type": "String",
+          "date_format": "ISO_TIMESTAMP",
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "table_name": "role",
+      "primary_key": "id",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "String",
+          "nullable": false
+        },
+        {
+          "column_name": "role_name",
+          "data_type": "String",
+          "nullable": false
+        },
+        {
+          "column_name": "description",
+          "data_type": "String",
+          "nullable": true
+        },
+        {
+          "column_name": "created",
+          "data_type": "String",
+          "date_format": "ISO_TIMESTAMP",
+          "nullable": false
+        },
+        {
+          "column_name": "last_modified",
+          "data_type": "String",
+          "date_format": "ISO_TIMESTAMP",
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "table_name": "search_profile",
+      "primary_key": "track_id",
+      "columns": [
+        {
+          "column_name": "track_id",
+          "data_type": "String",
+          "nullable": false
+        },
+        {
+          "column_name": "keywords",
+          "data_type": "String",
+          "nullable": true
+        },
+        {
+          "column_name": "salary_target_sgd",
+          "data_type": "Number",
+          "nullable": true
+        },
+        {
+          "column_name": "created",
+          "data_type": "String",
+          "date_format": "ISO_TIMESTAMP",
+          "nullable": false
+        },
+        {
+          "column_name": "last_modified",
+          "data_type": "String",
+          "date_format": "ISO_TIMESTAMP",
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "table_name": "track",
+      "primary_key": "id",
+      "sort_key": "user_id",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "String",
+          "nullable": false
+        },
+        {
+          "column_name": "user_id",
+          "data_type": "String",
+          "nullable": false
+        },
+        {
+          "column_name": "role_id",
+          "data_type": "String",
+          "nullable": false
+        },
+        {
+          "column_name": "seniority",
+          "data_type": "Number",
+          "nullable": true
+        },
+        {
+          "column_name": "created",
+          "data_type": "String",
+          "date_format": "ISO_TIMESTAMP",
+          "nullable": false
+        },
+        {
+          "column_name": "last_modified",
+          "data_type": "String",
+          "date_format": "ISO_TIMESTAMP",
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "table_name": "track_cv",
+      "primary_key": "track_id",
+      "columns": [
+        {
+          "column_name": "track_id",
+          "data_type": "String",
+          "nullable": false
+        },
+        {
+          "column_name": "cv_code",
+          "data_type": "String",
+          "nullable": false
+        },
+        {
+          "column_name": "created",
+          "data_type": "String",
+          "date_format": "ISO_TIMESTAMP",
+          "nullable": false
+        },
+        {
+          "column_name": "last_modified",
+          "data_type": "String",
+          "date_format": "ISO_TIMESTAMP",
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "table_name": "track_score",
+      "primary_key": "job_track_id",
+      "columns": [
+        {
+          "column_name": "job_track_id",
+          "data_type": "String",
+          "nullable": false
+        },
+        {
+          "column_name": "score",
+          "data_type": "Number",
+          "nullable": false
+        },
+        {
+          "column_name": "method",
+          "data_type": "String",
+          "nullable": false
+        },
+        {
+          "column_name": "created",
+          "data_type": "String",
+          "date_format": "ISO_TIMESTAMP",
+          "nullable": false
+        },
+        {
+          "column_name": "last_modified",
+          "data_type": "String",
+          "date_format": "ISO_TIMESTAMP",
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "table_name": "user",
+      "primary_key": "id",
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "String",
+          "nullable": false
+        },
+        {
+          "column_name": "email",
+          "data_type": "String",
+          "nullable": false
+        },
+        {
+          "column_name": "username",
+          "data_type": "String",
+          "nullable": false
+        },
+        {
+          "column_name": "name",
+          "data_type": "String",
+          "nullable": true
+        },
+        {
+          "column_name": "deactivated_date",
+          "data_type": "String",
+          "nullable": true
+        },
+        {
+          "column_name": "status",
+          "data_type": "Number",
+          "nullable": false
+        },
+        {
+          "column_name": "created",
+          "data_type": "String",
+          "date_format": "ISO_TIMESTAMP",
+          "nullable": false
+        },
+        {
+          "column_name": "last_modified",
+          "data_type": "String",
+          "date_format": "ISO_TIMESTAMP",
+          "nullable": false
+        }
+      ]
+    },
+    {
+      "table_name": "user_config",
+      "primary_key": "user_id",
+      "columns": [
+        {
+          "column_name": "user_id",
+          "data_type": "String",
+          "nullable": false
+        },
+        {
+          "column_name": "email_notifications",
+          "data_type": "Boolean",
+          "nullable": true
+        },
+        {
+          "column_name": "created",
+          "data_type": "String",
+          "date_format": "ISO_TIMESTAMP",
+          "nullable": false
+        },
+        {
+          "column_name": "last_modified",
+          "data_type": "String",
+          "date_format": "ISO_TIMESTAMP",
+          "nullable": false
+        }
+      ]
+    }
+  ]
 }
