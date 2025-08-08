@@ -1,11 +1,11 @@
-# Cloud Infrastructure
-This release covers the setup of Cloud infrastructure on AWS for the MCF pipe serverless backend API and database
+# Network Infrastructure
+This release covers the setup of Network infrastructure on AWS for the MCF pipe serverless backend API and database
 
 ## Situation
-The current version of the app `jobsearch` runs locally on PC.  Migrating to the cloud improves maintainability and pathway for full automation, with some drawback in development and small cloud operating costs.
+The current version of the app `jobsearch` runs locally on PC.  Migrating to the cloud improves maintainability and pathway for full automation, with some drawback in development and small cloud operating costs. The deployment to cloud is organized into stack layers, with the first layer to setup the network infrastructure.
 
 ## Objectives and aims
-Migrate current functionality to AWS Cloud. 
+Migrate current functionality to AWS Cloud. First step setup Network infrastructure.
 
 ## Scope
 The current scope includes the **network stack infrastructure**, deployed via CICD Github Aciton
@@ -82,7 +82,7 @@ network config parameters
 | 01 | VPC | VpcId |vpc-*** | The VPC every resource should live in. You’ll pass this to anything that needs VPC context (Lambda-in-VPC, ECS/Fargate, RDS, ALB, endpoints). |
 | 02 | Public Subnet 01 | PublicSubnet1Id | subnet-**** | public subnets: two for different AZs, associated with a route table that has a route to the IGW. Use for internet-facing things or tasks that need a public IP |
 | 03 | Public Subnet 02 | PublicSubnet2Id | subnet-**** | - same - |
-| 04 | PrivateSubnetId |subnet-**** | private subnet: associated with a route table that has a route to the IGW. Use for internet-facing things or tasks that need a public IP |
+| 04 | Private Subnet | PrivateSubnetId |subnet-**** | private subnet: associated with a route table that has a route to the IGW. Use for internet-facing things or tasks that need a public IP |
 | 05 | security group: Public HTTP | SGHTTP | sg-**** | Inbound: 80/443 from 0.0.0.0/0 |
 | 06 | security group: Private | SGPrivate | sg-**** |private services. Usually no inbound from the internet, only from trusted SGs or within VPC |
 | 07 | security group: SSH | SGSSH |  sg-**** | SSH access to public instances |
