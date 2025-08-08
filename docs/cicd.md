@@ -105,6 +105,7 @@ site
 .env
 *client_secret.json
 .pytest_cache*
+s3-mcfpipe*           # local copy of the contents of the S3 directory
 ```
 
 ## S3 bucket layout
