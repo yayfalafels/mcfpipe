@@ -12,7 +12,7 @@
         <link rel="prev" href="../data_model/">
       
       
-        <link rel="next" href="../enhancements/">
+        <link rel="next" href="../validation/">
       
       
       <link rel="icon" href="../assets/images/favicon.png">
@@ -431,6 +431,15 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#post-tablebatch" class="md-nav__link">
+    <span class="md-ellipsis">
+      POST /[table]/batch
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -440,6 +449,28 @@
   
 </nav>
       
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../validation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Validation
+    
+  </span>
+  
+
+      </a>
     </li>
   
 
@@ -481,10 +512,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
         
           
-          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
             
   
   
@@ -497,8 +528,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_9">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
             <span class="md-nav__icon md-icon"></span>
             Releases
           </label>
@@ -601,6 +632,15 @@
   <a href="#post-table" class="md-nav__link">
     <span class="md-ellipsis">
       POST /[table]
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#post-tablebatch" class="md-nav__link">
+    <span class="md-ellipsis">
+      POST /[table]/batch
     </span>
   </a>
   
@@ -736,6 +776,38 @@
 <span class="w">    </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;ids&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;abc123&quot;</span><span class="p">]</span>
 <span class="p">}</span>
+</code></pre></div></p>
+<h3 id="post-tablebatch">POST /[table]/batch</h3>
+<p>sample body for batch POST <code>/{job}/batch</code> request</p>
+<p>request
+<div class="highlight"><pre><span></span><code><span class="p">[</span>
+<span class="w">  </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;posted_date&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2025-08-02&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;position&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ML Engineer&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;load_status&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;posted_date&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2025-08-05&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;position&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Data Analyst&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;load_status&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">]</span>
+</code></pre></div></p>
+<p>response body
+<div class="highlight"><pre><span></span><code><span class="p">[</span>
+<span class="w">  </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;job_0000001&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;posted_date&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2025-08-02&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;position&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ML Engineer&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;load_status&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
+<span class="w">  </span><span class="p">},</span>
+<span class="w">  </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;job_0000002&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;posted_date&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2025-08-05&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;position&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Data Analyst&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;load_status&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">]</span>
 </code></pre></div></p>
 
 

@@ -342,6 +342,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#resources" class="md-nav__link">
+    <span class="md-ellipsis">
+      Resources
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#01-global-aws-managed-services" class="md-nav__link">
     <span class="md-ellipsis">
       01. Global AWS Managed Services
@@ -436,6 +445,28 @@
   
   
     <li class="md-nav__item">
+      <a href="../validation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Validation
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../enhancements/" class="md-nav__link">
         
   
@@ -466,10 +497,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
         
           
-          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
             
   
   
@@ -482,8 +513,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_9">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
             <span class="md-nav__icon md-icon"></span>
             Releases
           </label>
@@ -544,6 +575,15 @@
       Table of contents
     </label>
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#resources" class="md-nav__link">
+    <span class="md-ellipsis">
+      Resources
+    </span>
+  </a>
+  
+</li>
       
         <li class="md-nav__item">
   <a href="#01-global-aws-managed-services" class="md-nav__link">
@@ -639,6 +679,71 @@
 <td>public subnet: inbound/outbound HTTP</td>
 <td>IAM + app-level authentication</td>
 <td>CRM API (e.g., Flask on EC2/ALB/Fargate)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="resources">Resources</h2>
+<p><strong>network config parameters</strong>
+parameters stored in network config JSON artifact <code>mcfpipe/aws/network/network_config.json</code></p>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>resource</th>
+<th>parameter</th>
+<th>value</th>
+<th>description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>01</td>
+<td>VPC</td>
+<td>VpcId</td>
+<td>vpc-***</td>
+<td>The VPC every resource should live in. You’ll pass this to anything that needs VPC context (Lambda-in-VPC, ECS/Fargate, RDS, ALB, endpoints).</td>
+</tr>
+<tr>
+<td>02</td>
+<td>Public Subnet 01</td>
+<td>PublicSubnet1Id</td>
+<td>subnet-****</td>
+<td>public subnets: two for different AZs, associated with a route table that has a route to the IGW. Use for internet-facing things or tasks that need a public IP</td>
+</tr>
+<tr>
+<td>03</td>
+<td>Public Subnet 02</td>
+<td>PublicSubnet2Id</td>
+<td>subnet-****</td>
+<td>- same -</td>
+</tr>
+<tr>
+<td>04</td>
+<td>PrivateSubnetId</td>
+<td>subnet-****</td>
+<td>private subnet: associated with a route table that has a route to the IGW. Use for internet-facing things or tasks that need a public IP</td>
+<td></td>
+</tr>
+<tr>
+<td>05</td>
+<td>security group: Public HTTP</td>
+<td>SGHTTP</td>
+<td>sg-****</td>
+<td>Inbound: 80/443 from 0.0.0.0/0</td>
+</tr>
+<tr>
+<td>06</td>
+<td>security group: Private</td>
+<td>SGPrivate</td>
+<td>sg-****</td>
+<td>private services. Usually no inbound from the internet, only from trusted SGs or within VPC</td>
+</tr>
+<tr>
+<td>07</td>
+<td>security group: SSH</td>
+<td>SGSSH</td>
+<td>sg-****</td>
+<td>SSH access to public instances</td>
 </tr>
 </tbody>
 </table>
