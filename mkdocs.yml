@@ -12,6 +12,7 @@ nav:
   - Enhancements: enhancements.md
   - Releases:
       - 0.1.0: releases/010_cloud_infra.md
+      - 0.1.1: releases/011_dbapi.md
 
 theme:
   name: material

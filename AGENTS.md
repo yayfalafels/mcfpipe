@@ -22,7 +22,6 @@ _AWS credentials_
 - *
 
 __context__ 
-
 For context, refer to 
 
 - `docs/*` and `README.md` for documentation of the assignment aims and design
@@ -30,5 +29,4 @@ For context, refer to
 - the source code.
 
 __current focus__
-
-the current focus is release `0.1.0` with release doc `dev/010_cloud_infra.md`
+the current focus is release `0.1.1` on branch `011_dbapi` with release doc `docs/releases/011_dbapi.md` and session notes `dev/releases/011_dbapi.md`
