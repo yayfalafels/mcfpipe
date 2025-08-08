@@ -35,8 +35,8 @@ jobs:
         aws-region: ${{ env.AWS_REGION }}
 
     - name: Ensure S3 bucket exists
-        id: s3_bucket_create
-        run: |
+      id: s3_bucket_create
+      run: |
                 if ! aws s3api head-bucket --bucket $S3_BUCKET 2>/dev/null; then
                 echo "Creating S3 bucket: $S3_BUCKET"
                   aws s3 mb s3://$S3_BUCKET --region $AWS_REGION
@@ -45,8 +45,8 @@ jobs:
                 fi
 
     - name: Deploy Network CloudFormation Stack
-     id: deploy_network_stack
-     run: |
+      id: deploy_network_stack
+      run: |
         aws cloudformation deploy \
         --template-file aws/cloudformation/networking_stack.yaml \
         --stack-name mcf-network \
@@ -58,9 +58,9 @@ jobs:
             role=Bridges \
             project=mcfpipe
 
-      - name: Get network stack outputs and export to runner env
-        id: network_outputs
-        run: |
+    - name: Get network stack outputs and export to runner env
+      id: network_outputs
+      run: |
           export STACK_NAME="mcf-network"
           export OUTPUTS=$(aws cloudformation describe-stacks \
             --stack-name $STACK_NAME \
@@ -75,8 +75,8 @@ jobs:
           echo "PRIVATE_SUBNET=$(echo $OUTPUTS | jq -r '.[] | select(.OutputKey=="PrivateSubnetA") | .OutputValue')" >> $GITHUB_ENV
           echo "INTERNET_GATEWAY=$(echo $OUTPUTS | jq -r '.[] | select(.OutputKey=="InternetGateway") | .OutputValue')" >> $GITHUB_ENV
 
-      - name: Upload stack outputs to S3
-        run: |
+    - name: Upload stack outputs to S3
+      run: |
           aws s3 cp network_outputs.json s3://$S3_BUCKET/aws/network/network_config.json            
 
     - name: Fail workflow if build failed
@@ -84,5 +84,3 @@ jobs:
       run: |
         echo "Setup failed"
         exit 1
-        
-
