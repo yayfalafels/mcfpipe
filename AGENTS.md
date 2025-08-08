@@ -8,9 +8,8 @@ __dev environment__
 Your environment has limited internet access with whitelisted domains including the MCF website, github and AWS along with common python dependencies.  You have access to full range of HTTP methods.
 
 __whitelisted domains__ 
+FYI, can't use wildcard * when specifying domains ie *.aws.amazon.com, it causes container setup to fail.
 
-- github.com
-- aws.amazon.com
 - mycareersfuture.gov.sg
 
 __environment variables and secrets__ 

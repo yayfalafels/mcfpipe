@@ -27,6 +27,7 @@ class TestDatabaseAPI(unittest.TestCase):
     def setUpClass(cls):
         cls.table = 'job'
         cls.job_id = ''
+        cls.batch_ids = []
         cls.test_record = SAMPLE_TEST_RECORD
 
     def test_01_post_valid(self):
@@ -129,29 +130,33 @@ class TestDatabaseAPI(unittest.TestCase):
         self.assertEqual(len(response_body), 2, f'Expected 2 items in response, found {len(response_body)}')
         first_item = response_body[0]
         self.assertIn('id', first_item, f"Expected response job records to contain key 'id'. 'id' key not found.")
+        batch_ids = [r.get('id', '') for r in response_body]
+        self.__class__.batch_ids = batch_ids
 
     def test_12_get_search_by_posted_date(self):
         """GET search by posted_date (positive)"""
         response = requests.get(f"{BASE_URL}/{self.table}/search", params={'posted_date': '2025-08-02'})
         self.assertEqual(response.status_code, 200, f'expected status code 200, got {response.status_code}. {response.text}')
-        self.assertTrue(isinstance(response.json(), list))
-        self.assertGreaterEqual(len(response.json()), 1)
-        found_ids = [rec['id'] for rec in res.json()]
-        self.assertTrue(any(i in found_ids for i in self.batch_ids))
+        response_body = response.json()
+        self.assertTrue(isinstance(response_body, list))
+        self.assertGreaterEqual(len(response_body), 1)
+        found_ids = [rec['id'] for rec in response_body]
+        self.assertTrue(any(i in found_ids for i in self.__class__.batch_ids))
 
     def test_13_post_batch_delete(self):
         """POST delete batch of jobs (positive)"""
-        res = requests.post(f"{BASE_URL}/{self.table}/delete", json=self.batch_ids)
-        self.assertEqual(res.status_code, 200)
-        self.assertEqual(res.json().get("status"), 1)
+        response = requests.post(f"{BASE_URL}/{self.table}/delete", json=self.batch_ids)
+        self.assertEqual(response.status_code, 200, f'expected status code 200, got {response.status_code}. {response.text}')
+        response_body = response.json()
+        self.assertEqual(response_body.get('status', ''), 1)
 
     @classmethod
     def tearDownClass(cls):
         # Clean up all test jobs
-        test_ids = [cls.job_id, getattr(cls, "job_id_2", None), "job_test_missing", "job_test_invalid_type", "job_test_invalid_date"]
-        test_ids = [x for x in test_ids if x]
-        res = requests.post(f"{BASE_URL}/{cls.table}/delete", json=test_ids)
-        assert response.status_code in [200, 204], "Cleanup failed"
+        test_ids = [x for x in [cls.job_id] + cls.batch_ids if x]
+        response = requests.post(f"{BASE_URL}/{cls.table}/delete", json=test_ids)
+        cls.assertIn(response.status_code, [200, 204], "Cleanup failed")
+
 
 if __name__ == "__main__":
     unittest.main()

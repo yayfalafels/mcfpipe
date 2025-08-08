@@ -73,8 +73,33 @@ Cloudformation stack layers
 
 session logs are timestamped to Singapore timezone in reverse chronological order, with latest entries at the top, and earlier entries at the bottom.
 
-### Data model [Codex] 2025-08-06 <HH>:<MM>
+### Network stack [Data Engineer] Deploy 2025-08-08 <HH>:<MM>
+network stack deploy
 
+- 
+
+### Network stack [Data Engineer] Github workflow 2025-08-07 15:30
+network stack deploy yaml
+
+- defined steps, minimal
+   - create S3 bucket (if doesn't already exist)
+   - deploy network stack
+   - capture artifacts and upload to S3 bucket
+
+### Data model [Data Engineer]  Codex container error 2025-08-07 13:42
+FYI, can't use wildcard * when specifying domains ie *.aws.amazon.com, it causes container setup to fail.
+
+Container failed multiple attempts using *.aws.amazon.com. resolved when it was removed.
+
+Suggestion from ChatGPT is to list each domain separately and also to specify the region.
+
+```
+execute-api.ap-southeast-1.amazonaws.com
+s3.ap-southeast-1.amazonaws.com
+dynamodb.ap-southeast-1.amazonaws.com
+athena.ap-southeast-1.amazonaws.com
+glue.ap-southeast-1.amazonaws.com
+```
 
 ### Data model [Data Engineer]  Codex prompt 2025-08-06 18:48
 for context, refer to release doc `dev/releases/010_cloud_infra.md`, data model doc `docs/data_model.md` and DB schema `storage/db_schema.json`
