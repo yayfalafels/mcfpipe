@@ -1,0 +1,135 @@
+{
+  "wkbid":"1JiB-ofvyimIOZ9vVxF22xIyXybIP5FCyo6N_x-pvmCs",
+  "screened": {
+    "data":"screened!A2:P",
+    "header":"screened!A1:P1"
+  },
+  "open": {
+    "data":"open!A2:M",
+    "header":"open!A1:M1"
+  },
+  "closed": {
+    "data":"closed!A2:N",
+    "header":"closed!A1:N1"
+  },
+  "response_stages": {
+    "data":"response_stages!A2:I",
+    "header":"response_stages!A1:I1"
+  },
+  "post_statistics": {
+    "data":"post_statistics!A2:C",
+    "header":"post_statistics!A1:C1",
+    "data_types": {
+      "year":"int",
+      "week":"int",
+      "posts":"int"
+    }
+  },
+  "title_tags": {
+    "data":"title_tags!A2:D",
+    "header":"title_tags!A1:D1",
+    "data_types": {
+      "tag":"str",
+      "industry":"str",
+      "count":"float",
+      "score":"int"
+    }
+  },
+  "junk_tags": {
+    "data":"junk_tags!A2:A",
+    "header":"junk_tags!A1"
+  },
+  "keep_tags": {
+    "data":"keep_tags!A2:A",
+    "header":"keep_tags!A1"
+  },
+  "rank_tags": {
+    "data":"rank_tags!A2:B",
+    "header":"rank_tags!A1:B1",
+    "data_types": {
+      "tag":"str",
+      "weight_score":"float"
+    }
+  },
+  "keyword_tags": {
+    "data":"keyword_tags!A2:C",
+    "header":"keyword_tags!A1:C1",
+    "data_types": {
+      "group":"str",
+      "tag":"str",
+      "score":"float"
+    }
+  },
+  "cv": {
+    "data":"cv!A2:C",
+    "header":"cv!A1:C1",
+    "data_types": {
+      "role":"str",
+      "keyword":"str",
+      "years_experience":"float"
+    }
+  },
+  "industries": {
+    "data":"industries!A2:B",
+    "header":"industries!A1:B1",
+    "data_types": {
+      "industry_classification":"str",
+      "match":"int"
+    }
+  },
+  "config": {
+    "data":"config!A2:C",
+    "header":"config!A1:C1"
+  },
+  "evaluate": {
+    "data":"evaluated!A2:P",
+    "header":"evaluated!A1:P1",
+    "date_format":"%d/%m/%y %H:%M",
+    "data_types": {
+      "date":"date",
+      "jobid":"str",
+      "short_title":"str",
+      "match_eval":"float",
+      "match_man":"float",
+      "match_mcf":"float",
+      "match_formal":"float",
+      "match_keyword":"float",
+      "keyword_count_match":"int",
+      "formal_level":"str",
+      "keyword_formal":"str",
+      "keyword_count_some":"int",
+      "keyword_count_no_match":"int",
+      "keywords_match":"str",
+      "keywords_some":"str",
+      "keywords_no_match":"str"
+    }
+  },
+  "new_posts": {
+    "data":"new_posts!A2:M",
+    "header":"new_posts!A1:M1",
+    "date_format":"%d/%m/%Y",
+    "data_types": {
+      "timestamp":"str",
+      "source":"str",
+      "referral_name":"str",
+      "position_title":"str",
+      "company_name":"str",
+      "industry_classification":"str",
+      "url":"str",
+      "description":"str",
+      "posted_date":"date",
+      "closing_date":"date",
+      "salaryHigh":"int",
+      "years_experience":"float",
+      "applicants":"int"
+    }
+  },
+  "apply_in_process": {
+    "data":"apply_in_process!A2:C",
+    "header":"apply_in_process!A1:C1"
+  },
+  "apply_results": {
+    "data":"apply_results!A2:D",
+    "header":"apply_results!A1:D1"
+  }
+}

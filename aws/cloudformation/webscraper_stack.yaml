@@ -1,0 +1,153 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFormation stack to provision IAM roles and 3 ECS Fargate Task Definitions for MCF webscraper
+
+Parameters:
+  ImageUri:
+    Type: String
+    Description: ECR image URI to use for all Fargate tasks
+
+  SearchConfigTable:
+    Type: String
+    Description: DynamoDB table name for search config
+
+  SearchPagesPath:
+    Type: String
+    Description: S3 path for search result HTML files
+
+  PostPagesPath:
+    Type: String
+    Description: S3 path for job post HTML files
+
+  SessionCookiePath:
+    Type: String
+    Description: S3 path for stored session cookie JSON
+
+  CRMTableName:
+    Type: String
+    Description: DynamoDB table name for CRM data
+
+  JobIdsSource:
+    Type: String
+    Description: Source for job IDs (e.g., dynamodb)
+
+  VPCId:
+    Type: String
+    Description: ID of the shared VPC (from infrastructure stack)
+
+  PublicSubnetId:
+    Type: String
+    Description: ID of the public subnet for Fargate networking
+
+  SecurityGroupId:
+    Type: String
+    Description: ID of the security group for internet access
+
+Resources:
+
+  TaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: ecsTaskExecutionRole
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+
+  WebscraperTaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: mcfpipeWebscraperTaskRole
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: WebscraperAccessPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                Resource: "*"
+
+  CardScraperTask:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: mcf-webscraper-search
+      Cpu: 512
+      Memory: 1024
+      NetworkMode: awsvpc
+      RequiresCompatibilities: [FARGATE]
+      ExecutionRoleArn: !GetAtt TaskExecutionRole.Arn
+      TaskRoleArn: !GetAtt WebscraperTaskRole.Arn
+      ContainerDefinitions:
+        - Name: keywords-search
+          Image: !Ref ImageUri
+          Essential: true
+          Environment:
+            - Name: TASK_MODE
+              Value: cards
+            - Name: CONFIG_TABLE
+              Value: !Ref SearchConfigTable
+            - Name: OUTPUT_S3_PATH
+              Value: !Ref SearchPagesPath
+
+  PostScraperTask:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: mcf-webscraper-post-pages
+      Cpu: 512
+      Memory: 1024
+      NetworkMode: awsvpc
+      RequiresCompatibilities: [FARGATE]
+      ExecutionRoleArn: !GetAtt TaskExecutionRole.Arn
+      TaskRoleArn: !GetAtt WebscraperTaskRole.Arn
+      ContainerDefinitions:
+        - Name: post-pages-fetch
+          Image: !Ref ImageUri
+          Essential: true
+          Environment:
+            - Name: TASK_MODE
+              Value: posts
+            - Name: INPUT_JOB_IDS
+              Value: !Ref JobIdsSource
+            - Name: OUTPUT_S3_PATH
+              Value: !Ref PostPagesPath
+
+  JobApplyTask:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: mcf-jobs-apply
+      Cpu: 256
+      Memory: 512
+      NetworkMode: awsvpc
+      RequiresCompatibilities: [FARGATE]
+      ExecutionRoleArn: !GetAtt TaskExecutionRole.Arn
+      TaskRoleArn: !GetAtt WebscraperTaskRole.Arn
+      ContainerDefinitions:
+        - Name: jobs-apply
+          Image: !Ref ImageUri
+          Essential: true
+          Environment:
+            - Name: TASK_MODE
+              Value: apply
+            - Name: DYNAMODB_CRM_TABLE
+              Value: !Ref CRMTableName
+            - Name: SESSION_COOKIE_S3
+              Value: !Ref SessionCookiePath

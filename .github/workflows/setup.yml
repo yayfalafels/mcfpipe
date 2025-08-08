@@ -1,0 +1,86 @@
+name: Config and Network Infra
+
+on:
+  workflow_dispatch: 
+  push:
+    paths:
+      - '.github/workflows/setup.yml'
+      - 'aws/cloudformation/network_stack.yaml'
+      - 'setup/config.env'
+
+jobs:
+  validate-docker-image:
+    name: Run Docker Image Build
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Init Run Status
+      id: initialize_run_status
+      run: echo "SETUP_SUCCESS=true" >> $GITHUB_ENV
+
+    - name: Checkout repository
+      id: repo_checkout
+      uses: actions/checkout@v3
+
+    - name: Load environment config
+      id: env_var_set
+      run: cat setup/config.env >> $GITHUB_ENV
+
+    - name: Configure AWS credentials
+      id: aws_config
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Ensure S3 bucket exists
+      id: s3_bucket_create
+      run: |
+                if ! aws s3api head-bucket --bucket $S3_BUCKET 2>/dev/null; then
+                echo "Creating S3 bucket: $S3_BUCKET"
+                  aws s3 mb s3://$S3_BUCKET --region $AWS_REGION
+                else
+                  echo "Bucket $S3_BUCKET already exists"
+                fi
+
+    - name: Deploy Network CloudFormation Stack
+      id: deploy_network_stack
+      run: |
+        aws cloudformation deploy \
+        --template-file aws/cloudformation/networking_stack.yaml \
+        --stack-name mcf-network \
+        --capabilities CAPABILITY_NAMED_IAM \
+        --parameter-overrides \
+            EnvStage=prod \
+            ConfigBucket=$S3_BUCKET \
+        --tags \
+            role=Bridges \
+            project=mcfpipe
+
+    - name: Get network stack outputs and export to runner env
+      id: network_outputs
+      run: |
+          export STACK_NAME="mcf-network"
+          export OUTPUTS=$(aws cloudformation describe-stacks \
+            --stack-name $STACK_NAME \
+            --query "Stacks[0].Outputs" \
+            --output json)
+
+          echo "$OUTPUTS" > network_outputs.json
+
+          # Extract values and export them to GHA environment
+          echo "VPC_ID=$(echo $OUTPUTS | jq -r '.[] | select(.OutputKey=="VPC") | .OutputValue')" >> $GITHUB_ENV
+          echo "PUBLIC_SUBNET=$(echo $OUTPUTS | jq -r '.[] | select(.OutputKey=="PublicSubnetA") | .OutputValue')" >> $GITHUB_ENV
+          echo "PRIVATE_SUBNET=$(echo $OUTPUTS | jq -r '.[] | select(.OutputKey=="PrivateSubnetA") | .OutputValue')" >> $GITHUB_ENV
+          echo "INTERNET_GATEWAY=$(echo $OUTPUTS | jq -r '.[] | select(.OutputKey=="InternetGateway") | .OutputValue')" >> $GITHUB_ENV
+
+    - name: Upload stack outputs to S3
+      run: |
+          aws s3 cp network_outputs.json s3://$S3_BUCKET/aws/network/network_config.json            
+
+    - name: Fail workflow if build failed
+      if: env.SETUP_SUCCESS == 'false'
+      run: |
+        echo "Setup failed"
+        exit 1

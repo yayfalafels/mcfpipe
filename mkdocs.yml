@@ -2,7 +2,16 @@ site_name: MCF Pipe
 
 nav:
   - Home: index.md
+  - Workflows: workflows.md
+  - Architecture: architecture.md
+  - CICD: cicd.md
+  - Network: network.md
+  - Data Model: data_model.md
+  - Database API: database_api.md
+  - Validation: validation.md
   - Enhancements: enhancements.md
+  - Releases:
+      - 0.1.0: releases/010_cloud_infra.md
 
 theme:
   name: material

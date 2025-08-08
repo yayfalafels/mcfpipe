@@ -1,2 +1,6 @@
 mkdocs
 mkdocs-material
+cfn-flip
+boto3
+pytest
+requests
