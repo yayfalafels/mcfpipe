@@ -9,8 +9,23 @@ session logs are timestamped to Singapore timezone in reverse chronological orde
 ### CF stack [Data Engineer] review 2025-08-09 18:<MM>
 dbapi GHA debugging
 
+__issues__
 
+_01 DynamoDB name restrictions underscore not allowed_
 
+ - dynamoDB table names don't allow underscores "_", but hyphens  "-" are allowed 
+ - visa-versa for SQL db
+ - design choice: keep with SQL standard convention in db_schema.json
+    - perform the conversion to hyphen in the constructor *.py and DB API lambda handler
+        - constructor refactor: `table_name = table["table_name"].replace("_", "-")`
+
+`jobdb/cf_template_constructor.py`
+
+```python
+def generate_table_resource(table):
+    logical_name = f"{table['table_name'].capitalize()}Table"
+    table_name = table["table_name"].replace("_", "-")
+```
 
 ### CF stack [Data Engineer] review 2025-08-09 18:15
 dbapi GHA review
