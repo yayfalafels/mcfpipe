@@ -1,24 +1,25 @@
+---
 name: Database API
 
 on:
-  workflow_dispatch: 
+  workflow_dispatch:
   push:
     paths:
-      - '.github/workflows/db_api.yml'
+      - '.github/workflows/dbapi.yml'
       - 'aws/cloudformation/db_api_base.yaml'
       - 'aws/cloudformation/db_api_stack.yaml'
       - 'storage/db_schema.json'
 
 jobs:
-  validate-docker-image:
-    name: Run Docker Image Build
+  deploy-dbapi:
+    name: Deploy DB API
     runs-on: ubuntu-latest
 
     env:
       CONFIG_PATH: setup/config.env
       STACK_NAME: mcfpipe-dbapi
       TAG_ROLE: Bridges
-      TAG_PROJECT: mcfpipe 
+      TAG_PROJECT: mcfpipe
       CF_TEMPLATE_DIR: aws/cloudformation
       BASE_TEMPLATE_FILE: db_api_base.yaml
       STACK_TEMPLATE_FILE: db_api_stack.yaml
@@ -29,60 +30,96 @@ jobs:
       ARTIFACTS_JSON: db_api.json
 
     steps:
-    - name: Init Run Status
-      id: initialize_run_status
-      run: echo "TASK_SUCCESS=true" >> $GITHUB_ENV
+      - name: Init Run Status
+        id: initialize_run_status
+        run: echo "DBAPI_SUCCESS=true" >> $GITHUB_ENV
 
-    - name: Checkout repository
-      id: repo_checkout
-      uses: actions/checkout@v3
+      - name: Checkout repository
+        id: repo_checkout
+        uses: actions/checkout@v3
 
-    - name: Load environment config
-      id: env_var_set
-      run: cat $CONFIG_PATH >> $GITHUB_ENV
+      - name: Load environment config
+        id: env_var_set
+        run: cat $CONFIG_PATH >> $GITHUB_ENV
 
-    - name: Configure AWS credentials
-      id: aws_config
-      uses: aws-actions/configure-aws-credentials@v2
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_REGION }}
+      - name: Configure AWS credentials
+        id: aws_config
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
-    - name: Deploy CloudFormation Stack
-      id: stack_deploy
-      run: |
-        aws cloudformation deploy \
-        --template-file $TEMPLATE_DIR/$STACK_TEMPLATE_FILE \
-        --stack-name $STACK_NAME \
-        --capabilities CAPABILITY_NAMED_IAM \
-        --parameter-overrides \
-            EnvStage=prod \
-        --tags \
-            role=$TAG_ROLE \
-            project=$TAG_PROJECT
+      - name: Download network config
+        id: network_config
+        run: |
+          aws s3 cp s3://$S3_BUCKET/aws/network/network_config.json \
+            network_config.json
+          VPC_ID_VALUE=$(jq -r '.VpcId' network_config.json)
+          PRIVATE_SUBNET_VALUE=$(jq -r '.PrivateSubnetId' network_config.json)
+          DB_LAMBDA_SG_VALUE=$(jq -r '.SGPrivate' network_config.json)
+          echo "VPC_ID=$VPC_ID_VALUE" >> $GITHUB_ENV
+          echo "PRIVATE_SUBNET=$PRIVATE_SUBNET_VALUE" >> $GITHUB_ENV
+          echo "DB_LAMBDA_SG=$DB_LAMBDA_SG_VALUE" >> $GITHUB_ENV
 
-    - name: Get stack outputs and export to runner env
-      id: stack_artifacts
-      run: |
-          export STACK_NAME=$STACK_NAME
-          export OUTPUTS=$(aws cloudformation describe-stacks \
+      - name: Upload DB schema to S3
+        id: schema_load
+        run: aws s3 cp $STORAGE_S3_DIR/$DB_SCHEMA_JSON \
+          s3://$S3_BUCKET/$STORAGE_S3_DIR/$DB_SCHEMA_JSON
+
+      - name: Generate CloudFormation template
+        id: cf_template_generate
+        run: |
+          pip install -r jobdb/requirements.txt >/dev/null
+          python jobdb/cf_template_constructor.py \
+            $STORAGE_S3_DIR/$DB_SCHEMA_JSON \
+            $CF_TEMPLATE_DIR/$BASE_TEMPLATE_FILE \
+            $CF_TEMPLATE_DIR/$STACK_TEMPLATE_FILE
+
+      - name: Package Lambda handler
+        id: zip_lambda_handler
+        run: |
+          zip -r $LAMBDA_SC_ZIP jobdb/lambda_handler.py jobdb/jobdb >/dev/null
+          aws s3 cp $LAMBDA_SC_ZIP \
+            s3://$S3_BUCKET/$LAMBDA_SC_S3_DIR/$LAMBDA_SC_ZIP
+
+      - name: Deploy CloudFormation Stack
+        id: stack_deploy
+        run: |
+          aws cloudformation deploy \
+            --template-file $CF_TEMPLATE_DIR/$STACK_TEMPLATE_FILE \
+            --stack-name $STACK_NAME \
+            --capabilities CAPABILITY_NAMED_IAM \
+            --parameter-overrides \
+              VpcId=$VPC_ID \
+              PrivateSubnetIds=$PRIVATE_SUBNET \
+              S3Bucket=$S3_BUCKET \
+              LambdaSourceCodeS3=$LAMBDA_SC_S3_DIR/$LAMBDA_SC_ZIP \
+              DBSchemaS3=$STORAGE_S3_DIR/$DB_SCHEMA_JSON \
+              DBLambdaSG=$DB_LAMBDA_SG \
+            --tags \
+              role=$TAG_ROLE \
+              project=$TAG_PROJECT
+
+      - name: Get stack outputs and export to runner env
+        id: stack_artifacts
+        run: |
+          OUTPUTS=$(aws cloudformation describe-stacks \
             --stack-name $STACK_NAME \
             --query "Stacks[0].Outputs" \
             --output json)
-
           echo "$OUTPUTS" > $ARTIFACTS_JSON
+          DB_URL=$(echo $OUTPUTS | jq -r \
+            '.[] | select(.OutputKey==\"DB_API_URL\") | .OutputValue')
+          echo "DB_API_URL=$DB_URL" >> $GITHUB_ENV
 
-          # Extract values and export them to GHA environment
-          echo "DB_API_URL=$(echo $OUTPUTS | jq -r '.[] | select(.OutputKey=="DB_API_URL") | .OutputValue')" >> $GITHUB_ENV
+      - name: Upload stack outputs to S3
+        id: artifacts_upload
+        run: aws s3 cp $ARTIFACTS_JSON \
+          s3://$S3_BUCKET/$STORAGE_S3_DIR/$ARTIFACTS_JSON
 
-    - name: Upload stack outputs to S3
-      id: artifacts_upload
-      run: |
-          aws s3 cp $ARTIFACTS_JSON s3://$S3_BUCKET/$STORAGE_S3_DIR/$ARTIFACTS_JSON           
-
-    - name: Fail workflow if build failed
-      if: env.TASK_SUCCESS == 'false'
-      run: |
-        echo "Task failed"
-        exit 1
+      - name: Fail workflow if build failed
+        if: env.DBAPI_SUCCESS == 'false'
+        run: |
+          echo "DB API deploy failed"
+          exit 1
