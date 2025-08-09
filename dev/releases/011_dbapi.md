@@ -1,14 +1,25 @@
 # Database API
+
 release documentation `docs/releases/011_dbapi.md`
 
 ## Session Logs
 
 session logs are timestamped to Singapore timezone in reverse chronological order, with latest entries at the top, and earlier entries at the bottom.
 
-### CF stack [Codex] 2025-08-09 <HH>:<MM>
+### CF stack [Codex] 2025-08-09 17:28
 
+- reviewed release docs and `cicd.md` for DB API workflow design
+- noted discrepancies in skeleton GHA:
+  - push trigger referenced `.github/workflows/db_api.yml` instead of `dbapi.yml`
+  - environment variable `TEMPLATE_DIR` mismatched with `CF_TEMPLATE_DIR`
+  - missing steps for schema upload, template generation, lambda packaging, and network config loading
+  - CloudFormation templates lack outputs for `DB_API_URL`
+  - repository uses branch `work` rather than documented `011_dbapi`
+- implemented full workflow with parameterized steps for schema load, template generation, lambda packaging, stack deploy, and artifact upload
+- verified formatting with `yamllint` and `mdformat`
 
 ### CF stack [Data Engineer] Codex prompt 2025-08-09 17:26
+
 for context, refer to the reference docs
 
 - release doc `docs/releases/011_dbapi.md`
@@ -17,9 +28,11 @@ for context, refer to the reference docs
 - other relevant sections of docs and source code as required
 
 scope
- - dbapi GHA `.github/workflows/dbapi.yml`
+
+- dbapi GHA `.github/workflows/dbapi.yml`
 
 your task
+
 - review the design from the reference docs and the current skeleton template version for dbapi GHA
 - review for consistiency between documents and flag, document any discrepancies in your session log
 - review the patterns and layout of the skeleton template dbapi GHA, in particular the parameter passing, step naming
@@ -32,8 +45,8 @@ your task
 github action workflow
 
 - describe the steps for the github action workflow `.github/workflows/dbapi.yml`
-- skeleton outline 
-- define parameters 
+- skeleton outline
+- define parameters
 
 documentation
 
@@ -42,4 +55,4 @@ documentation
 ### Release note [Data Engineer] 2025-08-08 21:15
 
 - create new release note `dev/releases/011_dbapi.md`
-- switch to new branch `011_dbapi`w
+- switch to new branch `011_dbapi`
