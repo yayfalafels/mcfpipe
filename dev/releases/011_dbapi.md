@@ -11,20 +11,18 @@ dbapi GHA debugging
 
 __issues__
 
-_01 DynamoDB name restrictions underscore not allowed_
+_01 CF stack logical resource name restrictions underscore not allowed_
 
- - dynamoDB table names don't allow underscores "_", but hyphens  "-" are allowed 
- - visa-versa for SQL db
- - design choice: keep with SQL standard convention in db_schema.json
-    - perform the conversion to hyphen in the constructor *.py and DB API lambda handler
-        - constructor refactor: `table_name = table["table_name"].replace("_", "-")`
+ - CF stack resources don't allow underscores "_"
+    - remove underscore in the constructor *.py
+        - constructor refactor: `logical_name = table_name.replace("_", "").capitalize() + "Table"`
 
 `jobdb/cf_template_constructor.py`
 
 ```python
 def generate_table_resource(table):
-    logical_name = f"{table['table_name'].capitalize()}Table"
-    table_name = table["table_name"].replace("_", "-")
+    table_name = table["table_name"]
+    logical_name = table_name.replace("_", "").capitalize() + "Table"
 ```
 
 ### CF stack [Data Engineer] review 2025-08-09 18:15

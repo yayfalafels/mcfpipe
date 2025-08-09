@@ -1,0 +1,358 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Database API Stack - Thin Wrapper with DynamoDB, Lambda, API Gateway
+Parameters:
+  VpcId:
+    Type: String
+  PrivateSubnetIds:
+    Type: List<String>
+  S3Bucket:
+    Type: String
+  LambdaSourceCodeS3:
+    Type: String
+  DBSchemaS3:
+    Type: String
+  DBLambdaSG:
+    Type: String
+Resources:
+  DBLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: DynamoDBAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:Query
+                  - dynamodb:BatchWriteItem
+                Resource: '*'
+  DBLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: db-api-handler
+      Runtime: python3.11
+      Handler: db.lambda_handler
+      Role:
+        Fn::GetAtt:
+          - DBLambdaRole
+          - Arn
+      Code:
+        S3Bucket:
+          Ref: S3Bucket
+        S3Key:
+          Ref: LambdaSourceCodeS3
+      VpcConfig:
+        SubnetIds:
+          Ref: PrivateSubnetIds
+        SecurityGroupIds:
+          - Ref: DBLambdaSG
+      Environment:
+        Variables:
+          S3_BUCKET:
+            Ref: S3Bucket
+          DB_SCHEMA_S3_PATH:
+            Ref: DBSchemaS3
+  LambdaInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName:
+        Ref: DBLambdaFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${DatabaseAPI}/*/*
+  DatabaseAPI:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: DatabaseAPI
+      Description: Generic Database API for DynamoDB tables
+  RootResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId:
+        Ref: DatabaseAPI
+      ParentId:
+        Fn::GetAtt:
+          - DatabaseAPI
+          - RootResourceId
+      PathPart: '{table}'
+  ItemResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId:
+        Ref: DatabaseAPI
+      ParentId:
+        Ref: RootResource
+      PathPart: '{id}'
+  MethodPOST:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId:
+        Ref: DatabaseAPI
+      ResourceId:
+        Ref: RootResource
+      HttpMethod: POST
+      AuthorizationType: NONE
+      Integration:
+        IntegrationHttpMethod: POST
+        Type: AWS_PROXY
+        Uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DBLambdaFunction.Arn}/invocations
+  MethodGET:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId:
+        Ref: DatabaseAPI
+      ResourceId:
+        Ref: ItemResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      Integration:
+        IntegrationHttpMethod: POST
+        Type: AWS_PROXY
+        Uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DBLambdaFunction.Arn}/invocations
+  MethodPUT:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId:
+        Ref: DatabaseAPI
+      ResourceId:
+        Ref: ItemResource
+      HttpMethod: PUT
+      AuthorizationType: NONE
+      Integration:
+        IntegrationHttpMethod: POST
+        Type: AWS_PROXY
+        Uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DBLambdaFunction.Arn}/invocations
+  MethodDELETE:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId:
+        Ref: DatabaseAPI
+      ResourceId:
+        Ref: ItemResource
+      HttpMethod: DELETE
+      AuthorizationType: NONE
+      Integration:
+        IntegrationHttpMethod: POST
+        Type: AWS_PROXY
+        Uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DBLambdaFunction.Arn}/invocations
+  APIDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - MethodPOST
+      - MethodGET
+      - MethodPUT
+      - MethodDELETE
+    Properties:
+      RestApiId:
+        Ref: DatabaseAPI
+      StageName: prod
+  ApplystatusTable:
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: job_id
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: job_id
+          KeyType: HASH
+      TableName: apply_status
+    Type: AWS::DynamoDB::Table
+  CrmstatusTable:
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: job_id
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: job_id
+          KeyType: HASH
+      TableName: crm_status
+    Type: AWS::DynamoDB::Table
+  JobTable:
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: user_id
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+        - AttributeName: user_id
+          KeyType: RANGE
+      TableName: job
+    Type: AWS::DynamoDB::Table
+  JobdetailsTable:
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: job_id
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: job_id
+          KeyType: HASH
+      TableName: job_details
+    Type: AWS::DynamoDB::Table
+  JobtrackTable:
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: track_id
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+        - AttributeName: track_id
+          KeyType: RANGE
+      TableName: job_track
+    Type: AWS::DynamoDB::Table
+  PostTable:
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: posted_date
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+        - AttributeName: posted_date
+          KeyType: RANGE
+      TableName: post
+    Type: AWS::DynamoDB::Table
+  PostdetailsTable:
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: post_id
+          AttributeType: S
+        - AttributeName: closing_date
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: post_id
+          KeyType: HASH
+        - AttributeName: closing_date
+          KeyType: RANGE
+      TableName: post_details
+    Type: AWS::DynamoDB::Table
+  PostsourceTable:
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: N
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      TableName: post_source
+    Type: AWS::DynamoDB::Table
+  RoleTable:
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      TableName: role
+    Type: AWS::DynamoDB::Table
+  SearchprofileTable:
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: track_id
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: track_id
+          KeyType: HASH
+      TableName: search_profile
+    Type: AWS::DynamoDB::Table
+  TrackTable:
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: user_id
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+        - AttributeName: user_id
+          KeyType: RANGE
+      TableName: track
+    Type: AWS::DynamoDB::Table
+  TrackcvTable:
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: track_id
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: track_id
+          KeyType: HASH
+      TableName: track_cv
+    Type: AWS::DynamoDB::Table
+  TrackscoreTable:
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: job_track_id
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: job_track_id
+          KeyType: HASH
+      TableName: track_score
+    Type: AWS::DynamoDB::Table
+  UserTable:
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      TableName: user
+    Type: AWS::DynamoDB::Table
+  UserconfigTable:
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: user_id
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: user_id
+          KeyType: HASH
+      TableName: user_config
+    Type: AWS::DynamoDB::Table
+Outputs:
+  DB_API_URL:
+    Description: Base URL for the Database API Gateway
+    Value:
+      Fn::Sub: https://${DatabaseAPI}.execute-api.${AWS::Region}.amazonaws.com/prod
+    Export:
+      Name:
+        Fn::Sub: ${AWS::StackName}-DB_API_URL

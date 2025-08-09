@@ -23,8 +23,9 @@ def dynamodb_type(col_type):
 
 
 def generate_table_resource(table):
-    logical_name = f"{table['table_name'].capitalize()}Table"
-    table_name = table["table_name"].replace("_", "-")
+    table_name = table["table_name"]
+    #table_name = table["table_name"].replace("_", "-")
+    logical_name = table_name.replace("_", "").capitalize() + "Table"
     
     attr_defs = []
     key_schema = []
