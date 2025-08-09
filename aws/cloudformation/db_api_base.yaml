@@ -151,7 +151,7 @@ Resources:
       StageName: prod
 
 Outputs:
-  DB_API_URL:
+  DbAPIUrl:
     Description: Base URL for the Database API Gateway
     Value: !Sub "https://${DatabaseAPI}.execute-api.${AWS::Region}.amazonaws.com/prod"
     Export:
