@@ -6,10 +6,11 @@ release documentation `docs/releases/011_dbapi.md`
 
 session logs are timestamped to Singapore timezone in reverse chronological order, with latest entries at the top, and earlier entries at the bottom.
 
-### CF stack [Data Engineer] review 2025-08-09 18:<MM>
+### CF stack [Data Engineer] review 2025-08-09 19:10
 dbapi GHA debugging
 
 - now CF stack deploy step fails at expected breakpoint -> empty lambda zip payload
+- follow-up to cleanup the stack deploy so it doesn't get tripped up on a previous stack rollback or create fail
 
 __issues__
 
@@ -28,6 +29,39 @@ def generate_table_resource(table):
     table_name = table["table_name"]
     logical_name = table_name.replace("_", "").capitalize() + "Table"
 ```
+
+_(open) 02 idempotent deploy_
+
+GHA fails if a previous stack deploy failed --> stack is in `ROLLBACK_COMPLETE` or `CREATE_FAILED` status
+
+ - solution -> add a check 
+
+ ChatGPT suggestion
+
+ ```
+Short answer: do it up front.
+
+Pre-flight cleanup at the start of the deploy is safer and more deterministic:
+If a previous create failed, the stack will be ROLLBACK_COMPLETE and can’t be updated. Deleting it before deploy avoids an immediate re-fail.
+It keeps the main deploy path idempotent and avoids branching logic after a failure.
+You can still make the step a no-op for healthy stacks (UPDATE_COMPLETE, CREATE_COMPLETE).
+
+What I recommend:
+
+Pre-check at the beginning
+
+If status is ROLLBACK_COMPLETE or CREATE_FAILED → delete-stack + wait stack-delete-complete, then proceed with deploy.
+Otherwise just deploy --no-fail-on-empty-changeset.
+Keep a post-failure aid, not auto-delete
+If deploy fails, run a tiny “diagnose” step to dump recent stack events and the template validation error, but don’t auto-delete. You’ll want the stack artifacts for debugging.
+
+Guardrails
+
+Only auto-delete when an env flag is set (e.g., ALLOW_STACK_DELETE=true) so you don’t nuke prod by accident.
+Consider not auto-deleting UPDATE_ROLLBACK_COMPLETE (that stack is still usable) unless you really need to recreate.
+Net: pre-flight cleanup + post-failure diagnostics gives you fast green paths and good debuggability without surprise deletions.
+
+ ```
 
 ### CF stack [Data Engineer] review 2025-08-09 18:15
 dbapi GHA review
