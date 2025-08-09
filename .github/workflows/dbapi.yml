@@ -68,8 +68,9 @@ jobs:
 
       - name: Upload DB schema to S3
         id: schema_load
-        run: aws s3 cp $STORAGE_S3_DIR/$DB_SCHEMA_JSON \
-          s3://$S3_BUCKET/$STORAGE_S3_DIR/$DB_SCHEMA_JSON
+        run: |
+          aws s3 cp "$STORAGE_S3_DIR/$DB_SCHEMA_JSON" \
+            "s3://$S3_BUCKET/$STORAGE_S3_DIR/$DB_SCHEMA_JSON"
 
       - name: Generate CloudFormation template
         id: cf_template_generate
