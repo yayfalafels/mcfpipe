@@ -9,9 +9,11 @@ session logs are timestamped to Singapore timezone in reverse chronological orde
 ### CF stack [Data Engineer] review 2025-08-09 18:<MM>
 dbapi GHA debugging
 
+- now CF stack deploy step fails at expected breakpoint -> empty lambda zip payload
+
 __issues__
 
-_01 CF stack logical resource name restrictions underscore not allowed_
+_(resolved) 01 CF stack logical resource name restrictions underscore not allowed_
 
  - CF stack resources don't allow underscores "_"
     - remove underscore in the constructor *.py
