@@ -8,6 +8,7 @@ on:
       - '.github/workflows/dbapi.yml'
       - 'aws/cloudformation/db_api_base.yaml'
       - 'aws/cloudformation/db_api_stack.yaml'
+      - 'jobdb/**'
       - 'storage/db_schema.json'
 
 jobs:
@@ -72,6 +73,7 @@ jobs:
           aws s3 cp "$STORAGE_S3_DIR/$DB_SCHEMA_JSON" \
             "s3://$S3_BUCKET/$STORAGE_S3_DIR/$DB_SCHEMA_JSON"
 
+      # updated to convert underscore to hyphen
       - name: Generate CloudFormation template
         id: cf_template_generate
         run: |
