@@ -12,7 +12,6 @@ This service is designed to act as a **thin, schema-aware wrapper** over the Dyn
 - **Modular**: Tables can be added/updated without code changes.
 - **Internal Use**: This API is intended for trusted internal services (e.g., ingestion, screening, CRM).
 
-
 ## Route Definitions
 
 __Single Record Operations__

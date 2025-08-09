@@ -1,0 +1,88 @@
+name: Database API
+
+on:
+  workflow_dispatch: 
+  push:
+    paths:
+      - '.github/workflows/db_api.yml'
+      - 'aws/cloudformation/db_api_base.yaml'
+      - 'aws/cloudformation/db_api_stack.yaml'
+      - 'storage/db_schema.json'
+
+jobs:
+  validate-docker-image:
+    name: Run Docker Image Build
+    runs-on: ubuntu-latest
+
+    env:
+      CONFIG_PATH: setup/config.env
+      STACK_NAME: mcfpipe-dbapi
+      TAG_ROLE: Bridges
+      TAG_PROJECT: mcfpipe 
+      CF_TEMPLATE_DIR: aws/cloudformation
+      BASE_TEMPLATE_FILE: db_api_base.yaml
+      STACK_TEMPLATE_FILE: db_api_stack.yaml
+      LAMBDA_SC_S3_DIR: apps/jobdb
+      LAMBDA_SC_ZIP: lambda_sc_jobdb.zip
+      STORAGE_S3_DIR: storage
+      DB_SCHEMA_JSON: db_schema.json
+      ARTIFACTS_JSON: db_api.json
+
+    steps:
+    - name: Init Run Status
+      id: initialize_run_status
+      run: echo "TASK_SUCCESS=true" >> $GITHUB_ENV
+
+    - name: Checkout repository
+      id: repo_checkout
+      uses: actions/checkout@v3
+
+    - name: Load environment config
+      id: env_var_set
+      run: cat $CONFIG_PATH >> $GITHUB_ENV
+
+    - name: Configure AWS credentials
+      id: aws_config
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Deploy CloudFormation Stack
+      id: stack_deploy
+      run: |
+        aws cloudformation deploy \
+        --template-file $TEMPLATE_DIR/$STACK_TEMPLATE_FILE \
+        --stack-name $STACK_NAME \
+        --capabilities CAPABILITY_NAMED_IAM \
+        --parameter-overrides \
+            EnvStage=prod \
+        --tags \
+            role=$TAG_ROLE \
+            project=$TAG_PROJECT
+
+    - name: Get stack outputs and export to runner env
+      id: stack_artifacts
+      run: |
+          export STACK_NAME=$STACK_NAME
+          export OUTPUTS=$(aws cloudformation describe-stacks \
+            --stack-name $STACK_NAME \
+            --query "Stacks[0].Outputs" \
+            --output json)
+
+          echo "$OUTPUTS" > $ARTIFACTS_JSON
+
+          # Extract values and export them to GHA environment
+          echo "DB_API_URL=$(echo $OUTPUTS | jq -r '.[] | select(.OutputKey=="DB_API_URL") | .OutputValue')" >> $GITHUB_ENV
+
+    - name: Upload stack outputs to S3
+      id: artifacts_upload
+      run: |
+          aws s3 cp $ARTIFACTS_JSON s3://$S3_BUCKET/$STORAGE_S3_DIR/$ARTIFACTS_JSON           
+
+    - name: Fail workflow if build failed
+      if: env.TASK_SUCCESS == 'false'
+      run: |
+        echo "Task failed"
+        exit 1
