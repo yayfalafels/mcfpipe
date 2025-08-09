@@ -34,6 +34,7 @@ jobs:
       DBAPI_APP_DIR: jobdb
       DBAPI_APP: jobdb
       TEMPLATE_CONSTRUCTOR: cf_template_constructor.py
+      CF_DB_API_URL_NAME: DbAPIUrl
 
     steps:
       - name: Init Run Status
@@ -73,7 +74,6 @@ jobs:
           aws s3 cp "$STORAGE_S3_DIR/$DB_SCHEMA_JSON" \
             "s3://$S3_BUCKET/$STORAGE_S3_DIR/$DB_SCHEMA_JSON"
 
-      # updated to convert underscore to hyphen
       - name: Generate CloudFormation template
         id: cf_template_generate
         run: |
@@ -117,7 +117,7 @@ jobs:
             --output json)
           echo "$OUTPUTS" > $ARTIFACTS_JSON
           DB_URL=$(echo $OUTPUTS | jq -r \
-            '.[] | select(.OutputKey==\"DB_API_URL\") | .OutputValue')
+            '.[] | select(.OutputKey==\"$CF_DB_API_URL_NAME\") | .OutputValue')
           echo "DB_API_URL=$DB_URL" >> $GITHUB_ENV
 
       - name: Upload stack outputs to S3

@@ -155,4 +155,4 @@ Outputs:
     Description: Base URL for the Database API Gateway
     Value: !Sub "https://${DatabaseAPI}.execute-api.${AWS::Region}.amazonaws.com/prod"
     Export:
-      Name: !Sub "${AWS::StackName}-DB_API_URL"
+      Name: !Sub "${AWS::StackName}-DbAPIUrl"

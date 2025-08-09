@@ -17,6 +17,8 @@ _01 CF stack logical resource name restrictions underscore not allowed_
     - remove underscore in the constructor *.py
         - constructor refactor: `logical_name = table_name.replace("_", "").capitalize() + "Table"`
 
+ - also applies to Output variables names
+
 `jobdb/cf_template_constructor.py`
 
 ```python
