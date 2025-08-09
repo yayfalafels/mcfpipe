@@ -4,6 +4,7 @@
 # dependencies ------------------------------------------------------------------------
 import sys
 import json
+import re
 from cfn_tools import load_yaml, dump_yaml
 
 
@@ -22,11 +23,18 @@ def dynamodb_type(col_type):
     }.get(col_type, "S")
 
 
+def to_cfn_logical_id(name: str) -> str:
+    parts = re.findall(r"[A-Za-z0-9]+", name)
+    pascal = "".join(p[:1].upper() + p[1:] for p in parts if p)
+    if not pascal or not pascal[0].isalpha():
+        pascal = "T" + pascal
+    return pascal
+
+
 def generate_table_resource(table):
-    table_name = table["table_name"]
-    #table_name = table["table_name"].replace("_", "-")
-    logical_name = table_name.replace("_", "").capitalize() + "Table"
-    
+    table_name = table["table_name"]         
+    logical_name = f"{to_cfn_logical_id(table_name)}Table"
+
     attr_defs = []
     key_schema = []
 

@@ -163,7 +163,7 @@ Resources:
       RestApiId:
         Ref: DatabaseAPI
       StageName: prod
-  ApplystatusTable:
+  ApplyStatusTable:
     Properties:
       AttributeDefinitions:
         - AttributeName: job_id
@@ -174,7 +174,7 @@ Resources:
           KeyType: HASH
       TableName: apply_status
     Type: AWS::DynamoDB::Table
-  CrmstatusTable:
+  CrmStatusTable:
     Properties:
       AttributeDefinitions:
         - AttributeName: job_id
@@ -200,7 +200,7 @@ Resources:
           KeyType: RANGE
       TableName: job
     Type: AWS::DynamoDB::Table
-  JobdetailsTable:
+  JobDetailsTable:
     Properties:
       AttributeDefinitions:
         - AttributeName: job_id
@@ -211,7 +211,7 @@ Resources:
           KeyType: HASH
       TableName: job_details
     Type: AWS::DynamoDB::Table
-  JobtrackTable:
+  JobTrackTable:
     Properties:
       AttributeDefinitions:
         - AttributeName: id
@@ -241,7 +241,7 @@ Resources:
           KeyType: RANGE
       TableName: post
     Type: AWS::DynamoDB::Table
-  PostdetailsTable:
+  PostDetailsTable:
     Properties:
       AttributeDefinitions:
         - AttributeName: post_id
@@ -256,7 +256,7 @@ Resources:
           KeyType: RANGE
       TableName: post_details
     Type: AWS::DynamoDB::Table
-  PostsourceTable:
+  PostSourceTable:
     Properties:
       AttributeDefinitions:
         - AttributeName: id
@@ -278,7 +278,7 @@ Resources:
           KeyType: HASH
       TableName: role
     Type: AWS::DynamoDB::Table
-  SearchprofileTable:
+  SearchProfileTable:
     Properties:
       AttributeDefinitions:
         - AttributeName: track_id
@@ -304,7 +304,7 @@ Resources:
           KeyType: RANGE
       TableName: track
     Type: AWS::DynamoDB::Table
-  TrackcvTable:
+  TrackCvTable:
     Properties:
       AttributeDefinitions:
         - AttributeName: track_id
@@ -315,7 +315,7 @@ Resources:
           KeyType: HASH
       TableName: track_cv
     Type: AWS::DynamoDB::Table
-  TrackscoreTable:
+  TrackScoreTable:
     Properties:
       AttributeDefinitions:
         - AttributeName: job_track_id
@@ -337,7 +337,7 @@ Resources:
           KeyType: HASH
       TableName: user
     Type: AWS::DynamoDB::Table
-  UserconfigTable:
+  UserConfigTable:
     Properties:
       AttributeDefinitions:
         - AttributeName: user_id
@@ -349,10 +349,10 @@ Resources:
       TableName: user_config
     Type: AWS::DynamoDB::Table
 Outputs:
-  DB_API_URL:
+  DbAPIUrl:
     Description: Base URL for the Database API Gateway
     Value:
       Fn::Sub: https://${DatabaseAPI}.execute-api.${AWS::Region}.amazonaws.com/prod
     Export:
       Name:
-        Fn::Sub: ${AWS::StackName}-DB_API_URL
+        Fn::Sub: ${AWS::StackName}-DbAPIUrl
