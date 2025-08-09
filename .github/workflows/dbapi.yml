@@ -28,6 +28,11 @@ jobs:
       STORAGE_S3_DIR: storage
       DB_SCHEMA_JSON: db_schema.json
       ARTIFACTS_JSON: db_api.json
+      NETWORK_CONFIG_JSON: network_config.json
+      NETWORK_CONFIG_S3_PATH: aws/network
+      DBAPI_APP_DIR: jobdb
+      DBAPI_APP: jobdb
+      TEMPLATE_CONSTRUCTOR: cf_template_constructor.py
 
     steps:
       - name: Init Run Status
@@ -49,29 +54,28 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
-
-      - name: Download network config
+          
+      - name: Download and parse network config
         id: network_config
+        shell: bash
         run: |
-          aws s3 cp s3://$S3_BUCKET/aws/network/network_config.json \
-            network_config.json
-          VPC_ID_VALUE=$(jq -r '.VpcId' network_config.json)
-          PRIVATE_SUBNET_VALUE=$(jq -r '.PrivateSubnetId' network_config.json)
-          DB_LAMBDA_SG_VALUE=$(jq -r '.SGPrivate' network_config.json)
-          echo "VPC_ID=$VPC_ID_VALUE" >> $GITHUB_ENV
-          echo "PRIVATE_SUBNET=$PRIVATE_SUBNET_VALUE" >> $GITHUB_ENV
-          echo "DB_LAMBDA_SG=$DB_LAMBDA_SG_VALUE" >> $GITHUB_ENV
+            set -euo pipefail
+            aws s3 cp "s3://$S3_BUCKET/$NETWORK_CONFIG_S3_PATH/$NETWORK_CONFIG_JSON" $NETWORK_CONFIG_JSON
+            JQ='map({(.OutputKey): .OutputValue})|add'
+            echo "VPC_ID=$(jq -r "$JQ".VpcId $NETWORK_CONFIG_JSON)" >> "$GITHUB_ENV"
+            echo "PRIVATE_SUBNET=$(jq -r "$JQ".PrivateSubnetId $NETWORK_CONFIG_JSON)" >> "$GITHUB_ENV"
+            echo "DB_LAMBDA_SG=$(jq -r "$JQ".SGPrivate $NETWORK_CONFIG_JSON)" >> "$GITHUB_ENV"
 
       - name: Upload DB schema to S3
         id: schema_load
         run: aws s3 cp $STORAGE_S3_DIR/$DB_SCHEMA_JSON \
-          s3://$S3_BUCKET/$STORAGE_S3_DIR/$DB_SCHEMA_JSON
+        s3://$S3_BUCKET/$STORAGE_S3_DIR/$DB_SCHEMA_JSON
 
       - name: Generate CloudFormation template
         id: cf_template_generate
         run: |
-          pip install -r jobdb/requirements.txt >/dev/null
-          python jobdb/cf_template_constructor.py \
+          pip install -r $DBAPI_APP_DIR/requirements.txt >/dev/null
+          python $DBAPI_APP_DIR/$TEMPLATE_CONSTRUCTOR \
             $STORAGE_S3_DIR/$DB_SCHEMA_JSON \
             $CF_TEMPLATE_DIR/$BASE_TEMPLATE_FILE \
             $CF_TEMPLATE_DIR/$STACK_TEMPLATE_FILE
@@ -79,7 +83,7 @@ jobs:
       - name: Package Lambda handler
         id: zip_lambda_handler
         run: |
-          zip -r $LAMBDA_SC_ZIP jobdb/lambda_handler.py jobdb/jobdb >/dev/null
+          zip -r $LAMBDA_SC_ZIP $DBAPI_APP_DIR/lambda_handler.py $DBAPI_APP_DIR/$DBAPI_APP >/dev/null
           aws s3 cp $LAMBDA_SC_ZIP \
             s3://$S3_BUCKET/$LAMBDA_SC_S3_DIR/$LAMBDA_SC_ZIP
 

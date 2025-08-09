@@ -6,6 +6,40 @@ release documentation `docs/releases/011_dbapi.md`
 
 session logs are timestamped to Singapore timezone in reverse chronological order, with latest entries at the top, and earlier entries at the bottom.
 
+### CF stack [Data Engineer] review 2025-08-09 18:15
+dbapi GHA review
+
+ - network config load step to correctly parse the JSON
+ - parameterize network config path and lambda app path
+ - add output section to CF template to correctly pass `DB_API_URL`
+ - validate commit and re-test GHA
+
+__ChatGPT prompts__
+
+_01 GHA fail: wrong JSON parse_
+
+>update the GHA step "network_config" to correctly parse the network config JSON from the actual JSON format
+
+- refactored the step from ChatGPT suggestion
+
+_02 stack parameter DB URL clarification_
+
+>would the artifact step fail in the GHA? where is DB_URL defined in the CF stack?
+
+- added output section to cf template, after a couple of back-and-forth iterations
+
+`aws/cloudformation/db_api_base.yaml`
+
+```yaml
+Outputs:
+  DB_API_URL:
+    Description: Base URL for the Database API Gateway
+    Value: !Sub "https://${DatabaseAPI}.execute-api.${AWS::Region}.amazonaws.com/prod"
+    Export:
+      Name: !Sub "${AWS::StackName}-DB_API_URL"
+
+```
+
 ### CF stack [Codex] 2025-08-09 17:28
 
 - reviewed release docs and `cicd.md` for DB API workflow design

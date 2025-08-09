@@ -30,6 +30,20 @@ parameters stored in network config JSON artifact `mcfpipe/aws/network/network_c
 | 06 | security group: Private | SGPrivate | sg-**** |private services. Usually no inbound from the internet, only from trusted SGs or within VPC |
 | 07 | security group: SSH | SGSSH |  sg-**** | SSH access to public instances |
 
+__config JSON format__
+format of the network config JSON file
+
+```json
+[
+    {
+        "OutputKey": "SGHTTP",
+        "OutputValue": "sg-*****"
+    },
+    ...
+]
+```
+
+
 ## 01. Global AWS Managed Services
 
 - These services are accessed over the public AWS network.

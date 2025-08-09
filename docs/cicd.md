@@ -216,6 +216,32 @@ __Github action steps__
 | 03 | deploy network stack |  |
 | 04 | record, upload deploy artifacts to S3 | example: VPC id and endpoints |
 
+__network config parameters__
+network config parameters
+
+| id | resource | parameter | value | description |
+| - | - | - | - | - |
+| 01 | VPC | VpcId |vpc-*** | The VPC every resource should live in. You’ll pass this to anything that needs VPC context (Lambda-in-VPC, ECS/Fargate, RDS, ALB, endpoints). |
+| 02 | Public Subnet 01 | PublicSubnet1Id | subnet-**** | public subnets: two for different AZs, associated with a route table that has a route to the IGW. Use for internet-facing things or tasks that need a public IP |
+| 03 | Public Subnet 02 | PublicSubnet2Id | subnet-**** | - same - |
+| 04 | Private Subnet | PrivateSubnetId |subnet-**** | private subnet: associated with a route table that has a route to the IGW. Use for internet-facing things or tasks that need a public IP |
+| 05 | security group: Public HTTP | SGHTTP | sg-**** | Inbound: 80/443 from 0.0.0.0/0 |
+| 06 | security group: Private | SGPrivate | sg-**** |private services. Usually no inbound from the internet, only from trusted SGs or within VPC |
+| 07 | security group: SSH | SGSSH |  sg-**** | SSH access to public instances |
+
+format of the network config JSON file
+
+```json
+[
+    {
+        "OutputKey": "SGHTTP",
+        "OutputValue": "sg-*****"
+    },
+    ...
+]
+```
+
+
 ### 02 DB API
 load database schema, deploy database dynamodb tables and db api stack, upload db api config 
 ex API URL
@@ -224,13 +250,14 @@ __Artifacts__
 
 | id | artifact | file name | source code | S3 |
 | - | - | - | - | - |
+| 01 | network config | `network_config.json` | - | `aws/network/` |
 | 01 | db schema | `db_schema.json` | `storage/` | `storage/` |
 | 02 | template constructor script | `cf_template_constructor.py` | `jobdb/` | - |
 | 03 | CF template | `db_api_stack.yaml` | `aws/cloudformation/` | - |
 | 04 | Lambda handler source code | `lambda_sc_jobdb.zip` | `jobdb/*` | `apps/jobdb/` |
 | 05 | db api config | `db_api.json` | - | `storage/` |
 
-__Config JSON__
+__DB API Config JSON__
 contents of the DB API config JSON
 
 | id | variable | description |
@@ -241,8 +268,9 @@ __Github action steps__
 
 | id | step | description |
 | - | - | - |
-| 01 | schema load | load the db schema to workspace, upload to S3 |
-| 02 | cf template generate | generate the CF template from schema using template constructur script |
-| 03 | zip lambda handlder | zip and upload the lambda handler function code to S3 |
-| 04 | stack deploy | deploy the db api stack |
-| 05 | artifacts | upload artifacts to config JSON |
+| 01 | network config load | load the network config from S3 |
+| 02 | schema load | load the db schema to workspace, upload to S3 |
+| 03 | cf template generate | generate the CF template from schema using template constructur script |
+| 04 | zip lambda handlder | zip and upload the lambda handler function code to S3 |
+| 05 | stack deploy | deploy the db api stack |
+| 06 | artifacts | upload artifacts to config JSON |
