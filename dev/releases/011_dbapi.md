@@ -6,6 +6,202 @@ release documentation `docs/releases/011_dbapi.md`
 
 session logs are timestamped to Singapore timezone in reverse chronological order, with latest entries at the top, and earlier entries at the bottom.
 
+### Documentation [Data Engineer] ChatGPT review 2025-08-10 19:20
+
+__Open for followup__
+
+1. implementation for 06 GSI
+2. open follow-ups left over from last session
+  -  `jobdb` app development
+3. clean stack deploy cleanup `ROLLBACK_COMPLETE` status
+
+__Issues__
+
+_(closed) 01 PK type rule vs a table_
+[ChatGPT] 
+>Doc says PKs should be String (“Global patterns”), but post_source.id is Number in both docs and schema. Pick one rule and unify. 
+
+_(closed) 02 Private subnet description_
+[ChatGPT] 
+>Network doc row for PrivateSubnetId says it has “a route to the IGW” (internet gateway). Private subnets should not route to an IGW. You’re using VPC endpoints (no NAT), which is correct—so fix that line. 
+
+updated to read "private subnet: private subnet with no allowed inbound traffic the internet"
+
+_(closed) 03 CICD repo layout_
+[ChatGPT] 
+>CICD doc mentions a jobcrm/ backend folder that isn’t in the repo today; mark it TBD or remove to avoid confusion.
+
+this is intentional that CICD doc shows some organization not yet implemented
+
+_(closed) 04 Route coverage vs API config_
+[ChatGPT] 
+>Docs list /[table]/search and /[table]/delete. Make sure API Gateway includes an ANY /{proxy+} resource or explicit routes for these; otherwise the handler won’t see them. 
+
+_follow-up clarification prompt(s)_
+
+[Developer]
+>For item 04 "04 Route coverage vs API config" I don't catch what you mean, `/[table]/search` is listed in the doc `docs/database_api.md` Could you elaborate and explain what kinds of operations would fail in the current design and how adding the `ANY /{proxy+}` would help? What are the security implications of adding this feature?
+
+(summary of conversation with ChatGPT)
+
+-> Design choice: accept the ANY/{proxy+} proposal and use API gateway as a thin wrapper,  leave most of the implementation to the main `jobdb` api app. 
+
+Ultimately a design choice of using API gateway vs the Lambda handler (app) for many of the app features such as routing, validation, error handling. Ultimately, go with the suggestion to use API Gateway as a thin wrapper and leave most of the implementation to the main `jobdb` api app. Some considerations for this choice 
+
+1. CF not as ideal choice, managing version control in multiple locations (app + CF)
+2. It's a backend DB, not exposed to internet already in a private subnet so risk is lower.
+
+update snippet to CF file `aws/cloudformation/db_api_base.yaml`
+
+```yaml
+  # ANY on root "/"
+  RootAnyMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref RestApi
+      ResourceId: !GetAtt RestApi.RootResourceId
+      HttpMethod: ANY
+      AuthorizationType: !Ref ApiAuthType
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DbLambda.Arn}/invocations
+
+  # Catch-all /{proxy+}
+  ProxyResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref RestApi
+      ParentId: !GetAtt RestApi.RootResourceId
+      PathPart: "{proxy+}"
+
+  ProxyAnyMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref RestApi
+      ResourceId: !Ref ProxyResource
+      HttpMethod: ANY
+      AuthorizationType: !Ref ApiAuthType
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DbLambda.Arn}/invocations
+
+```
+
+_(closed) 05 ID generation language_
+[ChatGPT] 
+>“Auto-incremented UUID is a running MAX” is contradictory; decide: sequential (MAX+1) or UUID/ULID. For DynamoDB, favor ULID/KSUID to avoid hot partitions and racey “MAX” scans. 
+
+_follow-up clarification prompt(s)_
+
+[Developer]
+>for item 05 "ID generation language" The motivation for using MAX+1 is to ensure uniqueness even after a record is deleted from the table.  Explain what you mean by "racey MAX scans" and how UUID/ULID/KSUID is different from MAX+1, a description of methods and comparison for how these methods would handle uniqueness after record deletion 
+
+[ChatGPT] 
+(relevant snippet from full response)
+>UUIDv4 (random), ULID, KSUID (time-sortable)
+>Method: IDs are generated client-side.
+>UUIDv4: 128-bit random.
+>ULID: 128-bit, first 48 bits timestamp (ms) + 80 bits randomness; lexicographically sortable >by time.
+>KSUID: 160-bit, 32-bit timestamp (s) + 128-bit payload; also time-sortable.
+>Uniqueness after deletion: Unaffected. You never consult existing rows, so deletes don’t >matter; the chance of collision is astronomically small (UUIDv4) or practically negligible (ULID/KSUID).
+>Concurrency/scale: Excellent. No shared state, no scans, no lock. Horizontal scale “for free.”
+>Ordering:
+>- UUIDv4: not ordered.
+>- ULID/KSUID: roughly time-ordered (nice for pagination and range queries).
+>Partition heat: Good—high cardinality distribution if you use the ID as the partition key.
+>- multiple mature libs (ulid-py, python-ulid, ulid-transform) and good cross-language parity (Go, JS/TS, Rust, etc.). Monotonic ULID support is common.
+
+[Developer] 
+>are there any implementation considerations for ULID vs KSUID, are either one more native either in python, boto3 or AWS DynamoDB?
+
+[ChatGPT] 
+>- 128-bit: first 48 bits = milliseconds. 
+>- Lexicographic sort == chronological (ms). 
+>- Many libs support monotonic ULIDs, if you generate multiple in the same ms, the random tail is incremented so sort order stays strictly increasing within one process.
+>- 26 chars, Crockford Base32, uppercase alphabet without ambiguous chars (no I, L, O, U). 
+>- Regex: ^[0-9A-HJKMNP-TV-Z]{26}$. Case-insensitive by spec, but store as uppercase to preserve lexical ordering semantics everywhere.
+
+Design decision: take suggestion and update to ULID, doc `docs/data_model.md` updated accordingly
+
+_(open) 06 Search/indexing gap_
+[ChatGPT]
+>Docs offer /[table]/search, but there’s no doc section mapping access patterns to GSIs per table. Add a table-by-table list of keys/GSIs that support your queries.
+
+[Developer] 
+>could you elaborate more about 06 "mapping access patterns to GSIs per table" what do you mean, what is "GSI" and keys in this context. Where would you apply the updates? Could you describe some situations that would fail with the current design, and how it would be improved with the update you are proposing?
+
+_synopsis of ChatGPT response_
+
+GSI, "Global Secondary Index" are user-defined is regarding query design, how the queries and search are implemented from user queries by non-PK columns, ex by user or by date range.
+
+_summary of updates_ 
+
+data model doc `docs/data_model.md`
+
+```md
+**GSI naming convention (global pattern):** use `gsi_<partitionkey>_<sortkey>` (omit `_<sortkey>` if none). Index names are not repeated in the per-table sections below.
+```
+
+```md
+
+__Global Secondary Indexes__
+
+| id | Partition key | Sort key      | Projection | Purpose                    |
+| - |---------------|---------------|------------|----------------------------|
+| 01 | user_id (S)   | created (S)   | ALL        | Per-user timeline (newest) |
+| 02 | post_id (S)   | id (S)        | ALL        | Fetch job by post_id       |
+
+```
+
+example of updated GSI section in DynamoDB Table resource in CF stack template `aws/cloudformation/db_api_stack.yaml`.
+
+Details of how the converter python script writes the resource section from the db schema JSON are documented in the updates to the converter script.
+
+```yaml
+      GlobalSecondaryIndexes:
+        - IndexName: gsi_user_created
+          KeySchema:
+            - AttributeName: user_id
+              KeyType: HASH
+            - AttributeName: created
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+```
+
+db schema `storage/db_schema.json`
+
+```json
+  "global_secondary_indexes": [
+    {
+      "index_name": "gsi_user_created",
+      "partition_key": "user_id",
+      "sort_key": "created",
+      "projection": "ALL"
+    }
+  ]
+
+```
+
+example of how the GSI are used by the `jobdb` app python handler
+
+```python
+# Table primary index: PK = id
+table.query(
+    KeyConditionExpression=Key("id").eq(job_id)          # ✅ OK
+)
+
+# GSI: gsi_user_created (PK=user_id, SK=created_ulid)
+table.query(
+    IndexName="gsi_user_created",
+    KeyConditionExpression=Key("user_id").eq(u) & Key("created_ulid").between(lo, hi),
+    ScanIndexForward=False                                # ✅ OK (newest first)
+)
+
+```
+
 ### CF stack [Data Engineer] review 2025-08-09 19:10
 dbapi GHA debugging
 

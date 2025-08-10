@@ -273,7 +273,7 @@
       "columns": [
         {
           "column_name": "id",
-          "data_type": "Number",
+          "data_type": "String",
           "nullable": false
         },
         {

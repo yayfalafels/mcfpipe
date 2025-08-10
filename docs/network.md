@@ -25,7 +25,7 @@ parameters stored in network config JSON artifact `mcfpipe/aws/network/network_c
 | 01 | VPC | VpcId |vpc-*** | The VPC every resource should live in. You’ll pass this to anything that needs VPC context (Lambda-in-VPC, ECS/Fargate, RDS, ALB, endpoints). |
 | 02 | Public Subnet 01 | PublicSubnet1Id | subnet-**** | public subnets: two for different AZs, associated with a route table that has a route to the IGW. Use for internet-facing things or tasks that need a public IP |
 | 03 | Public Subnet 02 | PublicSubnet2Id | subnet-**** | - same - |
-| 04 | PrivateSubnetId |subnet-**** | private subnet: associated with a route table that has a route to the IGW. Use for internet-facing things or tasks that need a public IP |
+| 04 | PrivateSubnetId |subnet-**** | private subnet: private subnet with no allowed inbound traffic the internet |
 | 05 | security group: Public HTTP | SGHTTP | sg-**** | Inbound: 80/443 from 0.0.0.0/0 |
 | 06 | security group: Private | SGPrivate | sg-**** |private services. Usually no inbound from the internet, only from trusted SGs or within VPC |
 | 07 | security group: SSH | SGSSH |  sg-**** | SSH access to public instances |

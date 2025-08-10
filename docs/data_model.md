@@ -35,12 +35,21 @@ __Tables__
     - **Data type** Primary key data type String
     - **origin single PK** for origin, single PK table - auto-incremented Integer
     - **assignment combo PK** use hash for combo PK `<table_A>_<id_A>_<table_B>_<id_B>` example `post_0002_user_1001` for `post_id`: `0002` and `user_id`: `1001`
-    - **Auto-increment** auto-incremented UUID is a running MAX. This is to safely handle deleted records
+    - **ULID** auto assign with semi timestamp based ULID based unique identifer. 
 
 - **Date formats** limit to two cannonical date formats
     - `ISO_TIMESTAMP`: YYYY-MM-DD HH:MM:SS
     - `ISO_DATE`: YYYY-MM-DD
 - **SCD columns** all tables include `created` and `last_modified` timestamp, excluded from this documentation, with `ISO_TIMESTAMP` format for forward compatibility with SCD update logic
+
+__ULID implementation__
+
+- 128-bit: first 48 bits = milliseconds. 
+- Lexicographic sort == chronological (ms). 
+- Many libs support monotonic ULIDs, if you generate multiple in the same ms, the random tail is incremented so sort order stays strictly increasing within one process.
+- 26 chars, Crockford Base32, uppercase alphabet without ambiguous chars (no I, L, O, U). 
+- Regex: ^[0-9A-HJKMNP-TV-Z]{26}$. Case-insensitive by spec, but store as uppercase to preserve lexical ordering semantics everywhere.
+- multiple mature libs (ulid-py, python-ulid, ulid-transform) and good cross-language parity (Go, JS/TS, Rust, etc.). Monotonic ULID support is common.
 
 ## Posts
 data tables to describe job post information scraped from the web source ex: MyCareerFutures website or manually entered
@@ -90,6 +99,13 @@ erDiagram
 | company_name      | String    | Yes      | Full company name                       |
 | url               | String    | Yes      | URL to the job post                     |
 
+__Global Secondary Indexes__
+
+| id | Partition key | Sort key        | Projection | Purpose                         |
+| - |---------------|------------------|------------|---------------------------------|
+| 01 | source (S)    | external_id (S)  | ALL        | Dedupe/upsert by source+ext_id  |
+| 02 | source (S)    | posted (S)       | ALL        | Latest posts per source         |
+
 ### Table: post_details
 
 - Primary Key: `post_id`
@@ -103,6 +119,7 @@ erDiagram
 | salary_high_sgd  | Number    | Yes      | Maximum salary in SGD          |
 | url_slug         | String    | Yes      | primary MCF UID reference from url |
 | mcf_ref          | String    | Yes      | secondary MCF reference taken from card and or post|
+
 
 ### Table: post_source
 
@@ -150,6 +167,13 @@ erDiagram
 | name              | String    | Yes      | Full name                       |
 | deactivated_date  | String    | Yes      | Account deactivation date       |
 | status            | Number    | No       | User status (e.g., 1=active)    |
+
+__Global Secondary Indexes__
+
+| id | Partition key | Sort key | Projection | Purpose          |
+| - |---------------|----------|------------|------------------|
+| 01 | email (S)     | —        | KEYS_ONLY  | Lookup by email  |
+
 
 ### Table: user_config
 
@@ -277,6 +301,12 @@ erDiagram
 | search_match       | Boolean   | Yes      | showed up in search results? [Y/N]  |
 | assigned           | Boolean   | Yes      | job assigned to the track, only 1 track per job  |
 
+__Global Secondary Indexes__
+
+| id | Partition key | Sort key   | Projection | Purpose                |
+| - |---------------|------------|------------|------------------------|
+| 01 | job_id (S)    | track_id(S)| ALL        | Tracks attached to job |
+
 ### Table: job
 
 - Primary Key: `id`
@@ -288,6 +318,14 @@ erDiagram
 | user_id            | String    | No       | Foreign key to user table     |
 | post_id            | String    | No       | Foreign key to post table     |
 
+__Global Secondary Indexes__
+
+| id | Partition key | Sort key      | Projection | Purpose                    |
+| - |---------------|---------------|------------|----------------------------|
+| 01 | user_id (S)   | created (S)   | ALL        | Per-user timeline (newest) |
+| 02 | post_id (S)   | id (S)        | ALL        | Fetch job by post_id       |
+
+
 ### Table: job_details
 
 - Primary Key: `job_id`
@@ -297,6 +335,7 @@ erDiagram
 | job_id           | String    | No       | Foreign key to job table      |
 | position         | String    | Yes      | manually over-write position  |
 | company_name     | String    | Yes      | manually over-write company_name |
+
 
 ### Table: track_score
 

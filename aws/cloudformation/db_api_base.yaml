@@ -1,158 +1,264 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Database API Stack - Thin Wrapper with DynamoDB, Lambda, API Gateway
+Description: >
+  MCFPipe DB API (base) — API Gateway as thin infra wrapper forwarding ANY / and ANY /{proxy+}
+  to a single Lambda. Routing, validation, and business logic live in the jobdb app.
 
 Parameters:
   VpcId:
     Type: String
+    Description: VPC ID (for the Lambda's VPC config)
   PrivateSubnetIds:
     Type: List<String>
-  S3Bucket:
-    Type: String
-  LambdaSourceCodeS3:
-    Type: String
-  DBSchemaS3:
-    Type: String
+    Description: Private subnet IDs for the Lambda (no NAT required; uses VPCE for S3/DynamoDB)
   DBLambdaSG:
     Type: String
+    Description: Security Group ID for the DB API Lambda
+  S3Bucket:
+    Type: String
+    Description: S3 bucket containing the Lambda source bundle
+  LambdaSourceCodeS3:
+    Type: String
+    Description: S3 key (object path) for the Lambda source bundle zip
+  DBSchemaS3:
+    Type: String
+    Description: S3 URI (e.g., s3://bucket/path/schema.json) for the database schema the Lambda loads
+  StageName:
+    Type: String
+    Default: dev
+    AllowedPattern: '^[a-z0-9-_]+$'
+    Description: API stage name
+  LogLevel:
+    Type: String
+    Default: INFO
+    AllowedValues: [CRITICAL, ERROR, WARNING, INFO, DEBUG]
+    Description: Lambda log level
+  ApiAuthType:
+    Type: String
+    Default: NONE
+    AllowedValues: [NONE, AWS_IAM]
+    Description: AuthorizationType for the root/proxy ANY methods (adjust if you add Cognito/Lambda authorizers later)
+  AccessLogRetentionDays:
+    Type: Number
+    Default: 14
+    Description: CloudWatch Logs retention for API Gateway access logs
 
 Resources:
-
-  # Lambda Function
+  # -------------------------
+  # IAM Role for Lambda
+  # -------------------------
   DBLambdaRole:
     Type: AWS::IAM::Role
     Properties:
+      RoleName: !Sub mcfpipe-dbapi-lambda-role-${AWS::StackName}-${StageName}
       AssumeRolePolicyDocument:
-        Version: "2012-10-17"
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
+            Principal: { Service: lambda.amazonaws.com }
             Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole  # VPC ENI + basic logs
       Policies:
-        - PolicyName: DynamoDBAccess
+        - PolicyName: DbApiInlineAccess
           PolicyDocument:
-            Version: "2012-10-17"
+            Version: '2012-10-17'
             Statement:
+              # CloudWatch Logs (explicit, complements managed policy)
               - Effect: Allow
                 Action:
-                  - dynamodb:GetItem
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: 'arn:aws:logs:*:*:*'
+              # Read schema from S3
+              - Effect: Allow
+                Action: [ s3:GetObject, s3:ListBucket ]
+                Resource:
+                  - !Sub arn:aws:s3:::${S3Bucket}
+                  - !Sub arn:aws:s3:::${S3Bucket}/*
+              # DynamoDB R/W (tighten to ARNs per table in a stack-specific template if desired)
+              - Effect: Allow
+                Action:
+                  - dynamodb:BatchWriteItem
+                  - dynamodb:BatchGetItem
                   - dynamodb:PutItem
                   - dynamodb:UpdateItem
                   - dynamodb:DeleteItem
+                  - dynamodb:GetItem
                   - dynamodb:Query
-                  - dynamodb:BatchWriteItem
+                  - dynamodb:Scan
+                  - dynamodb:TransactWriteItems
                 Resource: "*"
 
-  DBLambdaFunction:
+  # -------------------------
+  # Lambda Function
+  # -------------------------
+  DbLambda:
     Type: AWS::Lambda::Function
     Properties:
-      FunctionName: db-api-handler
-      Runtime: python3.11
-      Handler: db.lambda_handler
+      FunctionName: !Sub mcfpipe-dbapi-${StageName}
+      Description: MCFPipe DB API Lambda (routes implemented in jobdb app)
+      Runtime: python3.12
+      Handler: jobdb.lambda_handler.handler
       Role: !GetAtt DBLambdaRole.Arn
+      MemorySize: 512
+      Timeout: 29
       Code:
         S3Bucket: !Ref S3Bucket
         S3Key: !Ref LambdaSourceCodeS3
       VpcConfig:
+        SecurityGroupIds: [ !Ref DBLambdaSG ]
         SubnetIds: !Ref PrivateSubnetIds
-        SecurityGroupIds:
-          - !Ref DBLambdaSG
       Environment:
         Variables:
-          S3_BUCKET: !Ref S3Bucket
-          DB_SCHEMA_S3_PATH: !Ref DBSchemaS3
+          LOG_LEVEL: !Ref LogLevel
+          DB_SCHEMA_S3: !Ref DBSchemaS3
 
-  LambdaInvokePermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName: !Ref DBLambdaFunction
-      Action: lambda:InvokeFunction
-      Principal: apigateway.amazonaws.com
-      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${DatabaseAPI}/*/*"
-
-  # API Gateway
-  DatabaseAPI:
+  # -------------------------
+  # API Gateway (REST API v1)
+  # -------------------------
+  RestApi:
     Type: AWS::ApiGateway::RestApi
     Properties:
-      Name: DatabaseAPI
-      Description: Generic Database API for DynamoDB tables
+      Name: !Sub mcfpipe-dbapi-${StageName}
+      EndpointConfiguration:
+        Types: [REGIONAL]
 
-  RootResource:
+  # ANY on root "/"
+  RootAnyMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref RestApi
+      ResourceId: !GetAtt RestApi.RootResourceId
+      HttpMethod: ANY
+      AuthorizationType: !Ref ApiAuthType
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DbLambda.Arn}/invocations
+
+  # Catch-all /{proxy+}
+  ProxyResource:
     Type: AWS::ApiGateway::Resource
     Properties:
-      RestApiId: !Ref DatabaseAPI
-      ParentId: !GetAtt DatabaseAPI.RootResourceId
-      PathPart: "{table}"
+      RestApiId: !Ref RestApi
+      ParentId: !GetAtt RestApi.RootResourceId
+      PathPart: "{proxy+}"
 
-  ItemResource:
-    Type: AWS::ApiGateway::Resource
-    Properties:
-      RestApiId: !Ref DatabaseAPI
-      ParentId: !Ref RootResource
-      PathPart: "{id}"
-
-  MethodPOST:
+  ProxyAnyMethod:
     Type: AWS::ApiGateway::Method
     Properties:
-      RestApiId: !Ref DatabaseAPI
-      ResourceId: !Ref RootResource
-      HttpMethod: POST
-      AuthorizationType: NONE
+      RestApiId: !Ref RestApi
+      ResourceId: !Ref ProxyResource
+      HttpMethod: ANY
+      AuthorizationType: !Ref ApiAuthType
       Integration:
-        IntegrationHttpMethod: POST
         Type: AWS_PROXY
-        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DBLambdaFunction.Arn}/invocations"
+        IntegrationHttpMethod: POST
+        Uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DbLambda.Arn}/invocations
 
-  MethodGET:
-    Type: AWS::ApiGateway::Method
+  # Let API Gateway invoke the Lambda for any stage/method/path
+  DbLambdaInvokeFromApiGw:
+    Type: AWS::Lambda::Permission
     Properties:
-      RestApiId: !Ref DatabaseAPI
-      ResourceId: !Ref ItemResource
-      HttpMethod: GET
-      AuthorizationType: NONE
-      Integration:
-        IntegrationHttpMethod: POST
-        Type: AWS_PROXY
-        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DBLambdaFunction.Arn}/invocations"
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref DbLambda
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RestApi}/*/*/*
 
-  MethodPUT:
-    Type: AWS::ApiGateway::Method
-    Properties:
-      RestApiId: !Ref DatabaseAPI
-      ResourceId: !Ref ItemResource
-      HttpMethod: PUT
-      AuthorizationType: NONE
-      Integration:
-        IntegrationHttpMethod: POST
-        Type: AWS_PROXY
-        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DBLambdaFunction.Arn}/invocations"
-
-  MethodDELETE:
-    Type: AWS::ApiGateway::Method
-    Properties:
-      RestApiId: !Ref DatabaseAPI
-      ResourceId: !Ref ItemResource
-      HttpMethod: DELETE
-      AuthorizationType: NONE
-      Integration:
-        IntegrationHttpMethod: POST
-        Type: AWS_PROXY
-        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DBLambdaFunction.Arn}/invocations"
-
-  APIDeployment:
+  # -------------------------
+  # API Deployment & Stage
+  # -------------------------
+  ApiDeployment:
     Type: AWS::ApiGateway::Deployment
     DependsOn:
-      - MethodPOST
-      - MethodGET
-      - MethodPUT
-      - MethodDELETE
+      - RootAnyMethod
+      - ProxyAnyMethod
     Properties:
-      RestApiId: !Ref DatabaseAPI
-      StageName: prod
+      RestApiId: !Ref RestApi
+      Description: !Sub "Deployment for ${StageName}"
+
+  ApiAccessLogs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/apigateway/mcfpipe-dbapi-${StageName}-access
+      RetentionInDays: !Ref AccessLogRetentionDays
+
+  ApiStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      StageName: !Ref StageName
+      RestApiId: !Ref RestApi
+      DeploymentId: !Ref ApiDeployment
+      TracingEnabled: false
+      MethodSettings:
+        - ResourcePath: '/*'
+          HttpMethod: '*'
+          MetricsEnabled: true
+          DataTraceEnabled: false
+          LoggingLevel: INFO
+      AccessLogSetting:
+        DestinationArn: !GetAtt ApiAccessLogs.Arn
+        Format: >-
+          { "requestId":"$context.requestId","ip":"$context.identity.sourceIp",
+            "caller":"$context.identity.caller","user":"$context.identity.user",
+            "requestTime":"$context.requestTime","httpMethod":"$context.httpMethod",
+            "resourcePath":"$context.resourcePath","status":"$context.status",
+            "protocol":"$context.protocol","responseLength":"$context.responseLength",
+            "integrationError":"$context.integration.error",
+            "errorMessage":"$context.error.message" }
+
+  # Ensure API Gateway default errors include CORS headers (proxy will handle success cases)
+  GatewayResponseDefault4XX:
+    Type: AWS::ApiGateway::GatewayResponse
+    Properties:
+      RestApiId: !Ref RestApi
+      ResponseType: DEFAULT_4XX
+      ResponseParameters:
+        gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+        gatewayresponse.header.Access-Control-Allow-Headers: "'*'"
+        gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS,PATCH'"
+      StatusCode: '400'
+
+  GatewayResponseDefault5XX:
+    Type: AWS::ApiGateway::GatewayResponse
+    Properties:
+      RestApiId: !Ref RestApi
+      ResponseType: DEFAULT_5XX
+      ResponseParameters:
+        gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+        gatewayresponse.header.Access-Control-Allow-Headers: "'*'"
+        gatewayresponse.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS,PATCH'"
+      StatusCode: '500'
 
 Outputs:
-  DbAPIUrl:
-    Description: Base URL for the Database API Gateway
-    Value: !Sub "https://${DatabaseAPI}.execute-api.${AWS::Region}.amazonaws.com/prod"
+  DbApiUrl:
+    Description: Base URL for the DB API stage
+    Value: !Sub https://${RestApi}.execute-api.${AWS::Region}.amazonaws.com/${StageName}
     Export:
-      Name: !Sub "${AWS::StackName}-DbAPIUrl"
+      Name: !Sub ${AWS::StackName}-DbApiUrl
+  RestApiId:
+    Description: API Gateway RestApi ID
+    Value: !Ref RestApi
+    Export:
+      Name: !Sub ${AWS::StackName}-RestApiId
+  ApiStageName:
+    Description: API Gateway stage name
+    Value: !Ref StageName
+    Export:
+      Name: !Sub ${AWS::StackName}-StageName
+  ProxyResourceId:
+    Description: Resource ID of the /{proxy+} node
+    Value: !Ref ProxyResource
+    Export:
+      Name: !Sub ${AWS::StackName}-ProxyResourceId
+  DbLambdaFunctionName:
+    Description: Name of the DB API Lambda function
+    Value: !Ref DbLambda
+    Export:
+      Name: !Sub ${AWS::StackName}-DbLambdaName
+  DbLambdaRoleArn:
+    Description: ARN of the DB API Lambda IAM role
+    Value: !GetAtt DBLambdaRole.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-DbLambdaRoleArn

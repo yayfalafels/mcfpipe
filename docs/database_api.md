@@ -11,6 +11,7 @@ This service is designed to act as a **thin, schema-aware wrapper** over the Dyn
 - **Minimal Endpoints**: A small set of HTTP routes supports all CRUD and batch operations.
 - **Modular**: Tables can be added/updated without code changes.
 - **Internal Use**: This API is intended for trusted internal services (e.g., ingestion, screening, CRM).
+- **API Gateway Thin Infra wrapper** use API gateway as a thin infrastructure wrapper, leave most of the implementation to the main `jobdb` api app. 
 
 ## Route Definitions
 
