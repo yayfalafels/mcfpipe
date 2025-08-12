@@ -6,6 +6,76 @@ release documentation `docs/releases/011_dbapi.md`
 
 session logs are timestamped to Singapore timezone in reverse chronological order, with latest entries at the top, and earlier entries at the bottom.
 
+### GSI [Data Engineer] Codex prompt 2025-08-12 16:29
+
+__situation__
+
+The current version of the data model does not specify Global Secondary Indexes (GSI) for DynamoDB tables. The methodology for specifying and implementing GSI is described in the Database API doc `docs/database_api.md`.  
+
+GSI have been specified in the data model, but have not been implemented into the db schema JSON file.
+
+__scope__
+
+ - data model `docs/data_model.md`
+ - db schema JSON `storage/db_schema.json`
+
+__task__
+
+ - update db schema JSON with the GSI attributes `"secondary_indexes": {...}` according to the specifications in the data model
+
+### GSI [Data Engineer] JSON 2025-08-12 16:25
+GSI specification methodology documentation `docs/database_api.md`
+
+- data model table section
+- DB Schema JSON, add new attribute `"secondary_indexes": {...}`
+- CF Template YAML DynamoDB table
+- CF template Python script constructor mapping method
+
+CF Template YAML DynamoDB table
+
+```yaml
+        - IndexName: gsi_user_id_company_name
+          KeySchema:
+            - AttributeName: user_id
+              KeyType: HASH
+            - AttributeName: company_name
+              KeyType: RANGE
+```
+
+### Agent [Data Engineer] update generic agent instructions 2025-08-12 15:38
+update generic AGENTS.md instructions
+ - task instructions for Codex
+ - session log 
+ - context navigation
+
+### GSI [Data Engineer] Data model 2025-08-12 15:19
+
+__GSI implementation__
+
+_01 data model_
+table-by-table updates for several considerations
+
+- GSI
+  - add GSI for common search, filter operations
+- second pass at schema design
+  - rationalize columns, place columns where they will be used most frequently
+  - relaxed normalized considerations, duplicate columns from post -> job table
+
+post
+- migrated common columns [`salary_high_sgd`, `closing_date`] into `post`
+- added `description` in `post_details`
+
+job_track
+- added GSI for jobs by track
+
+job
+- duplicate columns from post [`closing_date`, `salary_high_sgd`, etc..] migrate from `job_details` into `job`
+- GSI user reports and user sorted by company and position
+- add `status` in `job_details`
+
+### GSI [Data Engineer] ChatGPT 2025-08-11 18:58
+guided session GSI and search design with ChatGPT
+
 ### Documentation [Data Engineer] ChatGPT review 2025-08-10 19:20
 
 __Open for followup__

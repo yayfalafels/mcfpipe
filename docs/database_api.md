@@ -100,3 +100,167 @@ response body
 ]
 ```
 
+## Search
+
+**GET** `/{table}/search`
+
+- **table must exist** in `db_schema.json`.
+- **Primary (partition) key** queries are available on any table
+- **Global Secondary Indexes (GSI)** extend search to other declared columns.
+
+### Global Secondary Indexes (GSI)
+
+- the GSI must be declared in the DynamoDB table definition
+- DynamoDB requires an `IndexName` for non-PK queries; this API exposes a thin, validated façade over `Query`.
+
+__GSI specification__
+
+_Data model_
+
+GSI specification for `job` table in the data model `docs/data_model.md`
+
+```md
+### Table: job
+
+...
+
+__Global Secondary Indexes__
+
+| id | Partition key   | Sort key | Projection  | Purpose |
+|----|----------|----------|----|-------|
+| 01 | user_id  | id | INCLUDE [post_id, position, company_name, posted_date, url] | Per-user timeline & list (newest-first)   |
+| 02 | post_id  | id | KEYS_ONLY  | Dedupe / fetch job by post |
+| 04 | user_id  | company_name | KEYS_ONLY  | Filter a user’s jobs by company |
+| 05 | user_id  | position | KEYS_ONLY  | Filter a user’s jobs by position |
+
+```
+
+_DB schema JSON_
+
+GSI specification for `job` table in the DB schema JSON file `storage/db_schema.json`
+
+```json
+{
+  "table_name": "job",
+  ...
+  "secondary_indexes": {
+    "global": [
+      { "partition_key": "user_id", "sort_key": "created", "projection": {"type": "INCLUDE", "attributes": ["post_id", "position", "company_name", "posted_date", "url"]}},
+      { "partition_key": "post_id", "sort_key": "id", "projection": {"type": "KEYS_ONLY"}},
+      { "partition_key": "user_id", "sort_key": "company_name", "projection": {"type": "KEYS_ONLY" }},
+      { "partition_key": "user_id", "sort_key": "position", "projection": {"type": "KEYS_ONLY" }}
+    ]
+  }
+}
+
+```
+
+_DynamoDB resource in CF Template_
+
+GSI specification for `job` DynamoDB table resource in the CloudFormation template `aws/cloudformation/db_api_stack.yaml`
+
+```yaml
+Resources:
+  JobTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: job
+      BillingMode: PAY_PER_REQUEST
+       ...
+      GlobalSecondaryIndexes:
+        - IndexName: gsi_user_id_created
+          KeySchema:
+            - AttributeName: user_id
+              KeyType: HASH
+            - AttributeName: created
+              KeyType: RANGE
+          Projection:
+            ProjectionType: INCLUDE
+            NonKeyAttributes:
+              - post_id
+              - position
+              - company_name
+              - posted_date
+              - url
+        - IndexName: gsi_post_id_id
+          KeySchema:
+            - AttributeName: post_id
+              KeyType: HASH
+            - AttributeName: id
+              KeyType: RANGE
+          Projection:
+            ProjectionType: KEYS_ONLY
+        - IndexName: gsi_user_id_company_name
+          KeySchema:
+            - AttributeName: user_id
+              KeyType: HASH
+            - AttributeName: company_name
+              KeyType: RANGE
+          Projection:
+            ProjectionType: KEYS_ONLY
+        - IndexName: gsi_user_id_position
+          KeySchema:
+            - AttributeName: user_id
+              KeyType: HASH
+            - AttributeName: position
+              KeyType: RANGE
+          Projection:
+            ProjectionType: KEYS_ONLY
+
+```
+
+__specification mapping JSON to YAML__
+
+GSI mapping method in `generate_table_resource()` function in python constructor `jobdb/cf_template_constructor.py`
+
+```python
+def generate_table_resource(table):
+    table_name = table["table_name"]
+    logical_name = f"{to_cfn_logical_id(table_name)}Table"
+    ...
+
+    # GSIs
+    gsi_list = []
+    for gsi in table.get("secondary_indexes", {}).get("global", []):
+        gpk = gsi["partition_key"]
+        gsk = gsi.get("sort_key")
+        gpk_dtype = next(c for c in table["columns"] if c["column_name"] == gpk)["data_type"]
+        ensure_attr(gpk, gpk_dtype)
+        if gsk:
+            gsk_dtype = next(c for c in table["columns"] if c["column_name"] == gsk)["data_type"]
+            ensure_attr(gsk, gsk_dtype)
+
+        index_name = f"gsi_{gpk}" + (f"_{gsk}" if gsk else "")
+
+        # projection handling
+        proj = gsi.get("projection", "ALL")
+        proj_type = proj["type"] if isinstance(proj, dict) else str(proj)
+        proj_block = {"ProjectionType": proj_type}
+
+        if isinstance(proj, dict) and proj_type.upper() == "INCLUDE":
+            attrs = proj.get("attributes", [])
+            # DynamoDB limit is 20 non-key attributes for INCLUDE
+            if len(attrs) > 20:
+                raise ValueError(f"{table_name}:{index_name} INCLUDE has >20 attributes")
+            proj_block["NonKeyAttributes"] = attrs
+
+        gsi_entry = {
+            "IndexName": index_name,
+            "KeySchema": [{"AttributeName": gpk, "KeyType": "HASH"}],
+            "Projection": proj_block
+        }
+        if gsk:
+            gsi_entry["KeySchema"].append({"AttributeName": gsk, "KeyType": "RANGE"})
+
+        gsi_list.append(gsi_entry)
+
+    props = {
+        "TableName": table_name,
+        "BillingMode": "PAY_PER_REQUEST",
+        "AttributeDefinitions": attr_defs,
+        "KeySchema": key_schema
+    }
+    if gsi_list:
+        props["GlobalSecondaryIndexes"] = gsi_list
+
+```

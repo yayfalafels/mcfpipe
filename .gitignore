@@ -1,6 +1,7 @@
 env
 site
 .env
+.agent_env
 *client_secret.json
 .pytest_cache*
 s3-mcfpipe*

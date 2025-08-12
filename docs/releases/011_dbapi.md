@@ -92,3 +92,18 @@ __Github action steps__
 | 03 | zip lambda handlder | zip and upload the lambda handler function code to S3 |
 | 04 | stack deploy | deploy the db api stack |
 | 05 | artifacts | upload artifacts to config JSON |
+
+## Design
+
+### DynamoDB Database
+
+__Global Secondary Indexes__
+
+| id | status | location | task |
+| - | - | - | - |
+| 01 | closed | docs data model | - |
+| 02 | open | docs database api | - |
+| 03 | open | DB schema JSON | - |
+| 04 | open | CF constructor script | - |
+| 05 | open | DB API Lambda handler | - |
+

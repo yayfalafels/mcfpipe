@@ -60,20 +60,21 @@ __ERD__
 erDiagram
     post {
         String id PK
-        String posted_date
+        String post_source_id FK
         String position
         String company_name
+        String posted_date
         String url
+        String closing_date
+        Number salary_high_sgd
         Number status
     }
 
     post_details {
         String post_id PK, FK
-        String post_source_id FK
-        String closing_date
-        Number salary_high_sgd
         String url_slug
         String mcf_ref
+        String description
     }
 
     post_source {
@@ -93,18 +94,20 @@ erDiagram
 | Column Name       | Data Type | Nullable | Description                             |
 |-------------------|-----------|----------|-----------------------------------------|
 | id                | String    | No       | Unique post identifier                  |
-| posted_date       | String    | No       | Date the job was posted                 |
+| post_source_id   | String    | No       | Foreign key to post_source table |
 | position          | String    | No       | Job title                               |
-| status            | Number    | No       | Ingestion stage (e.g., 0=CARD, 1=POST, 2=CLOSED)  |
 | company_name      | String    | Yes      | Full company name                       |
+| posted_date       | String    | No       | Date the job was posted                 |
 | url               | String    | Yes      | URL to the job post                     |
+| closing_date     | String    | Yes       | Application deadline date      |
+| salary_high_sgd  | Number    | Yes      | Maximum salary in SGD          |
+| status            | Number    | No       | Ingestion stage (e.g., 0=CARD, 1=POST, 2=CLOSED)  |
 
 __Global Secondary Indexes__
 
-| id | Partition key | Sort key        | Projection | Purpose                         |
-| - |---------------|------------------|------------|---------------------------------|
-| 01 | source (S)    | external_id (S)  | ALL        | Dedupe/upsert by source+ext_id  |
-| 02 | source (S)    | posted (S)       | ALL        | Latest posts per source         |
+| id | Partition key | Sort key | Projection | Purpose  |
+| -- | -------- | --- | ------------ | -------------------- |
+| 01 | status | posted_date DESC | ALL | Latest posts by status, newest first |
 
 ### Table: post_details
 
@@ -114,12 +117,15 @@ __Global Secondary Indexes__
 | Column Name      | Data Type | Nullable | Description                    |
 |------------------|-----------|----------|--------------------------------|
 | post_id           | String    | No       | Foreign key to post table     |
-| post_source_id   | String    | No       | Foreign key to post_source table |
-| closing_date     | String    | No       | Application deadline date      |
-| salary_high_sgd  | Number    | Yes      | Maximum salary in SGD          |
+| description      | String    | Yes      | long text description about the job and requirements |
 | url_slug         | String    | Yes      | primary MCF UID reference from url |
 | mcf_ref          | String    | Yes      | secondary MCF reference taken from card and or post|
 
+__Global Secondary Indexes__
+
+| id | Partition key | Sort key | Projection | Purpose  |
+| -- | -------- | --- | ------------ | -------------------- |
+| 01 | url_slug | post_id | KEYS_ONLY | Search by `url_slug` for duplicate check   |
 
 ### Table: post_source
 
@@ -172,8 +178,9 @@ __Global Secondary Indexes__
 
 | id | Partition key | Sort key | Projection | Purpose          |
 | - |---------------|----------|------------|------------------|
-| 01 | email (S)     | —        | KEYS_ONLY  | Lookup by email  |
-
+| 01 | email        | —        | KEYS_ONLY  | Lookup by email  |
+| 02 | username     | —        | KEYS_ONLY  | Lookup by username  |
+| 03 | status       | —        | ALL  | Lookup by status  |
 
 ### Table: user_config
 
@@ -235,8 +242,7 @@ erDiagram
 
     job_details {
         String job_id PK
-        String position
-        String company_name
+        String update
     }
 
     track_score {
@@ -278,6 +284,12 @@ erDiagram
 | role_id     | String    | No       | Foreign key to role          |
 | seniority   | Number    | Yes      | Level of seniority (e.g., 1) |
 
+__Global Secondary Indexes__
+
+| id | Partition key | Sort key | Projection | Purpose          |
+| - |---------------|----------|------------|------------------|
+| 01 | user_id      | —        | ALL  | Filter tracks by user  |
+
 ### Table: search_profile
 
 - Primary Key: `track_id`
@@ -296,16 +308,17 @@ erDiagram
 | Column Name        | Data Type | Nullable | Description                    |
 |--------------------|-----------|----------|--------------------------------|
 | id                 | String    | No       | UUID hash job-track            |
-| track_id           | String    | No       | Foreign key to track table     |
 | job_id             | String    | No       | Foreign key to job table       |
+| track_id           | String    | No       | Foreign key to track table     |
 | search_match       | Boolean   | Yes      | showed up in search results? [Y/N]  |
 | assigned           | Boolean   | Yes      | job assigned to the track, only 1 track per job  |
 
 __Global Secondary Indexes__
 
-| id | Partition key | Sort key   | Projection | Purpose                |
-| - |---------------|------------|------------|------------------------|
-| 01 | job_id (S)    | track_id(S)| ALL        | Tracks attached to job |
+| id | Partition key | Sort key   | Projection | Purpose |
+| - |-- | - | -| -|
+| 01 | job_id  | track_id | ALL        | Tracks for a job |
+| 02 | track_id  | job_id | ALL        | Jobs for a given track |
 
 ### Table: job
 
@@ -317,14 +330,22 @@ __Global Secondary Indexes__
 | id                 | String    | No       | UUID hash user-post            |
 | user_id            | String    | No       | Foreign key to user table     |
 | post_id            | String    | No       | Foreign key to post table     |
+| post_source_id   | String    | No       | Foreign key to post_source table |
+| position          | String    | No       | Job title                               |
+| posted_date       | String    | No       | Date the job was posted                 |
+| closing_date     | String    | No       | Application deadline date      |
+| company_name      | String    | Yes      | Full company name                       |
+| url               | String    | Yes      | URL to the job post                     |
+| salary_high_sgd  | Number    | Yes      | Maximum salary in SGD          |
 
 __Global Secondary Indexes__
 
-| id | Partition key | Sort key      | Projection | Purpose                    |
-| - |---------------|---------------|------------|----------------------------|
-| 01 | user_id (S)   | created (S)   | ALL        | Per-user timeline (newest) |
-| 02 | post_id (S)   | id (S)        | ALL        | Fetch job by post_id       |
-
+| id | Partition key   | Sort key | Projection  | Purpose |
+|----|----------|----------|----|-------|
+| 01 | user_id  | id | INCLUDE [post_id, position, company_name, posted_date, url] | Per-user timeline & list (newest-first)   |
+| 02 | post_id  | id | KEYS_ONLY  | Dedupe / fetch job by post |
+| 04 | user_id  | company_name | KEYS_ONLY  | Filter a user’s jobs by company |
+| 05 | user_id  | position | KEYS_ONLY  | Filter a user’s jobs by position |
 
 ### Table: job_details
 
@@ -333,8 +354,7 @@ __Global Secondary Indexes__
 | Column Name      | Data Type | Nullable | Description                    |
 |------------------|-----------|----------|--------------------------------|
 | job_id           | String    | No       | Foreign key to job table      |
-| position         | String    | Yes      | manually over-write position  |
-| company_name     | String    | Yes      | manually over-write company_name |
+| update         | String    | Yes      |status update free text description field  |
 
 
 ### Table: track_score

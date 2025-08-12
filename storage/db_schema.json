@@ -61,33 +61,18 @@
       "primary_key": "id",
       "sort_key": "user_id",
       "columns": [
-        {
-          "column_name": "id",
-          "data_type": "String",
-          "nullable": false
-        },
-        {
-          "column_name": "user_id",
-          "data_type": "String",
-          "nullable": false
-        },
-        {
-          "column_name": "post_id",
-          "data_type": "String",
-          "nullable": false
-        },
-        {
-          "column_name": "created",
-          "data_type": "String",
-          "date_format": "ISO_TIMESTAMP",
-          "nullable": false
-        },
-        {
-          "column_name": "last_modified",
-          "data_type": "String",
-          "date_format": "ISO_TIMESTAMP",
-          "nullable": false
-        }
+        { "column_name": "id", "data_type": "String", "nullable": false },
+        { "column_name": "user_id", "data_type": "String", "nullable": false },
+        { "column_name": "post_id", "data_type": "String", "nullable": false },
+        { "column_name": "post_source_id", "data_type": "String", "nullable": false },
+        { "column_name": "position", "data_type": "String", "nullable": false },
+        { "column_name": "posted_date", "data_type": "String", "nullable": false },
+        { "column_name": "closing_date", "data_type": "String", "nullable": false },
+        { "column_name": "company_name", "data_type": "String", "nullable": true },
+        { "column_name": "salary_high_sgd", "data_type": "Number", "nullable": true },
+        { "column_name": "url", "data_type": "String", "nullable": true },
+        { "column_name": "created", "data_type": "String", "date_format": "ISO_TIMESTAMP", "nullable": false },
+        { "column_name": "last_modified", "data_type": "String", "date_format": "ISO_TIMESTAMP", "nullable": false }
       ]
     },
     {
