@@ -121,9 +121,11 @@ jobs:
 
       - name: CFN failure diagnostics
         id: stack_fail_diagnostics
-        if: failure() && steps.deploy_stack.outcome == 'failure'
+        if: steps.deploy_stack.outcome == 'failure'
         run: |
           $STACK_FAIL_DIAGNOSTICS_SCRIPT "$STACK_NAME" "$AWS_REGION"
+          echo "DB API deploy failed"
+          exit 1
 
       - name: Get stack outputs and export to runner env
         id: stack_artifacts
