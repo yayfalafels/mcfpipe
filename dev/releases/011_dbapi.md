@@ -28,7 +28,7 @@ control flow
 
       - name: CFN failure diagnostics
         id: stack_fail_diagnostics
-        if: steps.deploy_stack.outcome == 'failure'
+        if: steps.stack_deploy.outcome == 'failure'
         run: |
           $STACK_FAIL_DIAGNOSTICS_SCRIPT "$STACK_NAME" "$AWS_REGION"
           echo "DB API deploy failed"
