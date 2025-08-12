@@ -6,7 +6,34 @@ release documentation `docs/releases/011_dbapi.md`
 
 session logs are timestamped to Singapore timezone in reverse chronological order, with latest entries at the top, and earlier entries at the bottom.
 
-### CF stack deploy [Data Engineer] idempotent deploy 2025-08-12 <HH>:<MM>
+### CF stack deploy [Data Engineer] idempotent deploy 2025-08-12 18:40
+
+_(open) CFN stack deploy fail diagnostics to GHA runner_
+
+condition didn't work: `if: steps.deploy_stack.outcome == 'failure'`
+
+- create a diagnostics bash extraction script `aws/cloudformation/cf_stack_diagnostics.sh`
+- run this script from a GHA step
+
+control flow
+
+- set `continue-on-error`=true for the deploy step
+- fail the job after completing the diagnostics print-out step, so that the remaining steps skip
+
+```yaml
+      - name: Deploy CloudFormation Stack
+        id: stack_deploy
+        continue-on-error: true
+        ...
+
+      - name: CFN failure diagnostics
+        id: stack_fail_diagnostics
+        if: steps.deploy_stack.outcome == 'failure'
+        run: |
+          $STACK_FAIL_DIAGNOSTICS_SCRIPT "$STACK_NAME" "$AWS_REGION"
+          echo "DB API deploy failed"
+          exit 1
+```
 
 _(resolved) 02 idempotent deploy_
 

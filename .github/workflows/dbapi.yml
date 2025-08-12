@@ -93,7 +93,6 @@ jobs:
 
       - name: Deploy CloudFormation Stack
         id: stack_deploy
-        continue-on-error: true
         run: |
           STATE=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" \
             --query 'Stacks[0].StackStatus' --output text 2>/dev/null || true)
@@ -119,17 +118,9 @@ jobs:
               role=$ROLE \
               project=$PROJECT_NAME
 
-      - name: CFN failure diagnostics
-        id: stack_fail_diagnostics
-        if: steps.deploy_stack.outcome == 'failure'
-        run: |
-          $STACK_FAIL_DIAGNOSTICS_SCRIPT "$STACK_NAME" "$AWS_REGION"
-          echo "DB API deploy failed"
-          exit 1
-
       - name: Get stack outputs and export to runner env
         id: stack_artifacts
-        if: success()
+        if: steps.stack_deploy.outcome == 'failure'
         run: |
           OUTPUTS=$(aws cloudformation describe-stacks \
             --stack-name $STACK_NAME \
@@ -142,7 +133,6 @@ jobs:
 
       - name: Upload stack outputs to S3
         id: artifacts_upload
-        if: success()
         run: aws s3 cp $ARTIFACTS_JSON \
           s3://$S3_BUCKET/$STORAGE_S3_DIR/$ARTIFACTS_JSON
 
