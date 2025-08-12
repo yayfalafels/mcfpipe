@@ -6,7 +6,7 @@ release documentation `docs/releases/011_dbapi.md`
 
 session logs are timestamped to Singapore timezone in reverse chronological order, with latest entries at the top, and earlier entries at the bottom.
 
-### GSI [Data Engineer] Codex prompt 2025-08-12 16:29
+### GSI [Data Engineer] Codex prompt 2025-08-12 16:31
 
 __situation__
 
@@ -21,6 +21,7 @@ __scope__
 
 __task__
 
+ - udpate db schema JSON for table specifications (name, partition key, sort key, column definitions) from the data model
  - update db schema JSON with the GSI attributes `"secondary_indexes": {...}` according to the specifications in the data model
 
 ### GSI [Data Engineer] JSON 2025-08-12 16:25
