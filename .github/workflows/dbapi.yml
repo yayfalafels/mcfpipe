@@ -33,6 +33,7 @@ jobs:
       DBAPI_APP: jobdb
       TEMPLATE_CONSTRUCTOR: cf_template_constructor.py
       CF_DB_API_URL_NAME: DbAPIUrl
+      STACK_FAIL_DIAGNOSTICS_SCRIPT: aws/cloudformation/cfn_stack_diagnostics.sh
 
     steps:
       - name: Init Run Status
@@ -116,6 +117,12 @@ jobs:
             --tags \
               role=$ROLE \
               project=$PROJECT_NAME
+
+      - name: CFN failure diagnostics
+        id: stack_fail_diagnostics
+        if: failure() && steps.deploy_stack.outcome == 'failure'
+        run: |
+          $STACK_FAIL_DIAGNOSTICS_SCRIPT "$STACK_NAME" "$AWS_REGION"
 
       - name: Get stack outputs and export to runner env
         id: stack_artifacts
