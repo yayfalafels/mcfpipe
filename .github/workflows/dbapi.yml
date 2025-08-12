@@ -96,6 +96,8 @@ jobs:
           STATE=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" \
             --query 'Stacks[0].StackStatus' --output text 2>/dev/null || true)
 
+          echo $STATE
+
           if [[ "$ALLOW_STACK_DELETE" == "true" ]] && [[ "$STATE" =~ ^(ROLLBACK_COMPLETE|CREATE_FAILED)$ ]]; then
             aws cloudformation delete-stack --stack-name "$STACK_NAME"
             aws cloudformation wait stack-delete-complete --stack-name "$STACK_NAME"
