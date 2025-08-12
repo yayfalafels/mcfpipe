@@ -93,10 +93,19 @@ jobs:
       - name: Deploy CloudFormation Stack
         id: stack_deploy
         run: |
+          STATE=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" \
+            --query 'Stacks[0].StackStatus' --output text 2>/dev/null || true)
+
+          if [[ "$ALLOW_STACK_DELETE" == "true" ]] && [[ "$STATE" =~ ^(ROLLBACK_COMPLETE|CREATE_FAILED)$ ]]; then
+            aws cloudformation delete-stack --stack-name "$STACK_NAME"
+            aws cloudformation wait stack-delete-complete --stack-name "$STACK_NAME"
+          fi
+
           aws cloudformation deploy \
             --template-file $CF_TEMPLATE_DIR/$STACK_TEMPLATE_FILE \
             --stack-name $STACK_NAME \
             --capabilities CAPABILITY_NAMED_IAM \
+            --no-fail-on-empty-changeset \
             --parameter-overrides \
               VpcId=$VPC_ID \
               PrivateSubnetIds=$PRIVATE_SUBNET \

@@ -99,6 +99,9 @@ response body
   }
 ]
 ```
+## DynamoDB
+
+**table name prefix** to uniquely identify the DynamoDB tables in the account, table names include a prefix for `<env>_mcfpipe_`, so the full DynamoDB table name is `<env>_mcfpipe_<table_name>`. Since the API requests and responses are based on the base `table_name`, the full path to the DDB resource must be resolved by the API handler.
 
 ## Search
 
@@ -214,9 +217,10 @@ __specification mapping JSON to YAML__
 GSI mapping method in `generate_table_resource()` function in python constructor `jobdb/cf_template_constructor.py`
 
 ```python
-def generate_table_resource(table):
-    table_name = table["table_name"]
-    logical_name = f"{to_cfn_logical_id(table_name)}Table"
+def generate_table_resource(table, table_prefix: str=''):
+    stem_name = table.get('table_name', '')
+    table_name = f'{table_prefix}{stem_name}' if table_prefix else stem_name
+    logical_name = f"{to_cfn_logical_id(stem_name)}Table"
     ...
 
     # GSIs

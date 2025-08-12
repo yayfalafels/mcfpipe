@@ -36,8 +36,6 @@ def generate_table_resource(table, table_prefix: str=''):
     table_name = f'{table_prefix}{stem_name}' if table_prefix else stem_name
     logical_name = f"{to_cfn_logical_id(stem_name)}Table"
 
-    print(f'table_name: {table_name}')
-
     attr_defs, key_schema = [], []
 
     def ensure_attr(name, dtype):

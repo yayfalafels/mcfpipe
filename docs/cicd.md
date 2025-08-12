@@ -168,8 +168,8 @@ environment variables are passed to the container by Github actions at the `run-
 ## AWS Infrastructure
 The AWS infrastructure is organized into layered CloudFormation stacks, segregated by function and coupled through the repository via parameters and configuration files.
 
-__Cloudformation stacks__
-Cloudformation stack layers
+__CloudFormation (CF) stacks__
+CloudFormation stack layers
 
 | id | stack | purpose | resources |
 | - | - | - | - |
@@ -192,6 +192,10 @@ _manual setup resources_
 | 01 | S3 bucket | Github Action | initial setup |
 | 02 | S3 config | Github Action | initial setup after s3 bucket creation |
 | 03 | ECR Dockerimages | Github Action | before the stack they are used in |
+
+## CF Stack deploy
+
+
 
 ## Github Action Workflows
 
