@@ -112,14 +112,13 @@ __Global Secondary Indexes__
 ### Table: post_details
 
 - Primary Key: `post_id`
-- Sort Key: `closing_date`
 
 | Column Name      | Data Type | Nullable | Description                    |
 |------------------|-----------|----------|--------------------------------|
 | post_id           | String    | No       | Foreign key to post table     |
 | description      | String    | Yes      | long text description about the job and requirements |
 | url_slug         | String    | Yes      | primary MCF UID reference from url |
-| mcf_ref          | String    | Yes      | secondary MCF reference taken from card and or post|
+| mcf_ref          | String    | Yes      | secondary MCF reference taken from card and or post |
 
 __Global Secondary Indexes__
 
