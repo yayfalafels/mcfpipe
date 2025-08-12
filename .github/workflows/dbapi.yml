@@ -19,8 +19,6 @@ jobs:
     env:
       CONFIG_PATH: setup/config.env
       STACK_NAME: mcfpipe-dbapi
-      TAG_ROLE: Bridges
-      TAG_PROJECT: mcfpipe
       CF_TEMPLATE_DIR: aws/cloudformation
       BASE_TEMPLATE_FILE: db_api_base.yaml
       STACK_TEMPLATE_FILE: db_api_stack.yaml
@@ -82,7 +80,9 @@ jobs:
           python $DBAPI_APP_DIR/$TEMPLATE_CONSTRUCTOR \
             $STORAGE_S3_DIR/$DB_SCHEMA_JSON \
             $CF_TEMPLATE_DIR/$BASE_TEMPLATE_FILE \
-            $CF_TEMPLATE_DIR/$STACK_TEMPLATE_FILE
+            $CF_TEMPLATE_DIR/$STACK_TEMPLATE_FILE \
+            --env $DEV_ENV \
+            --project $PROJECT_NAME
 
       - name: Package Lambda handler
         id: zip_lambda_handler
@@ -106,8 +106,8 @@ jobs:
               DBSchemaS3=$STORAGE_S3_DIR/$DB_SCHEMA_JSON \
               DBLambdaSG=$DB_LAMBDA_SG \
             --tags \
-              role=$TAG_ROLE \
-              project=$TAG_PROJECT
+              role=$ROLE \
+              project=$PROJECT_NAME
 
       - name: Get stack outputs and export to runner env
         id: stack_artifacts

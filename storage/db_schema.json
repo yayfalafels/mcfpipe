@@ -22,7 +22,7 @@
           {
             "partition_key": "status",
             "sort_key": "posted_date",
-            "projection": "ALL"
+            "projection": { "type": "ALL" }
           }
         ]
       }
@@ -75,7 +75,7 @@
         "global": [
           { "partition_key": "email", "projection": { "type": "KEYS_ONLY" } },
           { "partition_key": "username", "projection": { "type": "KEYS_ONLY" } },
-          { "partition_key": "status", "projection": "ALL" }
+          { "partition_key": "status", "projection": { "type": "ALL" } }
         ]
       }
     },
@@ -114,7 +114,7 @@
       ],
       "secondary_indexes": {
         "global": [
-          { "partition_key": "user_id", "projection": "ALL" }
+          { "partition_key": "user_id", "projection": { "type": "KEYS_ONLY" } }
         ]
       }
     },
@@ -144,8 +144,8 @@
       ],
       "secondary_indexes": {
         "global": [
-          { "partition_key": "job_id", "sort_key": "track_id", "projection": "ALL" },
-          { "partition_key": "track_id", "sort_key": "job_id", "projection": "ALL" }
+          { "partition_key": "job_id", "sort_key": "track_id", "projection": { "type": "KEYS_ONLY" } },
+          { "partition_key": "track_id", "sort_key": "job_id", "projection": { "type": "KEYS_ONLY" } }
         ]
       }
     },

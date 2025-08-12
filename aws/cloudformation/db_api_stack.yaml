@@ -1,22 +1,57 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Database API Stack - Thin Wrapper with DynamoDB, Lambda, API Gateway
+Description: "MCFPipe DB API (base) — API Gateway as thin infra wrapper forwarding ANY / and ANY /{proxy+} to a single Lambda.\
+  \ Routing, validation, and business logic live in the jobdb app.\n"
 Parameters:
   VpcId:
     Type: String
+    Description: VPC ID (for the Lambda's VPC config)
   PrivateSubnetIds:
     Type: List<String>
-  S3Bucket:
-    Type: String
-  LambdaSourceCodeS3:
-    Type: String
-  DBSchemaS3:
-    Type: String
+    Description: Private subnet IDs for the Lambda (no NAT required; uses VPCE for S3/DynamoDB)
   DBLambdaSG:
     Type: String
+    Description: Security Group ID for the DB API Lambda
+  S3Bucket:
+    Type: String
+    Description: S3 bucket containing the Lambda source bundle
+  LambdaSourceCodeS3:
+    Type: String
+    Description: S3 key (object path) for the Lambda source bundle zip
+  DBSchemaS3:
+    Type: String
+    Description: S3 URI (e.g., s3://bucket/path/schema.json) for the database schema the Lambda loads
+  StageName:
+    Type: String
+    Default: dev
+    AllowedPattern: ^[a-z0-9-_]+$
+    Description: API stage name
+  LogLevel:
+    Type: String
+    Default: INFO
+    AllowedValues:
+      - CRITICAL
+      - ERROR
+      - WARNING
+      - INFO
+      - DEBUG
+    Description: Lambda log level
+  ApiAuthType:
+    Type: String
+    Default: NONE
+    AllowedValues:
+      - NONE
+      - AWS_IAM
+    Description: AuthorizationType for the root/proxy ANY methods (adjust if you add Cognito/Lambda authorizers later)
+  AccessLogRetentionDays:
+    Type: Number
+    Default: 14
+    Description: CloudWatch Logs retention for API Gateway access logs
 Resources:
   DBLambdaRole:
     Type: AWS::IAM::Role
     Properties:
+      RoleName:
+        Fn::Sub: mcfpipe-dbapi-lambda-role-${AWS::StackName}-${StageName}
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -24,208 +59,192 @@ Resources:
             Principal:
               Service: lambda.amazonaws.com
             Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
       Policies:
-        - PolicyName: DynamoDBAccess
+        - PolicyName: DbApiInlineAccess
           PolicyDocument:
             Version: '2012-10-17'
             Statement:
               - Effect: Allow
                 Action:
-                  - dynamodb:GetItem
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: arn:aws:logs:*:*:*
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource:
+                  - Fn::Sub: arn:aws:s3:::${S3Bucket}
+                  - Fn::Sub: arn:aws:s3:::${S3Bucket}/*
+              - Effect: Allow
+                Action:
+                  - dynamodb:BatchWriteItem
+                  - dynamodb:BatchGetItem
                   - dynamodb:PutItem
                   - dynamodb:UpdateItem
                   - dynamodb:DeleteItem
+                  - dynamodb:GetItem
                   - dynamodb:Query
-                  - dynamodb:BatchWriteItem
+                  - dynamodb:Scan
+                  - dynamodb:TransactWriteItems
                 Resource: '*'
-  DBLambdaFunction:
+  DbLambda:
     Type: AWS::Lambda::Function
     Properties:
-      FunctionName: db-api-handler
-      Runtime: python3.11
-      Handler: db.lambda_handler
+      FunctionName:
+        Fn::Sub: mcfpipe-dbapi-${StageName}
+      Description: MCFPipe DB API Lambda (routes implemented in jobdb app)
+      Runtime: python3.12
+      Handler: jobdb.lambda_handler.handler
       Role:
         Fn::GetAtt:
           - DBLambdaRole
           - Arn
+      MemorySize: 512
+      Timeout: 29
       Code:
         S3Bucket:
           Ref: S3Bucket
         S3Key:
           Ref: LambdaSourceCodeS3
       VpcConfig:
-        SubnetIds:
-          Ref: PrivateSubnetIds
         SecurityGroupIds:
           - Ref: DBLambdaSG
+        SubnetIds:
+          Ref: PrivateSubnetIds
       Environment:
         Variables:
-          S3_BUCKET:
-            Ref: S3Bucket
-          DB_SCHEMA_S3_PATH:
+          LOG_LEVEL:
+            Ref: LogLevel
+          DB_SCHEMA_S3:
             Ref: DBSchemaS3
-  LambdaInvokePermission:
-    Type: AWS::Lambda::Permission
-    Properties:
-      FunctionName:
-        Ref: DBLambdaFunction
-      Action: lambda:InvokeFunction
-      Principal: apigateway.amazonaws.com
-      SourceArn:
-        Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${DatabaseAPI}/*/*
-  DatabaseAPI:
+  RestApi:
     Type: AWS::ApiGateway::RestApi
     Properties:
-      Name: DatabaseAPI
-      Description: Generic Database API for DynamoDB tables
-  RootResource:
+      Name:
+        Fn::Sub: mcfpipe-dbapi-${StageName}
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+  RootAnyMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId:
+        Ref: RestApi
+      ResourceId:
+        Fn::GetAtt:
+          - RestApi
+          - RootResourceId
+      HttpMethod: ANY
+      AuthorizationType:
+        Ref: ApiAuthType
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: POST
+        Uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DbLambda.Arn}/invocations
+  ProxyResource:
     Type: AWS::ApiGateway::Resource
     Properties:
       RestApiId:
-        Ref: DatabaseAPI
+        Ref: RestApi
       ParentId:
         Fn::GetAtt:
-          - DatabaseAPI
+          - RestApi
           - RootResourceId
-      PathPart: '{table}'
-  ItemResource:
-    Type: AWS::ApiGateway::Resource
-    Properties:
-      RestApiId:
-        Ref: DatabaseAPI
-      ParentId:
-        Ref: RootResource
-      PathPart: '{id}'
-  MethodPOST:
+      PathPart: '{proxy+}'
+  ProxyAnyMethod:
     Type: AWS::ApiGateway::Method
     Properties:
       RestApiId:
-        Ref: DatabaseAPI
+        Ref: RestApi
       ResourceId:
-        Ref: RootResource
-      HttpMethod: POST
-      AuthorizationType: NONE
+        Ref: ProxyResource
+      HttpMethod: ANY
+      AuthorizationType:
+        Ref: ApiAuthType
       Integration:
-        IntegrationHttpMethod: POST
         Type: AWS_PROXY
+        IntegrationHttpMethod: POST
         Uri:
-          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DBLambdaFunction.Arn}/invocations
-  MethodGET:
-    Type: AWS::ApiGateway::Method
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DbLambda.Arn}/invocations
+  DbLambdaInvokeFromApiGw:
+    Type: AWS::Lambda::Permission
     Properties:
-      RestApiId:
-        Ref: DatabaseAPI
-      ResourceId:
-        Ref: ItemResource
-      HttpMethod: GET
-      AuthorizationType: NONE
-      Integration:
-        IntegrationHttpMethod: POST
-        Type: AWS_PROXY
-        Uri:
-          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DBLambdaFunction.Arn}/invocations
-  MethodPUT:
-    Type: AWS::ApiGateway::Method
-    Properties:
-      RestApiId:
-        Ref: DatabaseAPI
-      ResourceId:
-        Ref: ItemResource
-      HttpMethod: PUT
-      AuthorizationType: NONE
-      Integration:
-        IntegrationHttpMethod: POST
-        Type: AWS_PROXY
-        Uri:
-          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DBLambdaFunction.Arn}/invocations
-  MethodDELETE:
-    Type: AWS::ApiGateway::Method
-    Properties:
-      RestApiId:
-        Ref: DatabaseAPI
-      ResourceId:
-        Ref: ItemResource
-      HttpMethod: DELETE
-      AuthorizationType: NONE
-      Integration:
-        IntegrationHttpMethod: POST
-        Type: AWS_PROXY
-        Uri:
-          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DBLambdaFunction.Arn}/invocations
-  APIDeployment:
+      Action: lambda:InvokeFunction
+      FunctionName:
+        Ref: DbLambda
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RestApi}/*/*/*
+  ApiDeployment:
     Type: AWS::ApiGateway::Deployment
     DependsOn:
-      - MethodPOST
-      - MethodGET
-      - MethodPUT
-      - MethodDELETE
+      - RootAnyMethod
+      - ProxyAnyMethod
     Properties:
       RestApiId:
-        Ref: DatabaseAPI
-      StageName: prod
-  ApplyStatusTable:
+        Ref: RestApi
+      Description:
+        Fn::Sub: Deployment for ${StageName}
+  ApiAccessLogs:
+    Type: AWS::Logs::LogGroup
     Properties:
-      AttributeDefinitions:
-        - AttributeName: job_id
-          AttributeType: S
-      BillingMode: PAY_PER_REQUEST
-      KeySchema:
-        - AttributeName: job_id
-          KeyType: HASH
-      TableName: apply_status
-    Type: AWS::DynamoDB::Table
-  CrmStatusTable:
+      LogGroupName:
+        Fn::Sub: /aws/apigateway/mcfpipe-dbapi-${StageName}-access
+      RetentionInDays:
+        Ref: AccessLogRetentionDays
+  ApiStage:
+    Type: AWS::ApiGateway::Stage
     Properties:
-      AttributeDefinitions:
-        - AttributeName: job_id
-          AttributeType: S
-      BillingMode: PAY_PER_REQUEST
-      KeySchema:
-        - AttributeName: job_id
-          KeyType: HASH
-      TableName: crm_status
-    Type: AWS::DynamoDB::Table
-  JobTable:
+      StageName:
+        Ref: StageName
+      RestApiId:
+        Ref: RestApi
+      DeploymentId:
+        Ref: ApiDeployment
+      TracingEnabled: false
+      MethodSettings:
+        - ResourcePath: /*
+          HttpMethod: '*'
+          MetricsEnabled: true
+          DataTraceEnabled: false
+          LoggingLevel: INFO
+      AccessLogSetting:
+        DestinationArn:
+          Fn::GetAtt:
+            - ApiAccessLogs
+            - Arn
+        Format: "{ \"requestId\":\"$context.requestId\",\"ip\":\"$context.identity.sourceIp\",\n  \"caller\":\"$context.identity.caller\"\
+          ,\"user\":\"$context.identity.user\",\n  \"requestTime\":\"$context.requestTime\",\"httpMethod\":\"$context.httpMethod\"\
+          ,\n  \"resourcePath\":\"$context.resourcePath\",\"status\":\"$context.status\",\n  \"protocol\":\"$context.protocol\"\
+          ,\"responseLength\":\"$context.responseLength\",\n  \"integrationError\":\"$context.integration.error\",\n  \"errorMessage\"\
+          :\"$context.error.message\" }"
+  GatewayResponseDefault4XX:
+    Type: AWS::ApiGateway::GatewayResponse
     Properties:
-      AttributeDefinitions:
-        - AttributeName: id
-          AttributeType: S
-        - AttributeName: user_id
-          AttributeType: S
-      BillingMode: PAY_PER_REQUEST
-      KeySchema:
-        - AttributeName: id
-          KeyType: HASH
-        - AttributeName: user_id
-          KeyType: RANGE
-      TableName: job
-    Type: AWS::DynamoDB::Table
-  JobDetailsTable:
+      RestApiId:
+        Ref: RestApi
+      ResponseType: DEFAULT_4XX
+      ResponseParameters:
+        gatewayresponse.header.Access-Control-Allow-Origin: '''*'''
+        gatewayresponse.header.Access-Control-Allow-Headers: '''*'''
+        gatewayresponse.header.Access-Control-Allow-Methods: '''GET,POST,PUT,DELETE,OPTIONS,PATCH'''
+      StatusCode: '400'
+  GatewayResponseDefault5XX:
+    Type: AWS::ApiGateway::GatewayResponse
     Properties:
-      AttributeDefinitions:
-        - AttributeName: job_id
-          AttributeType: S
-      BillingMode: PAY_PER_REQUEST
-      KeySchema:
-        - AttributeName: job_id
-          KeyType: HASH
-      TableName: job_details
-    Type: AWS::DynamoDB::Table
-  JobTrackTable:
-    Properties:
-      AttributeDefinitions:
-        - AttributeName: id
-          AttributeType: S
-        - AttributeName: track_id
-          AttributeType: S
-      BillingMode: PAY_PER_REQUEST
-      KeySchema:
-        - AttributeName: id
-          KeyType: HASH
-        - AttributeName: track_id
-          KeyType: RANGE
-      TableName: job_track
-    Type: AWS::DynamoDB::Table
+      RestApiId:
+        Ref: RestApi
+      ResponseType: DEFAULT_5XX
+      ResponseParameters:
+        gatewayresponse.header.Access-Control-Allow-Origin: '''*'''
+        gatewayresponse.header.Access-Control-Allow-Headers: '''*'''
+        gatewayresponse.header.Access-Control-Allow-Methods: '''GET,POST,PUT,DELETE,OPTIONS,PATCH'''
+      StatusCode: '500'
   PostTable:
     Properties:
       AttributeDefinitions:
@@ -233,28 +252,46 @@ Resources:
           AttributeType: S
         - AttributeName: posted_date
           AttributeType: S
+        - AttributeName: status
+          AttributeType: N
       BillingMode: PAY_PER_REQUEST
+      GlobalSecondaryIndexes:
+        - IndexName: gsi_status_posted_date
+          KeySchema:
+            - AttributeName: status
+              KeyType: HASH
+            - AttributeName: posted_date
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
       KeySchema:
         - AttributeName: id
           KeyType: HASH
         - AttributeName: posted_date
           KeyType: RANGE
-      TableName: post
+      TableName: dev_mcfpipe_post
     Type: AWS::DynamoDB::Table
   PostDetailsTable:
     Properties:
       AttributeDefinitions:
         - AttributeName: post_id
           AttributeType: S
-        - AttributeName: closing_date
+        - AttributeName: url_slug
           AttributeType: S
       BillingMode: PAY_PER_REQUEST
+      GlobalSecondaryIndexes:
+        - IndexName: gsi_url_slug_post_id
+          KeySchema:
+            - AttributeName: url_slug
+              KeyType: HASH
+            - AttributeName: post_id
+              KeyType: RANGE
+          Projection:
+            ProjectionType: KEYS_ONLY
       KeySchema:
         - AttributeName: post_id
           KeyType: HASH
-        - AttributeName: closing_date
-          KeyType: RANGE
-      TableName: post_details
+      TableName: dev_mcfpipe_post_details
     Type: AWS::DynamoDB::Table
   PostSourceTable:
     Properties:
@@ -265,77 +302,43 @@ Resources:
       KeySchema:
         - AttributeName: id
           KeyType: HASH
-      TableName: post_source
-    Type: AWS::DynamoDB::Table
-  RoleTable:
-    Properties:
-      AttributeDefinitions:
-        - AttributeName: id
-          AttributeType: S
-      BillingMode: PAY_PER_REQUEST
-      KeySchema:
-        - AttributeName: id
-          KeyType: HASH
-      TableName: role
-    Type: AWS::DynamoDB::Table
-  SearchProfileTable:
-    Properties:
-      AttributeDefinitions:
-        - AttributeName: track_id
-          AttributeType: S
-      BillingMode: PAY_PER_REQUEST
-      KeySchema:
-        - AttributeName: track_id
-          KeyType: HASH
-      TableName: search_profile
-    Type: AWS::DynamoDB::Table
-  TrackTable:
-    Properties:
-      AttributeDefinitions:
-        - AttributeName: id
-          AttributeType: S
-        - AttributeName: user_id
-          AttributeType: S
-      BillingMode: PAY_PER_REQUEST
-      KeySchema:
-        - AttributeName: id
-          KeyType: HASH
-        - AttributeName: user_id
-          KeyType: RANGE
-      TableName: track
-    Type: AWS::DynamoDB::Table
-  TrackCvTable:
-    Properties:
-      AttributeDefinitions:
-        - AttributeName: track_id
-          AttributeType: S
-      BillingMode: PAY_PER_REQUEST
-      KeySchema:
-        - AttributeName: track_id
-          KeyType: HASH
-      TableName: track_cv
-    Type: AWS::DynamoDB::Table
-  TrackScoreTable:
-    Properties:
-      AttributeDefinitions:
-        - AttributeName: job_track_id
-          AttributeType: S
-      BillingMode: PAY_PER_REQUEST
-      KeySchema:
-        - AttributeName: job_track_id
-          KeyType: HASH
-      TableName: track_score
+      TableName: dev_mcfpipe_post_source
     Type: AWS::DynamoDB::Table
   UserTable:
     Properties:
       AttributeDefinitions:
         - AttributeName: id
           AttributeType: S
+        - AttributeName: email
+          AttributeType: S
+        - AttributeName: username
+          AttributeType: S
+        - AttributeName: status
+          AttributeType: N
       BillingMode: PAY_PER_REQUEST
+      GlobalSecondaryIndexes:
+        - IndexName: gsi_email
+          KeySchema:
+            - AttributeName: email
+              KeyType: HASH
+          Projection:
+            ProjectionType: KEYS_ONLY
+        - IndexName: gsi_username
+          KeySchema:
+            - AttributeName: username
+              KeyType: HASH
+          Projection:
+            ProjectionType: KEYS_ONLY
+        - IndexName: gsi_status
+          KeySchema:
+            - AttributeName: status
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
       KeySchema:
         - AttributeName: id
           KeyType: HASH
-      TableName: user
+      TableName: dev_mcfpipe_user
     Type: AWS::DynamoDB::Table
   UserConfigTable:
     Properties:
@@ -346,13 +349,243 @@ Resources:
       KeySchema:
         - AttributeName: user_id
           KeyType: HASH
-      TableName: user_config
+      TableName: dev_mcfpipe_user_config
+    Type: AWS::DynamoDB::Table
+  RoleTable:
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      TableName: dev_mcfpipe_role
+    Type: AWS::DynamoDB::Table
+  TrackTable:
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: user_id
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      GlobalSecondaryIndexes:
+        - IndexName: gsi_user_id
+          KeySchema:
+            - AttributeName: user_id
+              KeyType: HASH
+          Projection:
+            ProjectionType: KEYS_ONLY
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+        - AttributeName: user_id
+          KeyType: RANGE
+      TableName: dev_mcfpipe_track
+    Type: AWS::DynamoDB::Table
+  SearchProfileTable:
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: track_id
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: track_id
+          KeyType: HASH
+      TableName: dev_mcfpipe_search_profile
+    Type: AWS::DynamoDB::Table
+  JobTrackTable:
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: track_id
+          AttributeType: S
+        - AttributeName: job_id
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      GlobalSecondaryIndexes:
+        - IndexName: gsi_job_id_track_id
+          KeySchema:
+            - AttributeName: job_id
+              KeyType: HASH
+            - AttributeName: track_id
+              KeyType: RANGE
+          Projection:
+            ProjectionType: KEYS_ONLY
+        - IndexName: gsi_track_id_job_id
+          KeySchema:
+            - AttributeName: track_id
+              KeyType: HASH
+            - AttributeName: job_id
+              KeyType: RANGE
+          Projection:
+            ProjectionType: KEYS_ONLY
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+        - AttributeName: track_id
+          KeyType: RANGE
+      TableName: dev_mcfpipe_job_track
+    Type: AWS::DynamoDB::Table
+  JobTable:
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: user_id
+          AttributeType: S
+        - AttributeName: post_id
+          AttributeType: S
+        - AttributeName: company_name
+          AttributeType: S
+        - AttributeName: position
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      GlobalSecondaryIndexes:
+        - IndexName: gsi_user_id_id
+          KeySchema:
+            - AttributeName: user_id
+              KeyType: HASH
+            - AttributeName: id
+              KeyType: RANGE
+          Projection:
+            NonKeyAttributes:
+              - post_id
+              - position
+              - company_name
+              - posted_date
+              - url
+            ProjectionType: INCLUDE
+        - IndexName: gsi_post_id_id
+          KeySchema:
+            - AttributeName: post_id
+              KeyType: HASH
+            - AttributeName: id
+              KeyType: RANGE
+          Projection:
+            ProjectionType: KEYS_ONLY
+        - IndexName: gsi_user_id_company_name
+          KeySchema:
+            - AttributeName: user_id
+              KeyType: HASH
+            - AttributeName: company_name
+              KeyType: RANGE
+          Projection:
+            ProjectionType: KEYS_ONLY
+        - IndexName: gsi_user_id_position
+          KeySchema:
+            - AttributeName: user_id
+              KeyType: HASH
+            - AttributeName: position
+              KeyType: RANGE
+          Projection:
+            ProjectionType: KEYS_ONLY
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+        - AttributeName: user_id
+          KeyType: RANGE
+      TableName: dev_mcfpipe_job
+    Type: AWS::DynamoDB::Table
+  JobDetailsTable:
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: job_id
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: job_id
+          KeyType: HASH
+      TableName: dev_mcfpipe_job_details
+    Type: AWS::DynamoDB::Table
+  TrackScoreTable:
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: job_track_id
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: job_track_id
+          KeyType: HASH
+      TableName: dev_mcfpipe_track_score
+    Type: AWS::DynamoDB::Table
+  TrackCvTable:
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: track_id
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: track_id
+          KeyType: HASH
+      TableName: dev_mcfpipe_track_cv
+    Type: AWS::DynamoDB::Table
+  CrmStatusTable:
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: job_id
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: job_id
+          KeyType: HASH
+      TableName: dev_mcfpipe_crm_status
+    Type: AWS::DynamoDB::Table
+  ApplyStatusTable:
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: job_id
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: job_id
+          KeyType: HASH
+      TableName: dev_mcfpipe_apply_status
     Type: AWS::DynamoDB::Table
 Outputs:
-  DbAPIUrl:
-    Description: Base URL for the Database API Gateway
+  DbApiUrl:
+    Description: Base URL for the DB API stage
     Value:
-      Fn::Sub: https://${DatabaseAPI}.execute-api.${AWS::Region}.amazonaws.com/prod
+      Fn::Sub: https://${RestApi}.execute-api.${AWS::Region}.amazonaws.com/${StageName}
     Export:
       Name:
-        Fn::Sub: ${AWS::StackName}-DbAPIUrl
+        Fn::Sub: ${AWS::StackName}-DbApiUrl
+  RestApiId:
+    Description: API Gateway RestApi ID
+    Value:
+      Ref: RestApi
+    Export:
+      Name:
+        Fn::Sub: ${AWS::StackName}-RestApiId
+  ApiStageName:
+    Description: API Gateway stage name
+    Value:
+      Ref: StageName
+    Export:
+      Name:
+        Fn::Sub: ${AWS::StackName}-StageName
+  ProxyResourceId:
+    Description: Resource ID of the /{proxy+} node
+    Value:
+      Ref: ProxyResource
+    Export:
+      Name:
+        Fn::Sub: ${AWS::StackName}-ProxyResourceId
+  DbLambdaFunctionName:
+    Description: Name of the DB API Lambda function
+    Value:
+      Ref: DbLambda
+    Export:
+      Name:
+        Fn::Sub: ${AWS::StackName}-DbLambdaName
+  DbLambdaRoleArn:
+    Description: ARN of the DB API Lambda IAM role
+    Value:
+      Fn::GetAtt:
+        - DBLambdaRole
+        - Arn
+    Export:
+      Name:
+        Fn::Sub: ${AWS::StackName}-DbLambdaRoleArn

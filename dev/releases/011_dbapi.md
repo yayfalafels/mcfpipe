@@ -6,11 +6,91 @@ release documentation `docs/releases/011_dbapi.md`
 
 session logs are timestamped to Singapore timezone in reverse chronological order, with latest entries at the top, and earlier entries at the bottom.
 
+### GSI and table prefix [Data Engineer] stack deploy validation 2025-08-12 <HH>:<MM>
+
+
+### DDB YAML constructor [Data Engineer] DDB table namespace 2025-08-12 17:26
+
+[Developer] ChatGPT prompt
+>Regarding DynamoDB table namespace, can I organize DynamoDB tables by schema or database, in a similar manner as an SQL table <schema>.<table_name>? Or are table names global? Do I need to add a `mcfpipe_` prefix to all of the tables to prevent namespace clashes with other projects?
+
+suggestion to pass argument `table_prefix` to function `generate_table_resource()`
+ --> validated works as expected
+
+```python
+def generate_table_resource(table, table_prefix: str = ""):
+    table_name = table["table_name"]
+    logical_name = f"{to_cfn_logical_id(table_name)}Table"
+
+    # ---- NEW: apply physical name prefix (if any)
+    physical_table_name = f"{table_prefix}{table_name}" if table_prefix else table_name
+
+```
+
+updated CLI parser, suggestion by ChatGPT
+
+```python
+import argparse
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Generate CF from DB schema")
+    parser.add_argument("db_schema_path", nargs="?", default="db_schema.json")
+    parser.add_argument("base_yaml_path", nargs="?", default="db_api_base.yaml")
+    parser.add_argument("output_yaml_path", nargs="?", default="db_api_stack.yaml")
+    parser.add_argument("--env", dest="dev_env", default="", help="Environment tag, e.g. dev, prod")
+    parser.add_argument("--project", dest="project_prefix", default="", help="Project prefix, e.g. mcfpipe")
+    args = parser.parse_args()
+
+    # Build "<env>_<project>_" only from provided parts; keep underscores for DynamoDB
+    parts = [p for p in [args.dev_env, args.project_prefix] if p]
+    table_name_prefix = ("_".join(parts) + "_") if parts else ""
+
+    print(
+        "generating YAML file from\n"
+        f"schema: {args.db_schema_path}\n"
+        f"base CF template: {args.base_yaml_path}\n"
+        f"writing to {args.output_yaml_path} ...\n"
+        f"table name prefix: '{table_name_prefix}'"
+    )
+
+    run(args.db_schema_path, args.base_yaml_path, args.output_yaml_path, table_name_prefix)
+
+```
+
+update constructor call to include arguments `--env` and `--project`
+
+```yaml
+      # manual trigger
+      - name: Generate CloudFormation template
+        id: cf_template_generate
+        run: |
+          pip install -r $DBAPI_APP_DIR/requirements.txt >/dev/null
+          python $DBAPI_APP_DIR/$TEMPLATE_CONSTRUCTOR \
+            $STORAGE_S3_DIR/$DB_SCHEMA_JSON \
+            $CF_TEMPLATE_DIR/$BASE_TEMPLATE_FILE \
+            $CF_TEMPLATE_DIR/$STACK_TEMPLATE_FILE \
+            --env $DEV_ENV \
+            --project $PROJECT_NAME
+
+```
+
+add parameters `DEV_ENV` and `PROJECT_NAME` to config `setup/config.env`
+
+```
+DEV_ENV=prod
+ROLE=Bridges
+PROJECT_NAME=mcfpipe
+```
+
+### GSI [Data Engineer] update db schema and yaml 2025-08-12 16:56
+validate changes and manually apply the suggested update for `generate_table_resource()` function in python constructor `jobdb/cf_template_constructor.py` which was proposed by ChatGPT.
+
 ### GSI [Codex] 2025-08-12 16:37:07
 - reviewed `docs/data_model.md` and removed outdated sort key for `post_details`
 - expanded `storage/db_schema.json` with table schemas and declared GSI per data model
 
 ### GSI [Data Engineer] Codex prompt 2025-08-12 16:31
+prior to implementing the specific instructions in this prompt, first review generic instructions in `AGENTS.md`
 
 __situation__
 
