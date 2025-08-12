@@ -6,16 +6,22 @@ release documentation `docs/releases/011_dbapi.md`
 
 session logs are timestamped to Singapore timezone in reverse chronological order, with latest entries at the top, and earlier entries at the bottom.
 
-### CF stack deploy [Data Engineer] idempotent deploy 2025-08-12 18:40
+### CF stack deploy [Data Engineer] idempotent deploy 2025-08-12 22:09
 
-_(open) CFN stack deploy fail diagnostics to GHA runner_
+__follow-up__
 
-condition didn't work: `if: steps.deploy_stack.outcome == 'failure'`
+**intermediate milestone**: TDD closed-loop build-test with the DB API
+- **01 hello world** jobdb app + lambda handler, just enough to have an EP to send to tester
+- **02 tester app** stack ready with test cases
+- then loop back to `jobdb` now ready with full TDD closed-loop
 
+_(closed) CFN stack deploy fail diagnostics to GHA runner_
+
+- validated
 - create a diagnostics bash extraction script `aws/cloudformation/cf_stack_diagnostics.sh`
 - run this script from a GHA step
 
-control flow
+__control flow__
 
 - set `continue-on-error`=true for the deploy step
 - fail the job after completing the diagnostics print-out step, so that the remaining steps skip
@@ -30,9 +36,21 @@ control flow
         id: stack_fail_diagnostics
         if: steps.stack_deploy.outcome == 'failure'
         run: |
-          $STACK_FAIL_DIAGNOSTICS_SCRIPT "$STACK_NAME" "$AWS_REGION"
+          bash $STACK_FAIL_DIAGNOSTICS_SCRIPT "$STACK_NAME" "$AWS_REGION" --nested
           echo "DB API deploy failed"
           exit 1
+```
+
+__GAH runner logs__
+
+```
+|                                                                                                                                                                                     DescribeStackEvents                                                                                                                                                                                     |
++----------------------------------+-----------------------------+----------------+-----------------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+|  2025-08-12T13:48:44.026000+00:00|  AWS::CloudFormation::Stack |  mcfpipe-dbapi |  ROLLBACK_COMPLETE    |  None                                                                                                                                                                                                                                                                             |
+|  2025-08-12T13:48:18.754000+00:00|  AWS::CloudFormation::Stack |  mcfpipe-dbapi |  ROLLBACK_IN_PROGRESS |  The following resource(s) failed to create: [UserTable, DbLambda]. Rollback requested by user.                                                                                                                                                                                   |
+|  2025-08-12T13:48:18.360000+00:00|  AWS::DynamoDB::Table       |  UserTable     |  CREATE_FAILED        |  Resource creation cancelled                                                                                                                                                                                                                                                      |
+|  2025-08-12T13:48:17.935000+00:00|  AWS::Lambda::Function      |  DbLambda      |  CREATE_FAILED        |  Resource handler returned message: "Uploaded file must be a non-empty zip (Service: Lambda, Status Code: 400, Request ID: f7d54580-6977-476e-942b-369788c79d31) (SDK Attempt Count: 1)" (RequestToken: f9ec6ddb-7cdd-04e2-fe47-e4d4d0eefd78, HandlerErrorCode: InvalidRequest)   |
+
 ```
 
 _(resolved) 02 idempotent deploy_

@@ -97,13 +97,21 @@ __Github action steps__
 
 ### DynamoDB Database
 
-__Global Secondary Indexes__
+__table name prefix__
 
-| id | status | location | task |
-| - | - | - | - |
-| 01 | closed | docs data model | - |
-| 02 | open | docs database api | - |
-| 03 | open | DB schema JSON | - |
-| 04 | open | CF constructor script | - |
-| 05 | open | DB API Lambda handler | - |
+to uniquely identify the DynamoDB tables in the account, table names include a prefix for `<env>_mcfpipe_`, so the full DynamoDB table name is `<env>_mcfpipe_<table_name>`. Since the API requests and responses are based on the base `table_name`, the full path to the DDB resource must be resolved by the API handler.
+
+__Search__
+
+**GET** `/{table}/search`
+
+- **table must exist** in `db_schema.json`.
+- **Primary (partition) key** queries are available on any table
+- **Global Secondary Indexes (GSI)** extend search to other declared columns.
+
+__Global Secondary Indexes (GSI)__
+
+- the GSI must be declared in the DynamoDB table definition
+- DynamoDB requires an `IndexName` for non-PK queries; this API exposes a thin, validated façade over `Query`.
+
 
