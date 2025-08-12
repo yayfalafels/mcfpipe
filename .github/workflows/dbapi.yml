@@ -93,6 +93,7 @@ jobs:
 
       - name: Deploy CloudFormation Stack
         id: stack_deploy
+        continue-on-error: true
         run: |
           STATE=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" \
             --query 'Stacks[0].StackStatus' --output text 2>/dev/null || true)
@@ -126,6 +127,7 @@ jobs:
 
       - name: Get stack outputs and export to runner env
         id: stack_artifacts
+        if: success()
         run: |
           OUTPUTS=$(aws cloudformation describe-stacks \
             --stack-name $STACK_NAME \
@@ -138,6 +140,7 @@ jobs:
 
       - name: Upload stack outputs to S3
         id: artifacts_upload
+        if: success()
         run: aws s3 cp $ARTIFACTS_JSON \
           s3://$S3_BUCKET/$STORAGE_S3_DIR/$ARTIFACTS_JSON
 
