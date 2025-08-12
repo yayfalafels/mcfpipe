@@ -6,6 +6,10 @@ release documentation `docs/releases/011_dbapi.md`
 
 session logs are timestamped to Singapore timezone in reverse chronological order, with latest entries at the top, and earlier entries at the bottom.
 
+### GSI [Codex] 2025-08-12 16:37:07
+- reviewed `docs/data_model.md` and removed outdated sort key for `post_details`
+- expanded `storage/db_schema.json` with table schemas and declared GSI per data model
+
 ### GSI [Data Engineer] Codex prompt 2025-08-12 16:31
 
 __situation__
