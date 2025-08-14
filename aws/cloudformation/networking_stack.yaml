@@ -24,9 +24,9 @@ Resources:
       CidrBlock: !Ref VpcCidr
       EnableDnsSupport: true
       EnableDnsHostnames: true
-    Tags:
-      - Key: Name
-        Value: mcfpipe-vpc
+      Tags:
+        - Key: Name
+          Value: mcfpipe-vpc
 
   InternetGateway:
     Type: AWS::EC2::InternetGateway
@@ -44,9 +44,9 @@ Resources:
       CidrBlock: !Ref PublicSubnet1Cidr
       MapPublicIpOnLaunch: true
       AvailabilityZone: !Select [0, !GetAZs '']
-    Tags:
-      - Key: Name
-        Value: mcfpipe-public-az1
+      Tags:
+        - Key: Name
+          Value: mcfpipe-public-az1
 
   PublicSubnet2:
     Type: AWS::EC2::Subnet
@@ -55,9 +55,9 @@ Resources:
       CidrBlock: !Ref PublicSubnet2Cidr
       MapPublicIpOnLaunch: true
       AvailabilityZone: !Select [1, !GetAZs '']
-    Tags:
-      - Key: Name
-        Value: mcfpipe-public-az2
+      Tags:
+        - Key: Name
+          Value: mcfpipe-public-az2
 
   PrivateSubnet:
     Type: AWS::EC2::Subnet
@@ -66,17 +66,17 @@ Resources:
       CidrBlock: !Ref PrivateSubnetCidr
       MapPublicIpOnLaunch: false
       AvailabilityZone: !Select [0, !GetAZs '']
-    Tags:
-      - Key: Name
-        Value: mcfpipe-private-az1
+      Tags:
+        - Key: Name
+          Value: mcfpipe-private-az1
 
   PublicRT:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref VPC
-    Tags:
-      - Key: Name
-        Value: mcfpipe-public-rt
+      Tags:
+        - Key: Name
+          Value: mcfpipe-public-rt
 
   PublicRoute:
     Type: AWS::EC2::Route
@@ -102,9 +102,9 @@ Resources:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref VPC
-    Tags:
-      - Key: Name
-        Value: mcfpipe-private-rt
+      Tags:
+        - Key: Name
+          Value: mcfpipe-private-rt
 
   PrivateSubnetAssoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
@@ -189,9 +189,9 @@ Resources:
       ServiceName: !Sub com.amazonaws.${AWS::Region}.s3
       RouteTableIds: [!Ref PrivateRT]
       VpcEndpointType: Gateway
-    Tags:
-      - Key: Name
-        Value: mcfpipe-vpce-s3
+      Tags:
+        - Key: Name
+          Value: mcfpipe-vpce-s3
 
   VPCEndpointDDB:
     Type: AWS::EC2::VPCEndpoint
@@ -200,9 +200,9 @@ Resources:
       ServiceName: !Sub com.amazonaws.${AWS::Region}.dynamodb
       RouteTableIds: [!Ref PrivateRT]
       VpcEndpointType: Gateway
-    Tags:
-      - Key: Name
-        Value: mcfpipe-vpce-dynamodb
+      Tags:
+        - Key: Name
+          Value: mcfpipe-vpce-dynamodb
 
   VpceEndpointDBApi:
     Type: AWS::EC2::VPCEndpoint
@@ -213,9 +213,9 @@ Resources:
       VpcId: !Ref VPC
       SecurityGroupIds: [!Ref SGVpce]
       SubnetIds: [!Ref PrivateSubnet]
-    Tags:
-      - Key: Name
-        Value: mcfpipe-vpce-executeapi
+      Tags:
+        - Key: Name
+          Value: mcfpipe-vpce-executeapi
 
   VpceLogs:
     Type: AWS::EC2::VPCEndpoint
@@ -226,9 +226,9 @@ Resources:
       VpcId: !Ref VPC
       SecurityGroupIds: [!Ref SGVpce]
       SubnetIds: [!Ref PrivateSubnet]
-    Tags:
-      - Key: Name
-        Value: mcfpipe-vpce-logs
+      Tags:
+        - Key: Name
+          Value: mcfpipe-vpce-logs
 
   VpceEcrApi:
     Type: AWS::EC2::VPCEndpoint
@@ -239,9 +239,9 @@ Resources:
       VpcId: !Ref VPC
       SecurityGroupIds: [!Ref SGVpce]
       SubnetIds: [!Ref PrivateSubnet]
-    Tags:
-      - Key: Name
-        Value: mcfpipe-vpce-ecrapi
+      Tags:
+        - Key: Name
+          Value: mcfpipe-vpce-ecrapi
 
   VpceEcrDkr:
     Type: AWS::EC2::VPCEndpoint
@@ -252,9 +252,9 @@ Resources:
       VpcId: !Ref VPC
       SecurityGroupIds: [!Ref SGVpce]
       SubnetIds: [!Ref PrivateSubnet]
-    Tags:
-      - Key: Name
-        Value: mcfpipe-vpce-ecrdkr
+      Tags:
+        - Key: Name
+          Value: mcfpipe-vpce-ecrdkr
 
 Outputs:
   VpcId:
