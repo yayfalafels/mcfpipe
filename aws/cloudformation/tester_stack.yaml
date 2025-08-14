@@ -1,0 +1,83 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: MCFPipe Tester - ECS Fargate task in private subnet
+
+Parameters:
+  VpcId:
+    Type: String
+  PrivateSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+  TesterSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: Private SG that allows egress to VPC endpoints
+  TesterImageUri:
+    Type: String
+    Description: ECR image URI (e.g. 123456789012.dkr.ecr.ap-southeast-1.amazonaws.com/tester:latest)
+  Cpu:
+    Type: Number
+    Default: 256
+  Memory:
+    Type: Number
+    Default: 512
+
+Resources:
+  Logs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/mcfpipe/tester"
+      RetentionInDays: 14
+
+  TesterExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { Service: ecs-tasks.amazonaws.com }
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        # Includes ECR image pull + awslogs
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+
+  TesterTaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: { Service: ecs-tasks.amazonaws.com }
+            Action: sts:AssumeRole
+      # Inline/managed policies only if your tests call AWS APIs. Otherwise omit.
+
+  Cluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: mcfpipe-tester
+
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: mcfpipe-tester
+      Cpu: !Ref Cpu
+      Memory: !Ref Memory
+      NetworkMode: awsvpc
+      RequiresCompatibilities: [FARGATE]
+      ExecutionRoleArn: !GetAtt TesterExecutionRole.Arn
+      TaskRoleArn: !GetAtt TesterTaskRole.Arn
+      ContainerDefinitions:
+        - Name: tester
+          Image: !Ref TesterImageUri
+          Essential: true
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref Logs
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: tester
+
+Outputs:
+  TesterClusterName:
+    Value: !Ref Cluster
+  TesterTaskDefinitionArn:
+    Value: !Ref TaskDefinition

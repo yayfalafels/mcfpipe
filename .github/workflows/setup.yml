@@ -6,12 +6,20 @@ on:
     paths:
       - '.github/workflows/setup.yml'
       - 'aws/cloudformation/network_stack.yaml'
+      - 'setup/export_network_outputs.sh'
       - 'setup/config.env'
 
 jobs:
   validate-docker-image:
     name: Run Docker Image Build
     runs-on: ubuntu-latest
+
+    env:
+      STACK_NAME: mcf-network
+      STACK_TEMPLATE: aws/cloudformation/networking_stack.yaml
+      NETWORK_CONFIG_JSON: network_config.json
+      NETWORK_CONFIG_S3_PATH: aws/network
+      NETWORK_CONFIG_EXPORT_SCRIPT: setup/export_network_config.sh
 
     steps:
     - name: Init Run Status
@@ -48,36 +56,21 @@ jobs:
       id: deploy_network_stack
       run: |
         aws cloudformation deploy \
-        --template-file aws/cloudformation/networking_stack.yaml \
-        --stack-name mcf-network \
+        --template-file $STACK_TEMPLATE \
+        --stack-name $STACK_NAME \
         --capabilities CAPABILITY_NAMED_IAM \
         --parameter-overrides \
             EnvStage=prod \
             ConfigBucket=$S3_BUCKET \
         --tags \
-            role=Bridges \
-            project=mcfpipe
+            role=$ROLE \
+            project=$PROJECT_NAME
 
-    - name: Get network stack outputs and export to runner env
+    - name: Export network outputs to S3
       id: network_outputs
       run: |
-          export STACK_NAME="mcf-network"
-          export OUTPUTS=$(aws cloudformation describe-stacks \
-            --stack-name $STACK_NAME \
-            --query "Stacks[0].Outputs" \
-            --output json)
-
-          echo "$OUTPUTS" > network_outputs.json
-
-          # Extract values and export them to GHA environment
-          echo "VPC_ID=$(echo $OUTPUTS | jq -r '.[] | select(.OutputKey=="VPC") | .OutputValue')" >> $GITHUB_ENV
-          echo "PUBLIC_SUBNET=$(echo $OUTPUTS | jq -r '.[] | select(.OutputKey=="PublicSubnetA") | .OutputValue')" >> $GITHUB_ENV
-          echo "PRIVATE_SUBNET=$(echo $OUTPUTS | jq -r '.[] | select(.OutputKey=="PrivateSubnetA") | .OutputValue')" >> $GITHUB_ENV
-          echo "INTERNET_GATEWAY=$(echo $OUTPUTS | jq -r '.[] | select(.OutputKey=="InternetGateway") | .OutputValue')" >> $GITHUB_ENV
-
-    - name: Upload stack outputs to S3
-      run: |
-          aws s3 cp network_outputs.json s3://$S3_BUCKET/aws/network/network_config.json            
+        chmod +x ./$NETWORK_CONFIG_EXPORT_SCRIPT
+        ./$NETWORK_CONFIG_EXPORT_SCRIPT "${{ env.STACK_NAME }}" "${{ env.AWS_REGION }}" "${{ env.S3_BUCKET }}" "${{ env.NETWORK_CONFIG_S3_PATH }}/${{ env.NETWORK_CONFIG_JSON }}"
 
     - name: Fail workflow if build failed
       if: env.SETUP_SUCCESS == 'false'

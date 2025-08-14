@@ -1,14 +1,32 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: Minimal networking stack for jobsearch (private + public subnets, VPC endpoints, SGs)
 
+Parameters:
+  VpcCidr:
+    Type: String
+    Default: 10.0.0.0/16
+    Description: CIDR for the VPC
+  PublicSubnet1Cidr:
+    Type: String
+    Default: 10.0.1.0/24
+  PublicSubnet2Cidr:
+    Type: String
+    Default: 10.0.2.0/24
+  PrivateSubnetCidr:
+    Type: String
+    Default: 10.0.101.0/24
+
 Resources:
 
   VPC:
     Type: AWS::EC2::VPC
     Properties:
-      CidrBlock: 10.0.0.0/16
+      CidrBlock: !Ref VpcCidr
       EnableDnsSupport: true
       EnableDnsHostnames: true
+    Tags:
+      - Key: Name
+        Value: mcfpipe-vpc
 
   InternetGateway:
     Type: AWS::EC2::InternetGateway
@@ -23,30 +41,42 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
-      CidrBlock: 10.0.1.0/24
+      CidrBlock: !Ref PublicSubnet1Cidr
       MapPublicIpOnLaunch: true
       AvailabilityZone: !Select [0, !GetAZs '']
+    Tags:
+      - Key: Name
+        Value: mcfpipe-public-az1
 
   PublicSubnet2:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
-      CidrBlock: 10.0.2.0/24
+      CidrBlock: !Ref PublicSubnet2Cidr
       MapPublicIpOnLaunch: true
       AvailabilityZone: !Select [1, !GetAZs '']
+    Tags:
+      - Key: Name
+        Value: mcfpipe-public-az2
 
   PrivateSubnet:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
-      CidrBlock: 10.0.3.0/24
+      CidrBlock: !Ref PrivateSubnetCidr
       MapPublicIpOnLaunch: false
       AvailabilityZone: !Select [0, !GetAZs '']
+    Tags:
+      - Key: Name
+        Value: mcfpipe-private-az1
 
   PublicRT:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref VPC
+    Tags:
+      - Key: Name
+        Value: mcfpipe-public-rt
 
   PublicRoute:
     Type: AWS::EC2::Route
@@ -72,28 +102,15 @@ Resources:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref VPC
+    Tags:
+      - Key: Name
+        Value: mcfpipe-private-rt
 
   PrivateSubnetAssoc:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId: !Ref PrivateSubnet
       RouteTableId: !Ref PrivateRT
-
-  VPCEndpointS3:
-    Type: AWS::EC2::VPCEndpoint
-    Properties:
-      VpcId: !Ref VPC
-      ServiceName: !Sub com.amazonaws.${AWS::Region}.s3
-      RouteTableIds: [!Ref PrivateRT]
-      VpcEndpointType: Gateway
-
-  VPCEndpointDDB:
-    Type: AWS::EC2::VPCEndpoint
-    Properties:
-      VpcId: !Ref VPC
-      ServiceName: !Sub com.amazonaws.${AWS::Region}.dynamodb
-      RouteTableIds: [!Ref PrivateRT]
-      VpcEndpointType: Gateway
 
   SGPrivate:
     Type: AWS::EC2::SecurityGroup
@@ -106,6 +123,26 @@ Resources:
       SecurityGroupEgress:
         - IpProtocol: -1
           CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: mcfpipe-sg-private
+
+  SGVpce:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Interface VPC Endpoints (allow 443 from inside VPC)
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: !Ref VpcCidr       # allow all within VPC; tighten to SGs if preferred
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: mcfpipe-sg-vpce
 
   SGSSH:
     Type: AWS::EC2::SecurityGroup
@@ -120,6 +157,9 @@ Resources:
       SecurityGroupEgress:
         - IpProtocol: -1
           CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: mcfpipe-sg-ssh
 
   SGHTTP:
     Type: AWS::EC2::SecurityGroup
@@ -138,6 +178,83 @@ Resources:
       SecurityGroupEgress:
         - IpProtocol: -1
           CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: mcfpipe-sg-http
+
+  VPCEndpointS3:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref VPC
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.s3
+      RouteTableIds: [!Ref PrivateRT]
+      VpcEndpointType: Gateway
+    Tags:
+      - Key: Name
+        Value: mcfpipe-vpce-s3
+
+  VPCEndpointDDB:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: !Ref VPC
+      ServiceName: !Sub com.amazonaws.${AWS::Region}.dynamodb
+      RouteTableIds: [!Ref PrivateRT]
+      VpcEndpointType: Gateway
+    Tags:
+      - Key: Name
+        Value: mcfpipe-vpce-dynamodb
+
+  VpceEndpointDBApi:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.execute-api"
+      VpcId: !Ref VPC
+      SecurityGroupIds: [!Ref SGVpce]
+      SubnetIds: [!Ref PrivateSubnet]
+    Tags:
+      - Key: Name
+        Value: mcfpipe-vpce-executeapi
+
+  VpceLogs:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.logs"
+      VpcId: !Ref VPC
+      SecurityGroupIds: [!Ref SGVpce]
+      SubnetIds: [!Ref PrivateSubnet]
+    Tags:
+      - Key: Name
+        Value: mcfpipe-vpce-logs
+
+  VpceEcrApi:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ecr.api"
+      VpcId: !Ref VPC
+      SecurityGroupIds: [!Ref SGVpce]
+      SubnetIds: [!Ref PrivateSubnet]
+    Tags:
+      - Key: Name
+        Value: mcfpipe-vpce-ecrapi
+
+  VpceEcrDkr:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ecr.dkr"
+      VpcId: !Ref VPC
+      SecurityGroupIds: [!Ref SGVpce]
+      SubnetIds: [!Ref PrivateSubnet]
+    Tags:
+      - Key: Name
+        Value: mcfpipe-vpce-ecrdkr
 
 Outputs:
   VpcId:
@@ -154,3 +271,21 @@ Outputs:
     Value: !Ref SGSSH
   SGHTTP:
     Value: !Ref SGHTTP
+  VpcCidrOut:
+    Value: !Ref VpcCidr
+  PrivateRouteTableId:
+    Value: !Ref PrivateRT
+  SGVpce:
+    Value: !Ref SGVpce
+  VPCExecuteApiId:
+    Value: !Ref VpceEndpointDBApi
+  VpceLogsId:
+    Value: !Ref VpceLogs
+  VpceEcrApiId:
+    Value: !Ref VpceEcrApi
+  VpceEcrDkrId:
+    Value: !Ref VpceEcrDkr
+  VpceS3Id:
+    Value: !Ref VPCEndpointS3
+  VpceDynamoDBId:
+    Value: !Ref VPCEndpointDDB

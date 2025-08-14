@@ -6,6 +6,10 @@ release documentation `docs/releases/011_dbapi.md`
 
 session logs are timestamped to Singapore timezone in reverse chronological order, with latest entries at the top, and earlier entries at the bottom.
 
+### Tester [Data Engineer] 2025-08-13 <HH>:<MM>
+cf stack `aws/cloudformation/tester_stack.yaml`
+ - minimal stack 
+
 ### CF stack deploy [Data Engineer] idempotent deploy 2025-08-12 22:09
 
 __follow-up__
