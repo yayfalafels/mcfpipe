@@ -5,7 +5,7 @@ on:
   push:
     paths:
       - '.github/workflows/setup.yml'
-      - 'aws/cloudformation/network_stack.yaml'
+      - 'aws/cloudformation/networking_stack.yaml'
       - 'setup/export_network_outputs.sh'
       - 'setup/config.env'
 
