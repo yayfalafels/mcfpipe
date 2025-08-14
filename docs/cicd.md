@@ -114,6 +114,7 @@ S3 bucket: `mcfpipe`
 ```
 apps/                     # source code for apps
   jobdb/*
+  tester/*
 config/                   # setup infrastructure and app configuration
 aws/                      # information for the AWS infrastructure
   network/
@@ -194,16 +195,45 @@ _manual setup resources_
 | 03 | ECR Dockerimages | Github Action | before the stack they are used in |
 
 ## CF Stack deploy
+The stack deploy performed by GHA runner includes
 
+ - **parameters** read-in/export to S3
+ - **idempotent deploy** checks if the target stack is already in state `ROLLBACK_COMPLETE` or `CREATE_FAIL`
+  - deletes the stack and then triggers a re-deploy
+ - **fail diagnostics** captures diagnostic logs for stack deploy fail and prints out in the runner logs
 
+The stack deploy AWS CLI command includes these standard arguments:
+
+| argument | description |
+| - | - |
+| `--template-file` | Path to the rendered CFN template the runner will submit. Typically `${CF_TEMPLATE_DIR}/${STACK_TEMPLATE_FILE}`. |
+| `--stack-name` | Logical name of the stack to create/update. Used for change sets, events, and cross-stack exports. |
+| `--capabilities` | Required when your template creates/updates IAM resources. `CAPABILITY_NAMED_IAM` confirms you understand IAM changes with explicit names. |
+| `--no-fail-on-empty-changeset` | Makes updates idempotent: if the template/params/tags don’t change, CFN returns an empty change set and the CLI exits **successfully** instead of erroring. |
+| `--parameter-overrides` | Inline key=value pairs that bind to your template’s `Parameters`. Values here take precedence over any defaults in the template. |
+| `--tags` | Key=value pairs to tag the **stack** (and, for many resource types, the resources). Useful for ownership, cost allocation, and environment scoping. |
+
+ ```bash
+aws cloudformation deploy \
+--template-file $CF_TEMPLATE_DIR/$STACK_TEMPLATE_FILE \
+--stack-name $STACK_NAME \
+--capabilities CAPABILITY_NAMED_IAM \
+--no-fail-on-empty-changeset \
+--parameter-overrides \
+  ...
+--tags \
+  role=$ROLE \
+  project=$PROJECT_NAME
+
+ ```
 
 ## Github Action Workflows
 
 | id | workflow | app feature | description |
 | - | - | - | - |
 | 01 | network | initial setup and network | initial setup, create S3 bucket, global IAM roles, network infrastructure |
-| 02 | db api | database api | load database schema, deploy database dynamodb tables and db api stack, upload db api config ex API URL |
-| 03 | tester | tester | create docker image for tester Fargate container image, deploy tester stack |
+| 02 | tester | tester | create docker image for tester Fargate container image, deploy tester stack |
+| 03 | db api | database api | load database schema, deploy database dynamodb tables and db api stack, upload db api config ex API URL |
 | 04 | webscraper | webscraper | create docker image for Webscraper Fargate container image, deploy webscraper stack |
 | 05 | html parser | html parser | create HTML Parser Lambda functions and Step Function to orchestrate the `job search` workflow |
 | 06 | job scorer | job scorer | create docker image for job scorer Fargate container image, deploy job scorer stack  |
@@ -221,17 +251,6 @@ __Github action steps__
 | 04 | record, upload deploy artifacts to S3 | example: VPC id and endpoints |
 
 __network config parameters__
-network config parameters
-
-| id | resource | parameter | value | description |
-| - | - | - | - | - |
-| 01 | VPC | VpcId |vpc-*** | The VPC every resource should live in. You’ll pass this to anything that needs VPC context (Lambda-in-VPC, ECS/Fargate, RDS, ALB, endpoints). |
-| 02 | Public Subnet 01 | PublicSubnet1Id | subnet-**** | public subnets: two for different AZs, associated with a route table that has a route to the IGW. Use for internet-facing things or tasks that need a public IP |
-| 03 | Public Subnet 02 | PublicSubnet2Id | subnet-**** | - same - |
-| 04 | Private Subnet | PrivateSubnetId |subnet-**** | private subnet: associated with a route table that has a route to the IGW. Use for internet-facing things or tasks that need a public IP |
-| 05 | security group: Public HTTP | SGHTTP | sg-**** | Inbound: 80/443 from 0.0.0.0/0 |
-| 06 | security group: Private | SGPrivate | sg-**** |private services. Usually no inbound from the internet, only from trusted SGs or within VPC |
-| 07 | security group: SSH | SGSSH |  sg-**** | SSH access to public instances |
 
 format of the network config JSON file
 
@@ -245,8 +264,33 @@ format of the network config JSON file
 ]
 ```
 
+### 02 Tester
+create the tester image, register to ECR, deploy tester stack, upload artifacts
 
-### 02 DB API
+__Github action steps__
+
+| id | step | description |
+| - | - | - |
+| 01 | resolve version + image tags | Derive `IMAGE_TAG` (e.g., short SHA or semver) and `IMAGE_URI` (account.dkr.ecr.region.amazonaws.com/repo:tag). |
+| 02 | docker build | Build tester image from `tester/` (uses `tester/requirements.txt`). |
+| 03 | ecr repo ensure | Create ECR repo if missing (idempotent). |
+| 04 | ecr push | Tag & push image to ECR; capture digest. |
+| 05 | write image manifest | Emit `containers.json` with `{ repo, tag, digest, image_uri }`. |
+| 06 | load network config | Download `aws/network/network_config.json` from S3; parse VPC, subnets, SGs. |
+| 07 | deploy tester stack | `aws cloudformation deploy` with params: VpcId, PublicSubnetIds, SG(s), EcrImageUri, DBApiUrl |
+| 08 | capture CFN outputs | Save stack outputs (cluster, task def ARN, log group, security groups, etc.) to `tester_config.json`. |
+
+__Artifacts__
+
+| id | artifact | input / output | file name | source code | S3 |
+| - | - | - | - | - | - |
+| 01 | tester Docker context | input | * | `tester/` | — |
+| 02 | tester stack template | input | `tester_stack.yaml` | `aws/cloudformation` | — |
+| 03 | network config | input | `network_config.json` | — | `aws/network` |
+| 04 | image manifest | output | `containers.json` | generated in workflow | `aws/ecr` |
+| 05 | CFN stack outputs | output | `tester_config.json` | - | `apps/tester` |
+
+### 03 DB API
 load database schema, deploy database dynamodb tables and db api stack, upload db api config 
 ex API URL
 

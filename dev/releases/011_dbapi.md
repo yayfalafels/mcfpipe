@@ -6,9 +6,25 @@ release documentation `docs/releases/011_dbapi.md`
 
 session logs are timestamped to Singapore timezone in reverse chronological order, with latest entries at the top, and earlier entries at the bottom.
 
-### Tester [Data Engineer] 2025-08-13 <HH>:<MM>
+### Tester [Data Engineer] 2025-08-14 16:58
+
+cf stack `aws/cloudformation/tester_stack.yaml`
+ - documentation updates
+ - GHA steps and artifacts define
+
+__network configuration__
+review networking configuration to ensure tester container can reach DB API endpoint
+- migrate the network config JSON export to a bash script
+
+### Tester [Data Engineer] 2025-08-13 17:00
 cf stack `aws/cloudformation/tester_stack.yaml`
  - minimal stack 
+
+__network configuration__
+review networking configuration to ensure tester container can reach DB API endpoint
+
+- update network stack `aws/cloudformation/networking_stack.yaml`
+  - add VPC Endpoint for Execute API for the API Gateway
 
 ### CF stack deploy [Data Engineer] idempotent deploy 2025-08-12 22:09
 

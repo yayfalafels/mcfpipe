@@ -29,6 +29,9 @@ parameters stored in network config JSON artifact `mcfpipe/aws/network/network_c
 | 05 | security group: Public HTTP | SGHTTP | sg-**** | Inbound: 80/443 from 0.0.0.0/0 |
 | 06 | security group: Private | SGPrivate | sg-**** |private services. Usually no inbound from the internet, only from trusted SGs or within VPC |
 | 07 | security group: SSH | SGSSH |  sg-**** | SSH access to public instances |
+| 08 | VPC endpoint: API Gateway | VPCExecuteApiId |  vpce-**** | Interface endpoint for **API Gateway Execute-API** service. Lets private subnet resources call API Gateway without public internet access. |
+| 09 | VPC endpoint: ECR API | VpceEcrApiId |  vpce-**** | Interface endpoint for **Amazon ECR API**. Allows ECS tasks/Lambda to pull ECR repository metadata |
+| 10 | VPC endpoint: ECR DKR | VpceEcrDkrId |  vpce-**** | Interface endpoint for **Amazon ECR Docker Registry**. Enables private subnet ECS/Fargate tasks to pull container images |
 
 __config JSON format__
 format of the network config JSON file
@@ -43,6 +46,13 @@ format of the network config JSON file
 ]
 ```
 
+## VPC Endpoints
+
+The interface endpoints in the VPC are provisioned in private subnets and tied to relevant security groups.
+
+- **API Gateway Execute-API** endpoint is essential for keeping the DB API traffic fully inside AWS, avoiding NAT costs and public exposure.
+- The two **ECR endpoints (API & DKR)** work together: API handles control-plane requests (auth, image listings, tags), while DKR handles data-plane image layer downloads. ECS/Fargate pulls need both if running without internet access.
+ - If you omit these, private subnet tasks will fail when trying to reach API Gateway or pull images from ECR unless you provide a NAT gateway.
 
 ## 01. Global AWS Managed Services
 
