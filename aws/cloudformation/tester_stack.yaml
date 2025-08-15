@@ -12,6 +12,9 @@ Parameters:
   TesterImageUri:
     Type: String
     Description: ECR image URI (e.g. 123456789012.dkr.ecr.ap-southeast-1.amazonaws.com/tester:latest)
+  LogGroupName:
+    Type: String
+    Default: /mcfpipe/tester
   Cpu:
     Type: Number
     Default: 256
@@ -23,7 +26,7 @@ Resources:
   Logs:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Sub "/mcfpipe/tester"
+      LogGroupName: !Ref LogGroupName
       RetentionInDays: 14
 
   TesterExecutionRole:
@@ -35,9 +38,19 @@ Resources:
           - Effect: Allow
             Principal: { Service: ecs-tasks.amazonaws.com }
             Action: sts:AssumeRole
-      ManagedPolicyArns:
-        # Includes ECR image pull + awslogs
-        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+      Policies:
+        - PolicyName: cw-logs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub '${Logs.Arn}:*'
+              - Effect: Allow
+                Action: logs:CreateLogGroup
+                Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*'
 
   TesterTaskRole:
     Type: AWS::IAM::Role
@@ -48,7 +61,6 @@ Resources:
           - Effect: Allow
             Principal: { Service: ecs-tasks.amazonaws.com }
             Action: sts:AssumeRole
-      # Inline/managed policies only if your tests call AWS APIs. Otherwise omit.
 
   Cluster:
     Type: AWS::ECS::Cluster
@@ -72,7 +84,7 @@ Resources:
           LogConfiguration:
             LogDriver: awslogs
             Options:
-              awslogs-group: !Ref Logs
+              awslogs-group: !Ref LogGroupName
               awslogs-region: !Ref AWS::Region
               awslogs-stream-prefix: tester
 
@@ -81,3 +93,5 @@ Outputs:
     Value: !Ref Cluster
   TesterTaskDefinitionArn:
     Value: !Ref TaskDefinition
+  TesterLogGroup:
+    Value: !Ref TesterLogGroup

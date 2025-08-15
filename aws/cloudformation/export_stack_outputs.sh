@@ -2,9 +2,9 @@
 set -euo pipefail
 
 # Usage:
-#   ./setup/export_network_outputs.sh <STACK_NAME> <AWS_REGION> <S3_BUCKET> [s3_key_prefix]
+#   ./setup/export_stack_outputs.sh <STACK_NAME> <AWS_REGION> <S3_BUCKET> [s3_key_prefix]
 # Example:
-#   ./setup/export_network_outputs.sh mcfpipe-network ap-southeast-1 mcfpipe aws/network/network_config.json
+#   ./setup/export_stack_outputs.sh mcfpipe-network ap-southeast-1 mcfpipe aws/network/network_config.json
 
 STACK_NAME="${1:?Missing STACK_NAME}"
 AWS_REGION="${2:?Missing AWS_REGION}"

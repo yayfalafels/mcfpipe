@@ -1,0 +1,28 @@
+{
+  "family": "mcfpipe-tester",
+  "executionRoleArn": "arn:aws:iam::<acct>:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::<acct>:role/ecsTaskRole",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
+  "containerDefinitions": [
+    {
+      "name": "tester",
+      "image": "<your-ecr-repo>:<tag>",
+      "command": ["sh", "-c", "pytest -q tests.py 2>&1 | tee /var/log/tests.log"],
+      "environment": [
+        {"name": "DB_API_URL", "value": "<filled by GHA or task override>"}
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-region": "ap-southeast-1",
+          "awslogs-group": "/ecs/mcfpipe/tester",
+          "awslogs-stream-prefix": "tester"
+        }
+      },
+      "essential": true
+    }
+  ]
+}

@@ -1,0 +1,175 @@
+name: Database API
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/db_api_gha.yml'
+      - 'aws/cloudformation/db_api_base.yaml'
+      - 'aws/cloudformation/db_api_stack.yaml'
+      - 'aws/cloudformation/cfn_stack_diagnostics.sh'
+      - 'aws/cloudformation/export_stack_outputs.sh'
+      - 'jobdb/**'
+      - 'storage/db_schema.json'
+
+jobs:
+  dbapi-deploy:
+    name: DB API Deploy
+    runs-on: ubuntu-latest
+
+    env:
+      CONFIG_PATH: setup/config.env
+      STACK_NAME: mcfpipe-dbapi
+      CF_TEMPLATE_DIR: aws/cloudformation
+      BASE_TEMPLATE_FILE: db_api_base.yaml
+      STACK_TEMPLATE_FILE: db_api_stack.yaml
+      LAMBDA_SC_S3_DIR: apps/jobdb
+      LAMBDA_SC_ZIP: lambda_sc_jobdb.zip
+      STORAGE_S3_DIR: storage
+      DB_SCHEMA_JSON: db_schema.json
+      ARTIFACTS_JSON: db_api.json
+      NETWORK_CONFIG_JSON: network_config.json
+      NETWORK_CONFIG_S3_PATH: aws/network
+      DBAPI_APP_DIR: jobdb
+      DBAPI_APP: jobdb
+      TEMPLATE_CONSTRUCTOR: cf_template_constructor.py
+      CF_DB_API_URL_NAME: DbAPIUrl
+      STACK_OUTPUT_S3_PATH: apps/jobdb
+      STACK_OUTPUT_JSON: jobdb_stack_config.json
+      TESTER_CLUSTER: mcfpipe-tester
+      TESTER_TASK: mcfpipe-tester
+      TESTER_CONTAINER: mcfpipe-tester
+      TESTER_TASK_SCRIPT: tester/tester_task_execute.sh
+      TESTER_LOG_GROUP: /mcfpipe/tester
+      STACK_EXPORT_SCRIPT: aws/cloudformation/export_stack_outputs.sh
+      STACK_FAIL_DIAGNOSTICS_SCRIPT: aws/cloudformation/cfn_stack_diagnostics.sh
+
+    steps:
+      - name: Init Run Status
+        id: initialize_run_status
+        run: echo "DBAPI_SUCCESS=true" >> $GITHUB_ENV
+
+      - name: Checkout repository
+        id: repo_checkout
+        uses: actions/checkout@v3
+
+      - name: Load environment config
+        id: env_var_set
+        run: cat $CONFIG_PATH >> $GITHUB_ENV
+
+      - name: Configure AWS credentials
+        id: aws_config
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+          
+      - name: Download and parse network config
+        id: network_config
+        shell: bash
+        run: |
+            set -euo pipefail
+            aws s3 cp "s3://$S3_BUCKET/$NETWORK_CONFIG_S3_PATH/$NETWORK_CONFIG_JSON" $NETWORK_CONFIG_JSON
+            JQ='map({(.OutputKey): .OutputValue})|add'
+            echo "VPC_ID=$(jq -r "$JQ".VpcId $NETWORK_CONFIG_JSON)" >> "$GITHUB_ENV"
+            echo "PRIVATE_SUBNET=$(jq -r "$JQ".PrivateSubnetId $NETWORK_CONFIG_JSON)" >> "$GITHUB_ENV"
+            echo "SG_PRIVATE=$(jq -r "$JQ".SGPrivate $NETWORK_CONFIG_JSON)" >> "$GITHUB_ENV"
+
+      - name: Upload DB schema to S3
+        id: schema_load
+        run: |
+          aws s3 cp "$STORAGE_S3_DIR/$DB_SCHEMA_JSON" \
+            "s3://$S3_BUCKET/$STORAGE_S3_DIR/$DB_SCHEMA_JSON"
+
+      - name: Generate CloudFormation template
+        id: cf_template_generate
+        run: |
+          pip install -r $DBAPI_APP_DIR/requirements.txt >/dev/null
+          python $DBAPI_APP_DIR/$TEMPLATE_CONSTRUCTOR \
+            $STORAGE_S3_DIR/$DB_SCHEMA_JSON \
+            $CF_TEMPLATE_DIR/$BASE_TEMPLATE_FILE \
+            $CF_TEMPLATE_DIR/$STACK_TEMPLATE_FILE \
+            --env $DEV_ENV \
+            --project $PROJECT_NAME
+
+      - name: Package Lambda handler
+        id: zip_lambda_handler
+        run: |
+          zip -r $LAMBDA_SC_ZIP $DBAPI_APP_DIR/lambda_handler.py $DBAPI_APP_DIR/$DBAPI_APP >/dev/null
+          aws s3 cp $LAMBDA_SC_ZIP \
+            s3://$S3_BUCKET/$LAMBDA_SC_S3_DIR/$LAMBDA_SC_ZIP
+
+      - name: Deploy CloudFormation Stack
+        id: stack_deploy
+        continue-on-error: true
+        run: |
+          STATE=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" \
+            --query 'Stacks[0].StackStatus' --output text 2>/dev/null || true)
+
+          if [[ "$ALLOW_STACK_DELETE" == "true" ]] && [[ "$STATE" =~ ^(ROLLBACK_COMPLETE|CREATE_FAILED)$ ]]; then
+            aws cloudformation delete-stack --stack-name "$STACK_NAME"
+            aws cloudformation wait stack-delete-complete --stack-name "$STACK_NAME"
+          fi
+
+          aws cloudformation deploy \
+            --template-file $CF_TEMPLATE_DIR/$STACK_TEMPLATE_FILE \
+            --stack-name $STACK_NAME \
+            --capabilities CAPABILITY_NAMED_IAM \
+            --no-fail-on-empty-changeset \
+            --parameter-overrides \
+              VpcId=$VPC_ID \
+              PrivateSubnetIds=$PRIVATE_SUBNET \
+              S3Bucket=$S3_BUCKET \
+              LambdaSourceCodeS3=$LAMBDA_SC_S3_DIR/$LAMBDA_SC_ZIP \
+              DBSchemaS3=$STORAGE_S3_DIR/$DB_SCHEMA_JSON \
+              DBLambdaSG=$SG_PRIVATE \
+            --tags \
+              role=$ROLE \
+              project=$PROJECT_NAME
+
+      - name: CFN failure diagnostics
+        id: stack_fail_diagnostics
+        if: steps.stack_deploy.outcome == 'failure'
+        run: |
+          bash $STACK_FAIL_DIAGNOSTICS_SCRIPT "$STACK_NAME" "$AWS_REGION" --nested
+          echo "DB API deploy failed"
+          exit 1
+
+      - name: Export stack outputs to S3
+        id: stack_outputs
+        run: |
+          chmod +x ./$STACK_EXPORT_SCRIPT
+          ./$STACK_EXPORT_SCRIPT "${{ env.STACK_NAME }}" "${{ env.AWS_REGION }}" "${{ env.S3_BUCKET }}" "${{ env.STACK_OUTPUT_S3_PATH }}/${{ env.STACK_OUTPUT_JSON }}"
+
+      - name: Get DB API url
+        id: db_api_url
+        run: |
+          OUTPUTS=$(aws cloudformation describe-stacks \
+            --stack-name $STACK_NAME \
+            --query "Stacks[0].Outputs" \
+            --output json)
+          echo "$OUTPUTS" > $ARTIFACTS_JSON
+          DB_URL=$(echo "$OUTPUTS" | jq -r --arg k "$CF_DB_API_URL_NAME" \
+            '.[] | select(.OutputKey==$k) | .OutputValue')
+          echo "DB_API_URL=$DB_URL" >> $GITHUB_ENV
+          
+      - name: Test API execute tester ECS task
+        id: api_test
+        run: |
+          chmod +x ./$TESTER_TASK_SCRIPT
+          CLUSTER=$TESTER_CLUSTER \
+          TASK_DEF=$TESTER_TASK \
+          CONTAINER_NAME=$TESTER_CONTAINER \
+          DB_API_URL=$DB_API_URL \
+          SUBNETS_CSV=$PRIVATE_SUBNET \
+          SECURITY_GROUPS_CSV=$SG_PRIVATE \
+          LOG_GROUP="$TESTER_LOG_GROUP" \
+          ./$TESTER_TASK_SCRIPT          
+
+      - name: Fail workflow if build failed
+        id: fail_task
+        if: env.DBAPI_SUCCESS == 'false'
+        run: |
+          echo "DB API deploy failed"
+          exit 1

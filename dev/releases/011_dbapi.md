@@ -6,7 +6,32 @@ release documentation `docs/releases/011_dbapi.md`
 
 session logs are timestamped to Singapore timezone in reverse chronological order, with latest entries at the top, and earlier entries at the bottom.
 
-### Tester [Data Engineer] 2025-08-14 16:58
+### Tester [Developer] GHA workflow 2025-08-15 16:20
+tester build deploy and run task
+
+__next__
+
+1. local docker image build 
+2. **basic route**: add a basic route `/` to return basic api version info
+  - jobdb handler: update with basic non-empty lambda payload with handler outline and functionality for the basic route
+  - test case: add a test case to handle the basic route `/` and return passed. Silence the other tests temporarily
+
+__files worked on__
+
+| id | file | path | description |
+| - | - | - | - |
+| 01 | GHA build image and deploy | `.github/workflows/tester_gha.yml` | build and register image, pass URI with deploy |
+| 02 | tester stack | `aws/cloudformation/tester_stack.yaml` | CF template define cluster, task, IAM, attach SG, takes URI input |
+| 03 | Dockerfile | `.github/workflows/tester_gha.yml` | Dockerfile for ECS task |
+| 04 | ECS task run |`tester/tester_task_execute.sh` | bash script to run ECS task and show CW logs on failure |
+| 05 | DB API GHA | `.github/workflows/db_api_gha.yml` | run ECS task from bash script |
+
+### Tester [Developer] GHA workflow 2025-08-15 12:24
+tester GHA `.github/workflows/tester_gha.yml`
+
+- draft outline copy from other GHA YAML scripts
+
+### Tester [Developer] 2025-08-14 16:58
 
 cf stack `aws/cloudformation/tester_stack.yaml`
  - documentation updates

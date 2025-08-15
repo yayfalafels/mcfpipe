@@ -1,0 +1,99 @@
+name: Config and Network Infra
+
+on:
+  workflow_dispatch: 
+  push:
+    paths:
+      - '.github/workflows/network_gha.yml'
+      - 'aws/cloudformation/network_stack.yaml'
+      - 'aws/cloudformation/cfn_stack_diagnostics.sh'
+      - 'aws/cloudformation/export_stack_outputs.sh'
+      - 'setup/config.env'
+
+jobs:
+  network-deploy:
+    name: Network Deploy
+    runs-on: ubuntu-latest
+
+    env:
+      STACK_NAME: mcf-network
+      STACK_TEMPLATE: aws/cloudformation/networking_stack.yaml
+      STACK_OUTPUT_S3_PATH: aws/network
+      STACK_OUTPUT_JSON: network_config.json
+      STACK_FAIL_DIAGNOSTICS_SCRIPT: aws/cloudformation/cfn_stack_diagnostics.sh
+      STACK_EXPORT_SCRIPT: aws/cloudformation/export_stack_outputs.sh
+
+    steps:
+    - name: Init Run Status
+      id: initialize_run_status
+      run: echo "SETUP_SUCCESS=true" >> $GITHUB_ENV
+
+    - name: Checkout repository
+      id: repo_checkout
+      uses: actions/checkout@v3
+
+    - name: Load environment config
+      id: env_var_set
+      run: cat setup/config.env >> $GITHUB_ENV
+
+    - name: Configure AWS credentials
+      id: aws_config
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Ensure S3 bucket exists
+      id: s3_bucket_create
+      run: |
+                if ! aws s3api head-bucket --bucket $S3_BUCKET 2>/dev/null; then
+                echo "Creating S3 bucket: $S3_BUCKET"
+                  aws s3 mb s3://$S3_BUCKET --region $AWS_REGION
+                else
+                  echo "Bucket $S3_BUCKET already exists"
+                fi
+
+    - name: Deploy CloudFormation Stack
+      id: stack_deploy
+      continue-on-error: true
+      run: |
+        STATE=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" \
+          --query 'Stacks[0].StackStatus' --output text 2>/dev/null || true)
+
+        if [[ "$ALLOW_STACK_DELETE" == "true" ]] && [[ "$STATE" =~ ^(ROLLBACK_COMPLETE|CREATE_FAILED)$ ]]; then
+          aws cloudformation delete-stack --stack-name "$STACK_NAME"
+          aws cloudformation wait stack-delete-complete --stack-name "$STACK_NAME"
+        fi
+
+        aws cloudformation deploy \
+          --stack-name $STACK_NAME \
+          --template-file $STACK_TEMPLATE \
+          --capabilities CAPABILITY_NAMED_IAM \
+          --no-fail-on-empty-changeset \
+          --parameter-overrides \
+            EnvStage=prod \
+            ConfigBucket=$S3_BUCKET \
+          --tags \
+            role=$ROLE \
+            project=$PROJECT_NAME
+
+    - name: CFN failure diagnostics
+      id: stack_fail_diagnostics
+      if: steps.stack_deploy.outcome == 'failure'
+      run: |
+        bash $STACK_FAIL_DIAGNOSTICS_SCRIPT "$STACK_NAME" "$AWS_REGION" --nested
+        echo "stack deploy failed"
+        exit 1
+
+    - name: Export network outputs to S3
+      id: network_outputs
+      run: |
+        chmod +x ./$STACK_EXPORT_SCRIPT
+        ./$STACK_EXPORT_SCRIPT "${{ env.STACK_NAME }}" "${{ env.AWS_REGION }}" "${{ env.S3_BUCKET }}" "${{ env.STACK_OUTPUT_S3_PATH }}/${{ env.STACK_OUTPUT_JSON }}"
+
+    - name: Fail workflow if build failed
+      if: env.SETUP_SUCCESS == 'false'
+      run: |
+        echo "Setup failed"
+        exit 1

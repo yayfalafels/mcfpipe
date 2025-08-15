@@ -19,9 +19,10 @@ the repository files are organized in the following structure
 aws/                    # cloudformation templates and specifications for AWS infrastructure
   dynamodb/
     ...
+  ecs/
+    tasks/
+      ...
   ecr/
-    ...
-  fargate/
     ...
   lambda/
     ...
@@ -86,6 +87,7 @@ tester/                # Tester app that runs on Fargate container
   tester/
     __init__.py
   tests.py
+  Dockerfile
   requirements.txt
 .gitignore
 AGENTS.md               # instructions for Developer AI assistants

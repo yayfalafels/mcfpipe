@@ -1,44 +1,41 @@
----
-name: Database API
+name: Tester
 
 on:
   workflow_dispatch:
   push:
     paths:
-      - '.github/workflows/dbapi.yml'
-      - 'aws/cloudformation/db_api_base.yaml'
-      - 'aws/cloudformation/db_api_stack.yaml'
-      - 'jobdb/**'
-      - 'storage/db_schema.json'
+      - '.github/workflows/tester_gha.yml'
+      - 'aws/cloudformation/tester_stack.yaml'
+      - 'aws/cloudformation/cfn_stack_diagnostics.sh'
+      - 'aws/cloudformation/export_stack_outputs.sh'
+      - 'tester/**'
 
 jobs:
-  deploy-dbapi:
-    name: Deploy DB API
+  tester-deploy:
+    name: Tester Image Build and Stack Deploy
     runs-on: ubuntu-latest
 
     env:
       CONFIG_PATH: setup/config.env
-      STACK_NAME: mcfpipe-dbapi
+      STACK_NAME: mcfpipe-tester
       CF_TEMPLATE_DIR: aws/cloudformation
-      BASE_TEMPLATE_FILE: db_api_base.yaml
-      STACK_TEMPLATE_FILE: db_api_stack.yaml
-      LAMBDA_SC_S3_DIR: apps/jobdb
-      LAMBDA_SC_ZIP: lambda_sc_jobdb.zip
-      STORAGE_S3_DIR: storage
-      DB_SCHEMA_JSON: db_schema.json
-      ARTIFACTS_JSON: db_api.json
+      STACK_TEMPLATE_FILE: tester_stack.yaml
+      APP_SC_S3_DIR: apps/tester
+      APP_DIR: tester
+      APP_NAME: tester
+      CF_DB_API_URL_NAME: DbAPIUrl
       NETWORK_CONFIG_JSON: network_config.json
       NETWORK_CONFIG_S3_PATH: aws/network
-      DBAPI_APP_DIR: jobdb
-      DBAPI_APP: jobdb
-      TEMPLATE_CONSTRUCTOR: cf_template_constructor.py
-      CF_DB_API_URL_NAME: DbAPIUrl
+      STACK_OUTPUT_S3_PATH: apps/tester
+      STACK_OUTPUT_JSON: tester_stack_config.json
+      STACK_EXPORT_SCRIPT: aws/cloudformation/export_stack_outputs.sh
       STACK_FAIL_DIAGNOSTICS_SCRIPT: aws/cloudformation/cfn_stack_diagnostics.sh
+      REPO_NAME: mcfpipe_tester
 
     steps:
       - name: Init Run Status
         id: initialize_run_status
-        run: echo "DBAPI_SUCCESS=true" >> $GITHUB_ENV
+        run: echo "TASK_SUCCESS=true" >> $GITHUB_ENV
 
       - name: Checkout repository
         id: repo_checkout
@@ -65,31 +62,43 @@ jobs:
             JQ='map({(.OutputKey): .OutputValue})|add'
             echo "VPC_ID=$(jq -r "$JQ".VpcId $NETWORK_CONFIG_JSON)" >> "$GITHUB_ENV"
             echo "PRIVATE_SUBNET=$(jq -r "$JQ".PrivateSubnetId $NETWORK_CONFIG_JSON)" >> "$GITHUB_ENV"
-            echo "DB_LAMBDA_SG=$(jq -r "$JQ".SGPrivate $NETWORK_CONFIG_JSON)" >> "$GITHUB_ENV"
+            echo "SG_PRIVATE=$(jq -r "$JQ".SGPrivate $NETWORK_CONFIG_JSON)" >> "$GITHUB_ENV"
 
-      - name: Upload DB schema to S3
-        id: schema_load
+      - name: Set image tags and ECR URI
+        id: image_tag_name
         run: |
-          aws s3 cp "$STORAGE_S3_DIR/$DB_SCHEMA_JSON" \
-            "s3://$S3_BUCKET/$STORAGE_S3_DIR/$DB_SCHEMA_JSON"
+          echo "IMAGE_TAG=${GITHUB_SHA::7}" >> $GITHUB_ENV
+          echo "ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)" >> $GITHUB_ENV
+          echo "IMAGE_REPO=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${REPO_NAME}" >> $GITHUB_ENV
+          echo "IMAGE_URI=${IMAGE_REPO}:${IMAGE_TAG}" >> $GITHUB_ENV
 
-      - name: Generate CloudFormation template
-        id: cf_template_generate
+      - name: Ensure ECR repo exists
+        id: ecr_repo_exists
         run: |
-          pip install -r $DBAPI_APP_DIR/requirements.txt >/dev/null
-          python $DBAPI_APP_DIR/$TEMPLATE_CONSTRUCTOR \
-            $STORAGE_S3_DIR/$DB_SCHEMA_JSON \
-            $CF_TEMPLATE_DIR/$BASE_TEMPLATE_FILE \
-            $CF_TEMPLATE_DIR/$STACK_TEMPLATE_FILE \
-            --env $DEV_ENV \
-            --project $PROJECT_NAME
+          aws ecr describe-repositories --repository-names "$REPO_NAME" >/dev/null 2>&1 || \
+          aws ecr create-repository --repository-name "$REPO_NAME" >/dev/null
 
-      - name: Package Lambda handler
-        id: zip_lambda_handler
+      - name: Login to ECR
+        it: ecr_login
         run: |
-          zip -r $LAMBDA_SC_ZIP $DBAPI_APP_DIR/lambda_handler.py $DBAPI_APP_DIR/$DBAPI_APP >/dev/null
-          aws s3 cp $LAMBDA_SC_ZIP \
-            s3://$S3_BUCKET/$LAMBDA_SC_S3_DIR/$LAMBDA_SC_ZIP
+          aws ecr get-login-password --region "$AWS_REGION" \
+            | docker login --username AWS --password-stdin "${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+
+      - name: Build tester image
+        id: docker_image_build
+        working-directory: $APP_DIR
+        run: |
+          docker build -t "$IMAGE_REPO:$IMAGE_TAG" .
+
+      - name: Push image to ECR
+        id: docker_image_ecr
+        run: |
+          docker push "$IMAGE_URI"
+          DIGEST=$(aws ecr describe-images \
+            --repository-name "$REPO_NAME" \
+            --image-ids imageTag="$IMAGE_TAG" \
+            --query 'imageDetails[0].imageDigest' --output text)
+          echo "IMAGE_DIGEST=$DIGEST" >> $GITHUB_ENV
 
       - name: Deploy CloudFormation Stack
         id: stack_deploy
@@ -111,10 +120,10 @@ jobs:
             --parameter-overrides \
               VpcId=$VPC_ID \
               PrivateSubnetIds=$PRIVATE_SUBNET \
-              S3Bucket=$S3_BUCKET \
-              LambdaSourceCodeS3=$LAMBDA_SC_S3_DIR/$LAMBDA_SC_ZIP \
-              DBSchemaS3=$STORAGE_S3_DIR/$DB_SCHEMA_JSON \
-              DBLambdaSG=$DB_LAMBDA_SG \
+              VpcId=$VPC_ID \
+              PrivateSubnetIds=$PRIVATE_SUBNET \
+              TesterSecurityGroupId=$SG_PRIVATE \
+              TesterImageUri=$IMAGE_URI \
             --tags \
               role=$ROLE \
               project=$PROJECT_NAME
@@ -124,28 +133,17 @@ jobs:
         if: steps.stack_deploy.outcome == 'failure'
         run: |
           bash $STACK_FAIL_DIAGNOSTICS_SCRIPT "$STACK_NAME" "$AWS_REGION" --nested
-          echo "DB API deploy failed"
+          echo "stack deploy failed"
           exit 1
 
-      - name: Get stack outputs and export to runner env
-        id: stack_artifacts
+      - name: Export stack outputs to S3
+        id: stack_outputs
         run: |
-          OUTPUTS=$(aws cloudformation describe-stacks \
-            --stack-name $STACK_NAME \
-            --query "Stacks[0].Outputs" \
-            --output json)
-          echo "$OUTPUTS" > $ARTIFACTS_JSON
-          DB_URL=$(echo $OUTPUTS | jq -r \
-            '.[] | select(.OutputKey==\"$CF_DB_API_URL_NAME\") | .OutputValue')
-          echo "DB_API_URL=$DB_URL" >> $GITHUB_ENV
-
-      - name: Upload stack outputs to S3
-        id: artifacts_upload
-        run: aws s3 cp $ARTIFACTS_JSON \
-          s3://$S3_BUCKET/$STORAGE_S3_DIR/$ARTIFACTS_JSON
+          chmod +x ./$STACK_EXPORT_SCRIPT
+          ./$STACK_EXPORT_SCRIPT "${{ env.STACK_NAME }}" "${{ env.AWS_REGION }}" "${{ env.S3_BUCKET }}" "${{ env.STACK_OUTPUT_S3_PATH }}/${{ env.STACK_OUTPUT_JSON }}"
 
       - name: Fail workflow if build failed
-        if: env.DBAPI_SUCCESS == 'false'
+        if: env.TASK_SUCCESS == 'false'
         run: |
           echo "DB API deploy failed"
           exit 1
