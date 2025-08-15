@@ -124,6 +124,8 @@ jobs:
               LambdaSourceCodeS3=$LAMBDA_SC_S3_DIR/$LAMBDA_SC_ZIP \
               DBSchemaS3=$STORAGE_S3_DIR/$DB_SCHEMA_JSON \
               DBLambdaSG=$SG_PRIVATE \
+              StageName=$DEV_ENV \
+              GitSha="${GITHUB_SHA::7}" \
             --tags \
               role=$ROLE \
               project=$PROJECT_NAME

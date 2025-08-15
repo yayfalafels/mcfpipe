@@ -45,9 +45,8 @@ while [[ $# -gt 0 ]]; do
     --db-url) DB_API_URL="${2:-}"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown arg: $1" >&2; usage; exit 2 ;;
-  case_esac_done=true
+    esac
 done
-: "${case_esac_done:=}"
 
 if [[ -z "${DB_API_URL}" ]]; then
   echo "ERROR: DB_API_URL is required (env or --db-url)." >&2

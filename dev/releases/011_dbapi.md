@@ -6,7 +6,51 @@ release documentation `docs/releases/011_dbapi.md`
 
 session logs are timestamped to Singapore timezone in reverse chronological order, with latest entries at the top, and earlier entries at the bottom.
 
-### Tester [Developer] GHA workflow 2025-08-15 16:20
+### DB API [Developer] basic route 2025-08-15 20:05
+add a basic route `/` that returns DB API about and version info
+
+handler python code `tester/handler.py`
+
+### Tester [Developer] docker image 2025-08-15 19:39
+build tester docker image locally
+
+!Docker desktop must be running
+
+```bash
+cd tester
+docker build -t mcfpipe-tester:local .
+```
+run the container with dummy endpoint "http://127.0.0.1:8000/"
+alternate can use "https://fake-json-api.mock.beeceptor.com/users"
+
+```bash
+docker run --rm   -e DB_API_URL="http://127.0.0.1:8000/"   mcfpipe-tester:local
+```
+
+temporarily skip main API unit tests 1-N using `@unittest.skip()`
+leave only basic endpoint test `test_00_*`
+
+result: expected: 1 passed, 13 skipped
+
+```bash
+$ docker run --rm -e DB_API_URL=$FAKE_URL $CONTAINER_NAME:local
+.sssssssssssss                                                           [100%]
+1 passed, 13 skipped in 2.90s
+```
+
+```python
+    def test_00_endpoint_valid(self):
+        response = requests.get(f"{BASE_URL}")
+        self.assertEqual(response.status_code, 200, f'expected status code 200, got {response.status_code}. {response.text}')
+
+    @unittest.skip("TEMPORARY SKIP TEST")
+    def test_01_post_valid(self):
+        """POST Create new job (positive)"""
+        payload = self.__class__.test_record.copy()
+
+```
+
+### Tester [Developer] GHA workflow 2025-08-15 16:33
 tester build deploy and run task
 
 __next__
@@ -22,7 +66,7 @@ __files worked on__
 | - | - | - | - |
 | 01 | GHA build image and deploy | `.github/workflows/tester_gha.yml` | build and register image, pass URI with deploy |
 | 02 | tester stack | `aws/cloudformation/tester_stack.yaml` | CF template define cluster, task, IAM, attach SG, takes URI input |
-| 03 | Dockerfile | `.github/workflows/tester_gha.yml` | Dockerfile for ECS task |
+| 03 | Dockerfile | `tester/Dockerfile` | Dockerfile for ECS task |
 | 04 | ECS task run |`tester/tester_task_execute.sh` | bash script to run ECS task and show CW logs on failure |
 | 05 | DB API GHA | `.github/workflows/db_api_gha.yml` | run ECS task from bash script |
 

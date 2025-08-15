@@ -41,6 +41,9 @@ Parameters:
     Type: Number
     Default: 14
     Description: CloudWatch Logs retention for API Gateway access logs
+  GitSha:
+    Type: String
+    Default: unknown
 
 Resources:
   # -------------------------
@@ -99,7 +102,7 @@ Resources:
       FunctionName: !Sub mcfpipe-dbapi-${StageName}
       Description: MCFPipe DB API Lambda (routes implemented in jobdb app)
       Runtime: python3.12
-      Handler: jobdb.lambda_handler.handler
+      Handler: handler.lambda_handler
       Role: !GetAtt DBLambdaRole.Arn
       MemorySize: 512
       Timeout: 29
@@ -113,6 +116,8 @@ Resources:
         Variables:
           LOG_LEVEL: !Ref LogLevel
           DB_SCHEMA_S3: !Ref DBSchemaS3
+          GITHUB_SHA: !Ref GitSha
+          ENV_STAGE: !Ref StageName
 
   # -------------------------
   # API Gateway (REST API v1)
