@@ -47,12 +47,18 @@ jobs:
         run: cat $CONFIG_PATH >> $GITHUB_ENV
 
       - name: Configure AWS credentials
-        id: aws_config
+        id: aws_cred
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get AWS config
+        id: aws_config
+        shell: bash
+        run: |
+          echo "ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)" >> $GITHUB_ENV
           
       - name: Download and parse network config
         id: network_config
@@ -75,7 +81,6 @@ jobs:
         id: image_tag_name
         run: |
           echo "IMAGE_TAG=${GITHUB_SHA::7}" >> $GITHUB_ENV
-          echo "ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)" >> $GITHUB_ENV
           echo "IMAGE_REPO=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${REPO_NAME}" >> $GITHUB_ENV
           echo "IMAGE_URI=${IMAGE_REPO}:${IMAGE_TAG}" >> $GITHUB_ENV
 
