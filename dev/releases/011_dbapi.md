@@ -6,11 +6,21 @@ release documentation `docs/releases/011_dbapi.md`
 
 session logs are timestamped to Singapore timezone in reverse chronological order, with latest entries at the top, and earlier entries at the bottom.
 
-### DB API [Developer] basic route 2025-08-16 <HH>:<MM>
-switch to docker image for DB API Lambda
+### DB API [Developer] 2025-08-16 15:42
+tester and DB API stack switch Lambda to container URI
 
-validation
- - 
+__next__
+validate DB API stack
+
+__follow-up issues__
+
+ - issue ECR cleanup [#6](https://github.com/yayfalafels/mcfpipe/issues/6) created
+  - add GHA or ECR policy to periodically cleanup old images to avoid excess storage charges
+
+__completed__
+
+- switch to docker image for DB API Lambda
+- tester stack validated
 
 __files worked on__
 
