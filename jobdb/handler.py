@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 # jobdb/handler.py
+
+# dependencies -------------------------------------------------------------------------------
 import json
 import os
 import datetime
@@ -8,6 +10,15 @@ import datetime
 # constants -------------------------------------------------------------------------------
 APP_NAME = 'mcfpipe-dbapi'
 VERSION_FILE = 'VERSION'
+
+
+# env variables ----------------------------------------------------------------------------
+LOG_LEVEL = os.getenv('LOG_LEVEL', 'DEBUG')
+S3_BUCKET = os.getenv('S3_BUCKET', 'mcfpipe')
+DB_SCHEMA_S3_PATH = os.getenv('DB_SCHEMA_S3', 'storage/db_schema.json')
+ENV_STAGE = os.getenv('ENV_STAGE', 'dev')
+AWS_REGION = os.getenv('AWS_REGION', os.getenv('AWS_DEFAULT_REGION', ''))
+GITHUB_SHA = os.getenv('GITHUB_SHA', '')[:7]
 
 
 # helper functions -------------------------------------------------------------------------
@@ -39,8 +50,13 @@ def _json(status: int, body: dict, headers: dict | None = None):
     return response
 
 
+def get_utcnow():
+    return datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='seconds') + 'Z'
+
+
 # main handler ---------------------------------------------------------
 def lambda_handler(event, context):
+    now_timestamp = get_utcnow()
     method = event.get('httpMethod', 'GET')
     path   = event.get('path', '/')
 
@@ -49,10 +65,10 @@ def lambda_handler(event, context):
         body = {
             'service': APP_NAME,
             'version': _get_version(),
-            'stage': os.getenv('ENV_STAGE', 'dev'),
-            'region': os.getenv('AWS_REGION', os.getenv('AWS_DEFAULT_REGION', '')),
-            'commit': os.getenv('GITHUB_SHA', '')[:7],
-            'time_utc': datetime.datetime.utcnow().isoformat(timespec='seconds') + 'Z',
+            'stage': ENV_STAGE,
+            'region': AWS_REGION,
+            'commit': GITHUB_SHA,
+            'time_utc': now_timestamp,
             'routes': [
                 '/{table}/{id}',
                 '/{table}',

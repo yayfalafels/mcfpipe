@@ -22,9 +22,7 @@ jobs:
       STACK_NAME: mcfpipe-dbapi
       CF_TEMPLATE_DIR: aws/cloudformation
       BASE_TEMPLATE_FILE: db_api_base.yaml
-      STACK_TEMPLATE_FILE: db_api_stack.yaml
-      LAMBDA_SC_S3_DIR: apps/jobdb
-      LAMBDA_SC_ZIP: lambda_sc_jobdb.zip
+      STACK_TEMPLATE_FILE: db_api_stack.yaml      
       STORAGE_S3_DIR: storage
       DB_SCHEMA_JSON: db_schema.json
       ARTIFACTS_JSON: db_api.json
@@ -32,6 +30,7 @@ jobs:
       NETWORK_CONFIG_S3_PATH: aws/network
       DBAPI_APP_DIR: jobdb
       DBAPI_APP: jobdb
+      REPO_NAME: mcfpipe-dbapi
       TEMPLATE_CONSTRUCTOR: cf_template_constructor.py
       CF_DB_API_URL_NAME: DbAPIUrl
       STACK_OUTPUT_S3_PATH: apps/jobdb
@@ -82,6 +81,46 @@ jobs:
           aws s3 cp "$STORAGE_S3_DIR/$DB_SCHEMA_JSON" \
             "s3://$S3_BUCKET/$STORAGE_S3_DIR/$DB_SCHEMA_JSON"
 
+      - name: Install jq
+        id: install_jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: ECR Login
+        id: ecr_login
+        run: |
+          aws ecr get-login-password --region "$AWS_REGION" \
+            | docker login --username AWS --password-stdin "$(aws sts get-caller-identity --query Account --output text).dkr.ecr.${AWS_REGION}.amazonaws.com"
+
+      - name: Set image tags and ECR URI
+        id: image_tag_name
+        run: |
+          echo "ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)" >> $GITHUB_ENV
+          echo "IMAGE_TAG=${GITHUB_SHA::7}" >> $GITHUB_ENV
+          echo "IMAGE_REPO=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${REPO_NAME}" >> $GITHUB_ENV
+          echo "IMAGE_URI=${IMAGE_REPO}:${IMAGE_TAG}" >> $GITHUB_ENV
+
+      - name: Ensure ECR repo exists
+        id: ecr_repo_exists
+        run: |
+          aws ecr describe-repositories --repository-names "$REPO_NAME" >/dev/null 2>&1 || \
+          aws ecr create-repository --repository-name "$REPO_NAME" >/dev/null
+
+      - name: Build tester image
+        id: docker_image_build
+        working-directory:  ${{ env.DBAPI_APP_DIR }}
+        run: |
+          docker build -t "$IMAGE_REPO:$IMAGE_TAG" .
+
+      - name: Push image to ECR
+        id: docker_image_ecr
+        run: |
+          docker push "$IMAGE_URI"
+          DIGEST=$(aws ecr describe-images \
+            --repository-name "$REPO_NAME" \
+            --image-ids imageTag="$IMAGE_TAG" \
+            --query 'imageDetails[0].imageDigest' --output text)
+          echo "IMAGE_DIGEST=$DIGEST" >> $GITHUB_ENV
+
       - name: Generate CloudFormation template
         id: cf_template_generate
         run: |
@@ -92,13 +131,6 @@ jobs:
             $CF_TEMPLATE_DIR/$STACK_TEMPLATE_FILE \
             --env $DEV_ENV \
             --project $PROJECT_NAME
-
-      - name: Package Lambda handler
-        id: zip_lambda_handler
-        run: |
-          zip -r $LAMBDA_SC_ZIP $DBAPI_APP_DIR/lambda_handler.py $DBAPI_APP_DIR/$DBAPI_APP >/dev/null
-          aws s3 cp $LAMBDA_SC_ZIP \
-            s3://$S3_BUCKET/$LAMBDA_SC_S3_DIR/$LAMBDA_SC_ZIP
 
       - name: Deploy CloudFormation Stack
         id: stack_deploy
@@ -120,10 +152,10 @@ jobs:
             --parameter-overrides \
               VpcId=$VPC_ID \
               PrivateSubnetIds=$PRIVATE_SUBNET \
-              S3Bucket=$S3_BUCKET \
-              LambdaSourceCodeS3=$LAMBDA_SC_S3_DIR/$LAMBDA_SC_ZIP \
-              DBSchemaS3=$STORAGE_S3_DIR/$DB_SCHEMA_JSON \
               DBLambdaSG=$SG_PRIVATE \
+              S3Bucket=$S3_BUCKET \
+              LambdaImageUri=$IMAGE_URI \
+              DBSchemaS3=$STORAGE_S3_DIR/$DB_SCHEMA_JSON \
               StageName=$DEV_ENV \
               GitSha="${GITHUB_SHA::7}" \
             --tags \

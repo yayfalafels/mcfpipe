@@ -6,6 +6,20 @@ release documentation `docs/releases/011_dbapi.md`
 
 session logs are timestamped to Singapore timezone in reverse chronological order, with latest entries at the top, and earlier entries at the bottom.
 
+### DB API [Developer] basic route 2025-08-16 <HH>:<MM>
+switch to docker image for DB API Lambda
+
+validation
+ - 
+
+__files worked on__
+
+| id | file | path | description |
+| - | - | - | - |
+| 01 | Dockerfile | `jobdb/Dockerfile` | Dockerfile for the `jobdb` Lambda container image |
+| 02 | db api stack | `aws/cloudformation/db_api_base.yaml` | CF template update Lambda resource source code from container URI instead of zip |
+| 03 | db api GHA | `.github/workflows/db_api_gha.yml` | GHA to create the docker image, register in ECR and pass URI to CF stack deploy |
+
 ### DB API [Developer] basic route 2025-08-15 20:05
 add a basic route `/` that returns DB API about and version info
 

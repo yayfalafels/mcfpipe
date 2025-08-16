@@ -15,13 +15,13 @@ Parameters:
     Description: Security Group ID for the DB API Lambda
   S3Bucket:
     Type: String
-    Description: S3 bucket containing the Lambda source bundle
-  LambdaSourceCodeS3:
+    Description: S3 bucket containing the DB API config
+  LambdaImageUri:
     Type: String
-    Description: S3 key (object path) for the Lambda source bundle zip
+    Description: ECR Container URI for jobdb image
   DBSchemaS3:
     Type: String
-    Description: S3 URI (e.g., s3://bucket/path/schema.json) for the database schema the Lambda loads
+    Description: S3 path for the database schema JSON (e.g., storage/db_schema.json)
   StageName:
     Type: String
     Default: dev
@@ -101,20 +101,19 @@ Resources:
     Properties:
       FunctionName: !Sub mcfpipe-dbapi-${StageName}
       Description: MCFPipe DB API Lambda (routes implemented in jobdb app)
-      Runtime: python3.12
-      Handler: handler.lambda_handler
+      PackageType: Image
       Role: !GetAtt DBLambdaRole.Arn
       MemorySize: 512
       Timeout: 29
       Code:
-        S3Bucket: !Ref S3Bucket
-        S3Key: !Ref LambdaSourceCodeS3
+        ImageUri: !Ref LambdaImageUri
       VpcConfig:
         SecurityGroupIds: [ !Ref DBLambdaSG ]
         SubnetIds: !Ref PrivateSubnetIds
       Environment:
         Variables:
           LOG_LEVEL: !Ref LogLevel
+          S3_BUCKET: !Ref S3Bucket
           DB_SCHEMA_S3: !Ref DBSchemaS3
           GITHUB_SHA: !Ref GitSha
           ENV_STAGE: !Ref StageName
