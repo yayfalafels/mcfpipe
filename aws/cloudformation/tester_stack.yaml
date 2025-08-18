@@ -38,19 +38,8 @@ Resources:
           - Effect: Allow
             Principal: { Service: ecs-tasks.amazonaws.com }
             Action: sts:AssumeRole
-      Policies:
-        - PolicyName: cw-logs
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-              - Effect: Allow
-                Action:
-                  - logs:CreateLogStream
-                  - logs:PutLogEvents
-                Resource: !Sub '${Logs.Arn}:*'
-              - Effect: Allow
-                Action: logs:CreateLogGroup
-                Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
 
   TesterTaskRole:
     Type: AWS::IAM::Role
@@ -86,7 +75,6 @@ Resources:
             Options:
               awslogs-group: !Ref LogGroupName
               awslogs-region: !Ref AWS::Region
-              awslogs-stream-prefix: tester
 
 Outputs:
   TesterClusterName:
