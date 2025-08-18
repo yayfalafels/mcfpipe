@@ -6,8 +6,10 @@ release documentation `docs/releases/011_dbapi.md`
 
 session logs are timestamped to Singapore timezone in reverse chronological order, with latest entries at the top, and earlier entries at the bottom.
 
-### DB API [Developer] validation 2025-08-18 <HH>:<MM>
+### DB API [Developer] validation 2025-08-18 18:30
 db api stack validate
+
+stuck at issue 10 400 Forbidden
 
 __issues__
 
