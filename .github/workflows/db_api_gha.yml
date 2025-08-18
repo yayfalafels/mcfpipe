@@ -37,7 +37,7 @@ jobs:
       STACK_OUTPUT_JSON: jobdb_stack_config.json
       TESTER_CLUSTER: mcfpipe-tester
       TESTER_TASK: mcfpipe-tester
-      TESTER_CONTAINER: mcfpipe-tester
+      TESTER_CONTAINER: tester
       TESTER_TASK_SCRIPT: tester/tester_task_execute.sh
       TESTER_LOG_GROUP: /mcfpipe/tester
       STACK_EXPORT_SCRIPT: aws/cloudformation/export_stack_outputs.sh

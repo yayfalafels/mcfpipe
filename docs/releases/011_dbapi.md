@@ -177,7 +177,9 @@ environment variables are passed to the container by Github actions at the `run-
 | 04 | open | ENHANCEMENT | [ECR refresh on changes #7](https://github.com/yayfalafels/mcfpipe/issues/7) | update the logic in GHA to only refresh the DB API ECR docker image either no image is present OR changes that would affect the docker image |
 | 05 | closed | BUG | [API IAM CW log #8](https://github.com/yayfalafels/mcfpipe/issues/8) | API does not have IAM role to read/write to CW log group |
 | 06 | closed | BUG | [CF API log format #9](https://github.com/yayfalafels/mcfpipe/issues/9) | YAML line break fold `>-` not working as expected |
-| 07 | open | BUG | [DB_API_URL not passed #10](https://github.com/yayfalafels/mcfpipe/issues/10) | GHA parameter `DB_API_URL` not passed from stack outputs |
+| 07 | closed | BUG | [DB_API_URL not passed #10](https://github.com/yayfalafels/mcfpipe/issues/10) | GHA parameter `DB_API_URL` not passed from stack outputs |
+| 08 | open | BUG | [ECS run container name conflict #11](https://github.com/yayfalafels/mcfpipe/issues/11) | * |
+
 
 __Issue details__
 
@@ -359,3 +361,87 @@ update to correct variable name `DbApiUrl`
     env:
       CF_DB_API_URL_NAME: DbApiUrl
 ```
+
+### (open) 08 ECS run container name conflict
+Github issue [ECS run container name conflict #11](https://github.com/yayfalafels/mcfpipe/issues/11)
+type: `BUG`
+
+__situation__
+container with name `mcfpipe-tester` not found
+
+exception message
+
+```
+An error occurred (InvalidParameterException) when calling the RunTask operation: Override for container named mcfpipe-tester is not a container in the TaskDefinition.
+```
+
+GHA call
+
+```
+  chmod +x ./$TESTER_TASK_SCRIPT
+  CLUSTER=$TESTER_CLUSTER \
+  TASK_DEF=$TESTER_TASK \
+  CONTAINER_NAME=$TESTER_CONTAINER \
+  DB_API_URL=$DB_API_URL \
+  SUBNETS_CSV=$PRIVATE_SUBNET \
+  SECURITY_GROUPS_CSV=$SG_PRIVATE \
+  LOG_GROUP="$TESTER_LOG_GROUP" \
+  ./$TESTER_TASK_SCRIPT   
+
+    TESTER_CLUSTER: mcfpipe-tester
+    TESTER_TASK: mcfpipe-tester
+    TESTER_CONTAINER: mcfpipe-tester
+
+Cluster: mcfpipe-tester
+TaskDef: mcfpipe-tester
+Region : ap-southeast-1
+DB_API_URL: https://1vrt51wp19.execute-api.ap-southeast-1.amazonaws.com/prod
+```
+
+__diagnostics__
+
+root cause (suspected)
+conflict between container name GHA env variable `CONTAINER_NAME` and CF template `tester_stack.yaml`
+
+expected: OK `tester`  match `ContainerDefinitions` property of `TaskDefintion` resource in `tester_stack.yaml`
+actual: X `mcfpipe-tester`
+
+location `.github/workflow/db_api_gha.yml`
+
+```yaml
+    env:
+      CONTAINER_NAME: mcfpipe-tester
+```
+
+location `aws/cloudformation/tester_stack.yml`
+
+```yaml
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: mcfpipe-tester
+      Cpu: !Ref Cpu
+      Memory: !Ref Memory
+      NetworkMode: awsvpc
+      RequiresCompatibilities: [FARGATE]
+      ExecutionRoleArn: !GetAtt TesterExecutionRole.Arn
+      TaskRoleArn: !GetAtt TesterTaskRole.Arn
+      ContainerDefinitions:
+        - Name: tester
+
+```
+
+__resolution__
+update the GHA env variable to match the CF template `tester`
+
+location `.github/workflow/db_api_gha.yml`
+
+```yaml
+    env:
+      CONTAINER_NAME: tester
+```
+
+rational of updating GHA env variable vs visa-versa
+
+- the project tag `mcfpipe` is already on the cluster, so safe to resolve `tester` namespace conflicts with containers for other projects
+- simpler change, no need to redepoy the tester stack
