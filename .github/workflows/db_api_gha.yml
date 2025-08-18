@@ -117,7 +117,7 @@ jobs:
           aws ecr describe-repositories --repository-names "$REPO_NAME" >/dev/null 2>&1 || \
           aws ecr create-repository --repository-name "$REPO_NAME" >/dev/null
 
-      - name: Build tester image
+      - name: Build DB API image
         id: docker_image_build
         working-directory:  ${{ env.DBAPI_APP_DIR }}
         run: |
@@ -211,6 +211,8 @@ jobs:
           SUBNETS_CSV=$PRIVATE_SUBNET \
           SECURITY_GROUPS_CSV=$SG_PRIVATE \
           LOG_GROUP="$TESTER_LOG_GROUP" \
+          TAG_ROLE="$ROLE" \
+          TAG_PROJECT_NAME="$PROJECT_NAME" \
           ./$TESTER_TASK_SCRIPT          
 
       - name: Fail workflow if build failed

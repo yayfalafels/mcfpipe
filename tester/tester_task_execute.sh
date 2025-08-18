@@ -14,8 +14,10 @@ ASSIGN_PUBLIC_IP="${ASSIGN_PUBLIC_IP:-DISABLED}"                      # ENABLED|
 
 # CloudWatch Logs
 LOG_GROUP="${LOG_GROUP:-/mcfpipe/tester}"
-STREAM_PREFIX="${STREAM_PREFIX:-ecs}"       # should match awslogs-stream-prefix in task def
-CONTAINER_NAME="${CONTAINER_NAME:-tester}"  # containerDefinitions[].name
+STREAM_PREFIX="${STREAM_PREFIX:-ecs}"            # should match awslogs-stream-prefix in task def
+CONTAINER_NAME="${CONTAINER_NAME:-tester}"       # containerDefinitions[].name
+TAG_ROLE="${TAG_ROLE:-Bridges}"                  # role=Bridges
+TAG_PROJECT_NAME="${TAG_PROJECT_NAME:-mcfpipe}"  # project=mcfpipe
 
 # App env
 DB_API_URL="${DB_API_URL:-}"                # REQUIRED (or pass --db-url)
@@ -89,7 +91,9 @@ RUN_OUT=$(aws ecs run-task \
   --task-definition "$TASK_DEF" \
   --region "$REGION" \
   --network-configuration "awsvpcConfiguration={subnets=[$SUBNETS_CSV],securityGroups=[$SECURITY_GROUPS_CSV],assignPublicIp=$ASSIGN_PUBLIC_IP}" \
-  --overrides "$OVERRIDES")
+  --overrides "$OVERRIDES" \
+  --tags key=project,value="${TAG_PROJECT_NAME}" key=role,value="${TAG_ROLE}"
+  )
 
 FAILURES=$(echo "$RUN_OUT" | jq -r '.failures | length')
 if [[ "$FAILURES" != "0" ]]; then
