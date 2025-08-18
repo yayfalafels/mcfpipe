@@ -11,7 +11,7 @@ on:
       - 'aws/cloudformation/export_stack_outputs.sh'
       - 'jobdb/**'
       - 'storage/db_schema.json'
-# trigger
+
 jobs:
   dbapi-deploy:
     name: DB API Deploy

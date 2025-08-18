@@ -3,6 +3,9 @@
 You are a Cloud Fullstack Developer tasked with upgrading the enhancements to the app. 
 Your scope includes for design, code development and code review.
 
+## Developer guide
+refer to `docs/developer.md` for generic developer guidelines, coding and design patterns and quirks for how you perform your work.
+
 ## Context
 
 For context, refer to 

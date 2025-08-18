@@ -176,6 +176,7 @@ environment variables are passed to the container by Github actions at the `run-
 | 03 | open | SDLC | DB API stack | validation pending |
 | 04 | open | ENHANCEMENT | [ECR refresh on changes #7](https://github.com/yayfalafels/mcfpipe/issues/7) | update the logic in GHA to only refresh the DB API ECR docker image either no image is present OR changes that would affect the docker image |
 | 05 | open | BUG | [API IAM CW log #8](https://github.com/yayfalafels/mcfpipe/issues/8) | API does not have IAM role to read/write to CW log group |
+| 06 | open | BUG | [CF API log format #9](https://github.com/yayfalafels/mcfpipe/issues/9) | YAML line break fold `>-` not working as expected |
 
 __Issue details__
 
@@ -238,3 +239,74 @@ Resources:
       CloudWatchRoleArn: !GetAtt ApiGatewayCloudWatchRole.Arn
 
 ```
+
+### (open) 06 CF API log format
+Github issue [CF API log format #8](https://github.com/yayfalafels/mcfpipe/issues/9)
+type: `BUG`
+
+__situation__
+malformatted Access log with line break character `\n` in CF template
+
+location: `aws/cloudformation/db_api_base.yaml` CF Resource:`ApiStage`
+
+```yaml
+  ApiStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      StageName: !Ref StageName
+      RestApiId: !Ref RestApi
+      DeploymentId: !Ref ApiDeployment
+      TracingEnabled: false
+      ...
+      AccessLogSetting:
+        DestinationArn: !GetAtt ApiAccessLogs.Arn
+        Format: >-
+          { "requestId":"$context.requestId","ip":"$context.identity.sourceIp",
+            "caller":"$context.identity.caller","user":"$context.identity.user",
+            "requestTime":"$context.requestTime","httpMethod":"$context.httpMethod",
+            "resourcePath":"$context.resourcePath","status":"$context.status",
+            "protocol":"$context.protocol","responseLength":"$context.responseLength",
+            "integrationError":"$context.integration.error",
+            "errorMessage":"$context.error.message" }
+```
+
+exception
+
+```
+This AWS::ApiGateway::Stage resource is in a CREATE_FAILED state.
+
+Resource handler returned message: "Access Log format must be single line, new line character is allowed only at end of the format: '{ "requestId":"$context.requestId","ip":"$context.identity.sourceIp", "caller":"$context.identity.caller","user":"$context.identity.user", "requestTime":"$context.requestTime","httpMethod":"$context.httpMethod", "resourcePath":"$context.resourcePath","status":"$context.status", "protocol":"$context.protocol","responseLength":"$context.responseLength", "integrationError":"$context.integration.error", "errorMessage":"$context.error.message" }' (Service: ApiGateway, Status Code: 400, Request ID: 65007eb0-8bfa-47ff-9bc5-9d188d874781) (SDK Attempt Count: 1)" (RequestToken: d5b2dec4-40cf-b3f3-ca96-f834b5e6173c, HandlerErrorCode: InvalidRequest)
+```
+
+__diagnostics__
+`AWS::ApiGateway::Stage.AccessLogSetting.Format` contains one or more line break `\n` characters before the end of the string.
+
+The [YAML line break fold operator](https://stackoverflow.com/questions/3790454/how-do-i-break-a-string-in-yaml-over-multiple-lines) `>-` _should_ have resolved the issue
+    - but for some unknown reason, it didn't work as expected.
+
+_Possible causes_
+
+- **leading theory** baggage leftover `\r` from differences between Windows `\r\n` and linux `\n` line break
+- Using | (literal) or plain multi-line YAML.
+- Copy/pasting pretty JSON with line breaks.
+- Using !Sub over a multi-line block without folding/chomping.
+
+__resolution__
+don't use line breaks and write as a single long line.
+
+with line breaks
+
+```yaml
+        Format: >-
+          { "requestId":"$context.requestId","ip":"$context.identity.sourceIp",
+            "caller":"$context.identity.caller","user":"$context.identity.user",
+            "requestTime":"$context.requestTime","httpMethod":"$context.httpMethod",
+```
+
+without line breaks
+
+```yaml
+        Format: >-
+          { "requestId":"$context.requestId","ip":"$context.identity.sourceIp", "caller":"$context.identity.caller","user":"$context.identity.user", "requestTime":"$context.requestTime","httpMethod":"$context.httpMethod",
+```
+
