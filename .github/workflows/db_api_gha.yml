@@ -11,7 +11,7 @@ on:
       - 'aws/cloudformation/export_stack_outputs.sh'
       - 'jobdb/**'
       - 'storage/db_schema.json'
-#trigger
+
 jobs:
   dbapi-deploy:
     name: DB API Deploy
@@ -80,6 +80,7 @@ jobs:
             echo "VPC_ID=$(jq -r "$JQ".VpcId $NETWORK_CONFIG_JSON)" >> "$GITHUB_ENV"
             echo "PRIVATE_SUBNET=$(jq -r "$JQ".PrivateSubnetId $NETWORK_CONFIG_JSON)" >> "$GITHUB_ENV"
             echo "SG_PRIVATE=$(jq -r "$JQ".SGPrivate $NETWORK_CONFIG_JSON)" >> "$GITHUB_ENV"
+            echo "VPCE_ID=$(jq -r "$JQ".VPCExecuteApiId $NETWORK_CONFIG_JSON)" >> "$GITHUB_ENV"
 
       - name: Upload DB schema to S3
         id: schema_load
@@ -170,6 +171,7 @@ jobs:
               DBSchemaS3=$STORAGE_S3_DIR/$DB_SCHEMA_JSON \
               StageName=$DEV_ENV \
               GitSha="${GITHUB_SHA::7}" \
+              ExecuteApiVpceId=$VPCE_ID \
             --tags \
               role=$ROLE \
               project=$PROJECT_NAME
