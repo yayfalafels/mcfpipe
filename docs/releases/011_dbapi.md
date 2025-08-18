@@ -175,8 +175,9 @@ environment variables are passed to the container by Github actions at the `run-
 | 02 | closed | SDLC | tester stack | validated 2025-08-16 |
 | 03 | open | SDLC | DB API stack | validation pending |
 | 04 | open | ENHANCEMENT | [ECR refresh on changes #7](https://github.com/yayfalafels/mcfpipe/issues/7) | update the logic in GHA to only refresh the DB API ECR docker image either no image is present OR changes that would affect the docker image |
-| 05 | open | BUG | [API IAM CW log #8](https://github.com/yayfalafels/mcfpipe/issues/8) | API does not have IAM role to read/write to CW log group |
-| 06 | open | BUG | [CF API log format #9](https://github.com/yayfalafels/mcfpipe/issues/9) | YAML line break fold `>-` not working as expected |
+| 05 | closed | BUG | [API IAM CW log #8](https://github.com/yayfalafels/mcfpipe/issues/8) | API does not have IAM role to read/write to CW log group |
+| 06 | closed | BUG | [CF API log format #9](https://github.com/yayfalafels/mcfpipe/issues/9) | YAML line break fold `>-` not working as expected |
+| 07 | open | BUG | [DB_API_URL not passed #10](https://github.com/yayfalafels/mcfpipe/issues/10) | GHA parameter `DB_API_URL` not passed from stack outputs |
 
 __Issue details__
 
@@ -200,7 +201,7 @@ The current configuration refreshes the DB API ECR docker image for all GHA trig
 __resolution__
 update the logic in GHA to only refresh the DB API ECR docker image either no image is present OR changes that would affect the docker image, such as any change to `jobdb/*` contents.
 
-### (open) 05 ECR refresh on changes
+### (closed) 05 ECR refresh on changes
 Github issue [API IAM CW log #8](https://github.com/yayfalafels/mcfpipe/issues/8)
 type: `BUG`
 
@@ -240,7 +241,7 @@ Resources:
 
 ```
 
-### (open) 06 CF API log format
+### (closed) 06 CF API log format
 Github issue [CF API log format #8](https://github.com/yayfalafels/mcfpipe/issues/9)
 type: `BUG`
 
@@ -310,3 +311,51 @@ without line breaks
           { "requestId":"$context.requestId","ip":"$context.identity.sourceIp", "caller":"$context.identity.caller","user":"$context.identity.user", "requestTime":"$context.requestTime","httpMethod":"$context.httpMethod",
 ```
 
+### (closed) 07 DB_API_URL not passed
+Github issue [DB_API_URL not passed #10](https://github.com/yayfalafels/mcfpipe/issues/10)
+type: `BUG`
+
+__situation__
+The GHA env variable `DB_API_URL` failed to set from stack outputs. variable was empty in the next step.
+
+```bash
+OUTPUTS=$(aws cloudformation describe-stacks \
+  --stack-name $STACK_NAME \
+  --query "Stacks[0].Outputs" \
+  --output json)
+echo "$OUTPUTS" > $ARTIFACTS_JSON
+DB_URL=$(echo "$OUTPUTS" | jq -r --arg k "$CF_DB_API_URL_NAME" \
+  '.[] | select(.OutputKey==$k) | .OutputValue')
+echo "DB_API_URL=$DB_URL" >> $GITHUB_ENV
+```
+
+__diagnostics__
+
+root cause (suspected)
+incorrect CF stack output variable name in GHA env variable `CF_DB_API_URL_NAME`
+
+expected: OK `DbApiUrl`
+actual: X `DbAPIUrl`
+
+location `.github/workflow/db_api_gha.yml`
+
+```yaml
+    env:
+      CF_DB_API_URL_NAME: DbAPIUrl
+```
+
+diagnostic steps
+
+| id | status | check | results |
+| - | - | - | - |
+| 01 | closed | stack output parameter exported to S3 config | OK `DbApiUrl=https://1vrt51wp19.execute-api.ap-southeast-1.amazonaws.com/prod` |
+| 02 | open | GHA env variable correct  |X `CF_DB_API_URL_NAME=DbAPIUrl` should be `CF_DB_API_URL_NAME=DbApiUrl` |
+
+__resolution__
+
+update to correct variable name `DbApiUrl`
+
+```yaml
+    env:
+      CF_DB_API_URL_NAME: DbApiUrl
+```

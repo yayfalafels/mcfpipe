@@ -32,7 +32,7 @@ jobs:
       DBAPI_APP: jobdb
       REPO_NAME: mcfpipe-dbapi
       TEMPLATE_CONSTRUCTOR: cf_template_constructor.py
-      CF_DB_API_URL_NAME: DbAPIUrl
+      CF_DB_API_URL_NAME: DbApiUrl
       STACK_OUTPUT_S3_PATH: apps/jobdb
       STACK_OUTPUT_JSON: jobdb_stack_config.json
       TESTER_CLUSTER: mcfpipe-tester
