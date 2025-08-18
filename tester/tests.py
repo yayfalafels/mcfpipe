@@ -19,7 +19,7 @@ SAMPLE_TEST_RECORD = {
 
 # module variables --------------------------------------------------------------------
 BASE_URL = os.environ.get('DB_API_URL', 'http://localhost:8000')  # Use env var for flexibility
-
+print(f'BASE_URL:{BASE_URL}')
 
 # classes -----------------------------------------------------------------------------
 class TestDatabaseAPI(unittest.TestCase):
