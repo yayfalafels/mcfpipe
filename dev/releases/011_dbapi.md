@@ -9,6 +9,12 @@ session logs are timestamped to Singapore timezone in reverse chronological orde
 ### DB API [Developer] validation 2025-08-18 <HH>:<MM>
 db api stack validate
 
+__issues__
+
+| id | status | type | issue | description |
+| - | - | - | - | - |
+| 05 | open | BUG | [API IAM CW log #8](https://github.com/yayfalafels/mcfpipe/issues/8) | API does not have IAM role to read/write to CW log group |
+
 ### DB API [Developer] documentation 2025-08-18 13:56
 release documentation updates
 

@@ -169,17 +169,19 @@ environment variables are passed to the container by Github actions at the `run-
 
 ## Issues
 
-| id | status | issue | description |
-| - | - | - | - |
-| 01 | open | [ECR cleanup #6](https://github.com/yayfalafels/mcfpipe/issues/6) | Add a cleanup function to cleanup old ECR image versions |
-| 02 | closed | tester stack | validated 2025-08-16 |
-| 03 | open | DB API stack | validation pending |
-| 04 | open | [ECR refresh on changes #7](https://github.com/yayfalafels/mcfpipe/issues/7) | update the logic in GHA to only refresh the DB API ECR docker image either no image is present OR changes that would affect the docker image |
+| id | status | type | issue | description |
+| - | - | - | - | - |
+| 01 | open | ENHANCEMENT | [ECR cleanup #6](https://github.com/yayfalafels/mcfpipe/issues/6) | Add a cleanup function to cleanup old ECR image versions |
+| 02 | closed | SDLC | tester stack | validated 2025-08-16 |
+| 03 | open | SDLC | DB API stack | validation pending |
+| 04 | open | ENHANCEMENT | [ECR refresh on changes #7](https://github.com/yayfalafels/mcfpipe/issues/7) | update the logic in GHA to only refresh the DB API ECR docker image either no image is present OR changes that would affect the docker image |
+| 05 | open | BUG | [API IAM CW log #8](https://github.com/yayfalafels/mcfpipe/issues/8) | API does not have IAM role to read/write to CW log group |
 
 __Issue details__
 
 ### (open) 01 ECR cleanup
 Github issue [ECR cleanup #6](https://github.com/yayfalafels/mcfpipe/issues/6)
+type: `ENHANCEMENT`
 
 __situation__
 Current behavior keeps versioned ECR images. Each image is tagged to a commit and size ~ 60 MB. Over time, this can accumulate for excess storage costs.
@@ -189,9 +191,50 @@ Add a cleanup function, either separate lambda (recommended) or a setup in the G
 
 ### (open) 04 ECR refresh on changes
 Github issue [ECR refresh on changes #7](https://github.com/yayfalafels/mcfpipe/issues/7)
+type: `ENHANCEMENT`
 
 __situation__
 The current configuration refreshes the DB API ECR docker image for all GHA triggers, including those which have no effect on the container, such as changes to `db_schema.json` which the container pulls directly from S3 and is not pre-loaded to the container at image build runtine.
 
 __resolution__
 update the logic in GHA to only refresh the DB API ECR docker image either no image is present OR changes that would affect the docker image, such as any change to `jobdb/*` contents.
+
+### (open) 05 ECR refresh on changes
+Github issue [API IAM CW log #8](https://github.com/yayfalafels/mcfpipe/issues/8)
+type: `BUG`
+
+__situation__
+Stack deploy FAIL. An IAM Role for the API Gateway must have permissions to read/write to CW log group.
+
+exception
+
+```
+|  2025-08-18T06:03:15.677000+00:00|  AWS::ApiGateway::Stage     |  ApiStage      |  CREATE_FAILED        |  Resource handler returned message: "CloudWatch Logs role ARN must be set in account settings to enable logging (Service: ApiGateway, Status Code: 400, Request ID: bc4ede82-d75d-4c43-9d5d-a88fc90aa24b) (SDK Attempt Count: 1)" (RequestToken: ce63743f-5eb5-23f9-0185-6bd7e6d2e752, HandlerErrorCode: InvalidRequest)
+```
+
+__resolution__
+Create a simple IAM role with write access to CW log group using the managed policy `AmazonAPIGatewayPushToCloudWatchLogs`. 
+ - attach the policy to an API Gateway account
+
+```yaml
+Resources:
+  ApiGatewayCloudWatchRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: apigw-cw-logs
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: apigateway.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs
+
+  ApiGatewayAccount:
+    Type: AWS::ApiGateway::Account
+    Properties:
+      CloudWatchRoleArn: !GetAtt ApiGatewayCloudWatchRole.Arn
+
+```
