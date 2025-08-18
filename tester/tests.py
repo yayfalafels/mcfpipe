@@ -19,7 +19,7 @@ SAMPLE_TEST_RECORD = {
 
 # module variables --------------------------------------------------------------------
 BASE_URL = os.environ.get('DB_API_URL', 'http://localhost:8000')  # Use env var for flexibility
-print(f'BASE_URL:{BASE_URL}')
+
 
 # classes -----------------------------------------------------------------------------
 class TestDatabaseAPI(unittest.TestCase):
@@ -32,7 +32,7 @@ class TestDatabaseAPI(unittest.TestCase):
 
     def test_00_endpoint_valid(self):
         response = requests.get(f"{BASE_URL}")
-        self.assertEqual(response.status_code, 200, f'expected status code 200, got {response.status_code}. {response.text}')
+        self.assertEqual(response.status_code, 200, f'expected status code 200, got {response.status_code}. {response.text} from BASE_URL: {BASE_URL}')
 
     @unittest.skip("TEMPORARY SKIP TEST")
     def test_01_post_valid(self):
