@@ -179,7 +179,8 @@ environment variables are passed to the container by Github actions at the `run-
 | 06 | closed | BUG | [CF API log format #9](https://github.com/yayfalafels/mcfpipe/issues/9) | YAML line break fold `>-` not working as expected |
 | 07 | closed | BUG | [DB_API_URL not passed #10](https://github.com/yayfalafels/mcfpipe/issues/10) | GHA parameter `DB_API_URL` not passed from stack outputs |
 | 08 | closed | BUG | [ECS run container name conflict #11](https://github.com/yayfalafels/mcfpipe/issues/11) | container name conflict btw CF template and GHA env variable |
-| 09 | open | BUG | [tester container script failures #12](https://github.com/yayfalafels/mcfpipe/issues/12) | * |
+| 09 | closed | BUG | [tester container script failures #12](https://github.com/yayfalafels/mcfpipe/issues/12) | missing IAM `AmazonECSTaskExecutionRolePolicy` on the `TesterExecutionRole` |
+| 10 | open | BUG | [test 00 basic route fail 400 Forbidden #13](https://github.com/yayfalafels/mcfpipe/issues/13) | test 00 basic route failed 400 Forbidden |
 
 
 __Issue details__
@@ -447,7 +448,7 @@ rational of updating GHA env variable vs visa-versa
 - the project tag `mcfpipe` is already on the cluster, so safe to resolve `tester` namespace conflicts with containers for other projects
 - simpler change, no need to redepoy the tester stack
 
-### (open) 09 tester container script failure
+### (closed) 09 tester container script failure
 Github issue [tester container script failure #12](https://github.com/yayfalafels/mcfpipe/issues/12)
 type: `BUG`
 
@@ -457,11 +458,11 @@ __multiple sub-issues__
 
 | id | status | sub-issue |
 | - | - | - |
-| 01 | open | insufficient IAM permissions on task execution role |
-| 02 | open | CW log stream not found |
-| 03 | open | unknown flag `--no-follow` |
+| 01 | closed | insufficient IAM permissions on task execution role |
+| 02 | closed | CW log stream not found |
+| 03 | closed | unknown flag `--no-follow` |
 
-__(open) 09.01 insufficient IAM permissions on task execution role__
+__(closed) 09.01 insufficient IAM permissions on task execution role__
 
 location: `tester/tester_task_execute.sh`
 plus possible other locations 
@@ -502,7 +503,7 @@ TesterExecutionRole:
 
 ```
 
-__(open) 09.02 CW log stream not found__
+__(closed) 09.02 CW log stream not found__
 
 _situation_
 
@@ -518,7 +519,7 @@ _diagnostics_
 
 symptom of underlying cause for sub-issue 01
 
-__(open) 09.03 unknown flag no follow__
+__(closed) 09.03 unknown flag no follow__
 
 _situation_
 
@@ -558,3 +559,60 @@ drop the `--no-follow` argument from the line
 ```bash
 aws logs tail "$LOG_GROUP" --region "$REGION" --since 1h --format short --no-follow || true
 ```
+
+### (open) 10 test 00 basic route fail 400 Forbidden
+Github issue [test 00 basic route fail 400 Forbidden #12](https://github.com/yayfalafels/mcfpipe/issues/13)
+type: `BUG`
+
+__situation__
+
+test 00 fails with status code 400 "Forbidden"
+
+ECS task CW logs
+
+```
+August 18, 2025 at 17:10
+> self.assertEqual(response.status_code, 200, f'expected status code 200, got {response.status_code}. {response.text} from BASE_URL: {BASE_URL}')
+tester
+August 18, 2025 at 17:10
+E AssertionError: 400 != 200 : expected status code 200, got 400. {"message":"Forbidden"} from BASE_URL: https://1vrt51wp19.execute-api.ap-southeast-1.amazonaws.com/prod
+tester
+```
+
+__diagnostics__
+
+several diagnostic steps taken, confirmed 
+
+- correct Base URL passed in (print-out in logs)
+- X base URL returns expected response from console 
+  actually this is unexpected because supposed to be PRIVATE
+
+location `aws/cloudformation/db_api_base.yaml`
+
+X REGIONAL (Public IP)
+
+```yaml
+  RestApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Sub mcfpipe-dbapi-${StageName}
+      EndpointConfiguration:
+        Types: [REGIONAL]
+
+```
+
+OK PRIVATE 
+
+```yaml
+  RestApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Sub mcfpipe-dbapi-${StageName}
+      EndpointConfiguration:
+        Types: [PRIVATE]
+
+```
+
+__resolution__
+
+

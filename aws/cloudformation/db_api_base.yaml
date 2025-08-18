@@ -149,6 +149,16 @@ Resources:
       Name: !Sub mcfpipe-dbapi-${StageName}
       EndpointConfiguration:
         Types: [PRIVATE]
+      Policy:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: '*'
+            Action: execute-api:Invoke
+            Resource: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:*/*/*/*
+            Condition:
+              StringEquals:
+                aws:SourceVpce: !Ref ExecuteApiVpceId
 
   # ANY on root "/"
   RootAnyMethod:
@@ -190,7 +200,7 @@ Resources:
       Action: lambda:InvokeFunction
       FunctionName: !Ref DbLambda
       Principal: apigateway.amazonaws.com
-      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RestApi}/*/*/*
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:*/*/*/*
 
   # -------------------------
   # API Deployment & Stage
