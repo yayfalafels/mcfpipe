@@ -75,6 +75,7 @@ Resources:
             Options:
               awslogs-group: !Ref LogGroupName
               awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: ecs
 
 Outputs:
   TesterClusterName:

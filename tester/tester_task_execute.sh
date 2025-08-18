@@ -14,7 +14,7 @@ ASSIGN_PUBLIC_IP="${ASSIGN_PUBLIC_IP:-DISABLED}"                      # ENABLED|
 
 # CloudWatch Logs
 LOG_GROUP="${LOG_GROUP:-/mcfpipe/tester}"
-#STREAM_PREFIX="${STREAM_PREFIX:-tester}"    # should match awslogs-stream-prefix in task def
+STREAM_PREFIX="${STREAM_PREFIX:-ecs}"       # should match awslogs-stream-prefix in task def
 CONTAINER_NAME="${CONTAINER_NAME:-tester}"  # containerDefinitions[].name
 
 # App env
@@ -31,7 +31,7 @@ Usage: $(basename "$0") [--db-url URL]
 
 Env overrides:
   CLUSTER, TASK_DEF, SUBNETS_CSV, SECURITY_GROUPS_CSV, ASSIGN_PUBLIC_IP
-  LOG_GROUP, CONTAINER_NAME, AWS_REGION
+  LOG_GROUP, STREAM_PREFIX, CONTAINER_NAME, AWS_REGION
   CMD_OVERRIDE_JSON  (optional JSON array for "command" override)
 Examples:
   DB_API_URL="https://abc.execute-api.${REGION}.amazonaws.com/prod" \\
@@ -116,7 +116,7 @@ echo "Stopped reason: $STOPPED_REASON"
 ### --- On failure: print CW logs to runner output ----------------------------
 if [[ "$EXIT_CODE" != "0" ]]; then
   echo "::group::CloudWatch Logs for failed task"
-  STREAM="${CONTAINER_NAME}/${TASK_ID}"
+  STREAM="${STREAM_PREFIX}/${CONTAINER_NAME}/${TASK_ID}"
   # small delay to allow final log flush
   sleep 3 || true
   if ! aws logs get-log-events \
