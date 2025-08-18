@@ -268,3 +268,33 @@ def generate_table_resource(table, table_prefix: str=''):
         props["GlobalSecondaryIndexes"] = gsi_list
 
 ```
+
+## Deployment Resources
+
+### API Gateway + Lambda (Private)
+
+- **Isolation**: Both API Gateway and the Lambda function run inside the VPC private subnets.  
+  - They are **not directly reachable from the public internet**.  
+  - Access is restricted to internal services (e.g., tester Fargate, other backend modules) via VPC endpoints and security groups.
+- **Routing strategy**: API Gateway acts only as a thin wrapper, forwarding all HTTP methods to Lambda.  
+  - A catch-all `{proxy+}` route is configured to pass requests through to the handler.  
+  - Request validation, routing, and schema checks are implemented inside the `jobdb` application.
+- **Execution environment**: Lambda runs from a Docker image hosted in Amazon ECR 
+  - This allows bundling Python dependencies and the `jobdb` app into a single immutable image.
+- **Logging**: Log output is automatically forwarded to CloudWatch Logs.
+
+### Compute: Docker Image in ECR
+
+The DB API Lambda function executes inside a container built from the following image:
+
+- **Base image**: [`public.ecr.aws/lambda/python:3.12`](https://gallery.ecr.aws/lambda/python)  
+  Provides AWS Lambda runtime with Python 3.12 preinstalled.
+- **Build contents**:  
+  - Installs dependencies from `jobdb/requirements.txt`.  
+  - Copies application source under `jobdb/*` including `handler.py`.  
+  - Exposes entry point: `handler.lambda_handler`.  
+- **Versioning**:  
+  - Image is tagged by GitHub Actions with the short commit SHA.  
+  - Each commit to the repo refreshes the image and triggers redeployment.  
+  - Old image versions are retained in ECR unless pruned by a cleanup workflow.
+

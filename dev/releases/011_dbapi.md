@@ -6,6 +6,21 @@ release documentation `docs/releases/011_dbapi.md`
 
 session logs are timestamped to Singapore timezone in reverse chronological order, with latest entries at the top, and earlier entries at the bottom.
 
+### DB API [Developer] validation 2025-08-18 <HH>:<MM>
+db api stack validate
+
+### DB API [Developer] documentation 2025-08-18 13:56
+release documentation updates
+
+- db api `docs/database_api.md`
+  - compute resources API Gateway, ECR image
+- cicd `docs/cicd.md`
+  - tester design
+- release `docs/releases/011_dbapi.md`
+  - tester design
+  - CF stack deploy - idempotent, failure diagnostics, parameters export
+  - issues - open issue 6 ECR cleanup, 7 ECR refresh, validation tasks
+
 ### DB API [Developer] 2025-08-16 15:42
 tester and DB API stack switch Lambda to container URI
 

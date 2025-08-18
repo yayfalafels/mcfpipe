@@ -31,8 +31,8 @@ Cloudformation stack layers
 | id | stack | purpose | resources |
 | - | - | - | - |
 | 01 | networking | network and VPC for public and private subnets | VPC, subnets, security groups, internet gateway |
-| 02 | database | storage database and connector API | DynamoDB tables, API Gateway + Lambda handler |
-| 03 | tester | serverless Fargate compute resource for validating app resources | Fargate compute task(s) |
+| 02 | tester | serverless Fargate compute resource for validating app resources | Fargate compute task(s) |
+| 03 | db api | storage database and connector API | DynamoDB tables, API Gateway + Lambda handler |
 
 __Dev stack: EC2 vs Fargate__
 It may be necessary to have two parallel stacks for each compute resources 
@@ -53,14 +53,47 @@ _manual setup resources_
 | 02 | S3 config | Github Action | initial setup after s3 bucket creation |
 | 03 | ECR Dockerimages | Github Action | before the stack they are used in |
 
+__Stack deploy__
+The stack deploy performed by GHA runner includes
+
+ - **parameters** read-in/export to S3
+ - **idempotent deploy** checks if the target stack is already in state `ROLLBACK_COMPLETE` or `CREATE_FAIL`
+  - deletes the stack and then triggers a re-deploy
+ - **fail diagnostics** captures diagnostic logs for stack deploy fail and prints out in the runner logs
+
+The stack deploy AWS CLI command includes these standard arguments:
+
+| argument | description |
+| - | - |
+| `--template-file` | Path to the rendered CFN template the runner will submit. Typically `${CF_TEMPLATE_DIR}/${STACK_TEMPLATE_FILE}`. |
+| `--stack-name` | Logical name of the stack to create/update. Used for change sets, events, and cross-stack exports. |
+| `--capabilities` | Required when your template creates/updates IAM resources. `CAPABILITY_NAMED_IAM` confirms you understand IAM changes with explicit names. |
+| `--no-fail-on-empty-changeset` | Makes updates idempotent: if the template/params/tags don’t change, CFN returns an empty change set and the CLI exits **successfully** instead of erroring. |
+| `--parameter-overrides` | Inline key=value pairs that bind to your template’s `Parameters`. Values here take precedence over any defaults in the template. |
+| `--tags` | Key=value pairs to tag the **stack** (and, for many resource types, the resources). Useful for ownership, cost allocation, and environment scoping. |
+
+ ```bash
+aws cloudformation deploy \
+--template-file $CF_TEMPLATE_DIR/$STACK_TEMPLATE_FILE \
+--stack-name $STACK_NAME \
+--capabilities CAPABILITY_NAMED_IAM \
+--no-fail-on-empty-changeset \
+--parameter-overrides \
+  ...
+--tags \
+  role=$ROLE \
+  project=$PROJECT_NAME
+
+ ```
+
 ## Github Action Workflows
 CICD to deploy each of the stacks are orchestrated via Github Actions 
 
 | id | workflow | app feature | description |
 | - | - | - | - |
 | 01 | network | initial setup and network | initial setup, create S3 bucket, global IAM roles, network infrastructure |
-| 02 | db api | database api | load database schema, deploy database dynamodb tables and db api stack, upload db api config ex API URL |
-| 03 | tester | tester | create docker image for tester Fargate container image, deploy tester stack |
+| 02 | tester | tester | create docker image for tester Fargate container image, deploy tester stack |
+| 03 | db api | database api | load database schema, deploy database dynamodb tables and db api stack, upload db api config ex API URL |
 
 ### Github action 02: DB API
 load database schema, deploy database dynamodb tables and db api stack, upload db api config 
@@ -114,4 +147,51 @@ __Global Secondary Indexes (GSI)__
 - the GSI must be declared in the DynamoDB table definition
 - DynamoDB requires an `IndexName` for non-PK queries; this API exposes a thin, validated façade over `Query`.
 
+### DB API app
 
+
+### Tester
+The tester app uses the test module `tester` and runs on a dedicated AWS Fargate container
+The app runs `tests.py` which uses `requests` package to send HTTPS requests to the API endpoint.
+
+__docker image__
+
+- base image: `python:3.11-slim`
+- minimal python dependencies [pytest, requests]
+
+__environment variables__
+environment variables are passed to the container by Github actions at the `run-task` cli command
+
+| id | variable | description |
+| - | - | - |
+| 01 | DB_API_URL | API endpoint |
+
+
+## Issues
+
+| id | status | issue | description |
+| - | - | - | - |
+| 01 | open | [ECR cleanup #6](https://github.com/yayfalafels/mcfpipe/issues/6) | Add a cleanup function to cleanup old ECR image versions |
+| 02 | closed | tester stack | validated 2025-08-16 |
+| 03 | open | DB API stack | validation pending |
+| 04 | open | [ECR refresh on changes #7](https://github.com/yayfalafels/mcfpipe/issues/7) | update the logic in GHA to only refresh the DB API ECR docker image either no image is present OR changes that would affect the docker image |
+
+__Issue details__
+
+### (open) 01 ECR cleanup
+Github issue [ECR cleanup #6](https://github.com/yayfalafels/mcfpipe/issues/6)
+
+__situation__
+Current behavior keeps versioned ECR images. Each image is tagged to a commit and size ~ 60 MB. Over time, this can accumulate for excess storage costs.
+
+__resolution__
+Add a cleanup function, either separate lambda (recommended) or a setup in the GHA to cleanup old ECR image versions
+
+### (open) 04 ECR refresh on changes
+Github issue [ECR refresh on changes #7](https://github.com/yayfalafels/mcfpipe/issues/7)
+
+__situation__
+The current configuration refreshes the DB API ECR docker image for all GHA triggers, including those which have no effect on the container, such as changes to `db_schema.json` which the container pulls directly from S3 and is not pre-loaded to the container at image build runtine.
+
+__resolution__
+update the logic in GHA to only refresh the DB API ECR docker image either no image is present OR changes that would affect the docker image, such as any change to `jobdb/*` contents.

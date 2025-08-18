@@ -12,6 +12,7 @@ __Tests__
 
 | id | test type | feature to test | test method | expected outcome |
 | - | - | - | - | - |
+| 00 | positive | GET default route | default route `/` | version info |
 | 01 | positive | POST Create new job | position="Data Engineer" | list of ids with single item |
 | 02 | positive | GET Fetch a single job | fetch by id for the job from step 01 | job record as json |
 | 03 | positive | PUT Update a single job | update the position title to "Data Engineer contract" | non-empty list of ids |
