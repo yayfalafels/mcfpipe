@@ -396,3 +396,23 @@ __resolution__
         VpcEndpointIds:
           - !Ref ExecuteApiVpceId
 ```
+
+location: `aws/cloudformation/network_stack.yaml`
+
+set `PrivateDnsEnabled` to "false"
+
+```yaml
+  VpceEndpointDBApi:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: false
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.execute-api"
+      VpcId: !Ref VPC
+      SecurityGroupIds: [!Ref SGVpce]
+      SubnetIds: [!Ref PrivateSubnet]
+      Tags:
+        - Key: Name
+          Value: mcfpipe-vpce-executeapi
+
+```

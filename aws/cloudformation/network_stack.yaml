@@ -208,7 +208,7 @@ Resources:
     Type: AWS::EC2::VPCEndpoint
     Properties:
       VpcEndpointType: Interface
-      PrivateDnsEnabled: true
+      PrivateDnsEnabled: false
       ServiceName: !Sub "com.amazonaws.${AWS::Region}.execute-api"
       VpcId: !Ref VPC
       SecurityGroupIds: [!Ref SGVpce]
