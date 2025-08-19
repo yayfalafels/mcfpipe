@@ -200,11 +200,13 @@ Resources:
   ApiDeployment:
     Type: AWS::ApiGateway::Deployment
     DependsOn:
+      - RestApi
       - RootAnyMethod
       - ProxyAnyMethod
     Properties:
       RestApiId: !Ref RestApi
-      Description: !Sub "Deployment for ${StageName}"
+      StageName: !Ref StageName
+      Description: !Sub "Deployment for ${StageName}:${GitSha}"
 
   ApiAccessLogs:
     Type: AWS::Logs::LogGroup

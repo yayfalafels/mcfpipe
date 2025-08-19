@@ -326,9 +326,10 @@ tester
 ```
 
 __diagnostics__
-root cause: **VPCE is not attached to the API Gateway**
+root cause: **API not yet deployed** [Stack Overflow: getting message forbidden reply from aws api gateway](https://stackoverflow.com/questions/40988051/getting-message-forbidden-reply-from-aws-api-gateway)
 
-several diagnostic steps taken, confirmed 
+several diagnostic steps taken, some improvements made, explicitly attach VPCE
+but ultimately cause was not yet deployed.
 
 - correct Base URL passed in (print-out in logs)
 - X base URL returns expected response from console 
@@ -384,7 +385,10 @@ aws apigateway get-rest-api --rest-api-id 1vrt51wp19 \
   --query 'endpointConfiguration'
 ```
 
-__resolution__
+__resolution(s)__
+01.  add a step to GHA to deploy the API after stack deploy
+
+02. explicitly attach VPCE to the RestApi resource
 
 ```yaml
   RestApi:
@@ -397,22 +401,4 @@ __resolution__
           - !Ref ExecuteApiVpceId
 ```
 
-location: `aws/cloudformation/network_stack.yaml`
-
-set `PrivateDnsEnabled` to "false"
-
-```yaml
-  VpceEndpointDBApi:
-    Type: AWS::EC2::VPCEndpoint
-    Properties:
-      VpcEndpointType: Interface
-      PrivateDnsEnabled: false
-      ServiceName: !Sub "com.amazonaws.${AWS::Region}.execute-api"
-      VpcId: !Ref VPC
-      SecurityGroupIds: [!Ref SGVpce]
-      SubnetIds: [!Ref PrivateSubnet]
-      Tags:
-        - Key: Name
-          Value: mcfpipe-vpce-executeapi
-
-```
+ 
