@@ -12,7 +12,7 @@ jobs:
   diagnose:
     name: DB API Diagnostics
     runs-on: ubuntu-latest
-
+#trigger
     env:
         CONFIG_PATH: setup/config.env
         REST_API_ID: 1vrt51wp19
