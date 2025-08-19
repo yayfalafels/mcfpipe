@@ -5,14 +5,14 @@ on:
   push:
     paths:
       - '.github/workflows/issue_dbapi_vpce_gha.yml'
-      - 'issues/010_dbapi_vpce/vpce_diagnostics.sh'
+      - 'issues/010_dbapi_vpce/vpce_diagnostics_02.sh'
       - 'setup/config.env'
 
 jobs:
   diagnose:
     name: DB API Diagnostics
     runs-on: ubuntu-latest
-#trigger
+
     env:
         CONFIG_PATH: setup/config.env
         REST_API_ID: 1vrt51wp19
@@ -26,7 +26,7 @@ jobs:
         PROJECT_NAME: mcfpipe
         ASSIGN_PUBLIC_IP: DISABLED
         LOG_GROUP: /mcfpipe/tester
-        DIAGNOSTICS_SCRIPT: issues/010_dbapi_vpce/vpce_diagnostics.sh
+        DIAGNOSTICS_SCRIPT: issues/010_dbapi_vpce/vpce_diagnostics_02.sh
 
     steps:
       - name: Checkout repository
