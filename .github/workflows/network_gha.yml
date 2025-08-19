@@ -17,7 +17,7 @@ jobs:
 
     env:
       STACK_NAME: mcf-network
-      STACK_TEMPLATE: aws/cloudformation/networking_stack.yaml
+      STACK_TEMPLATE: aws/cloudformation/network_stack.yaml
       STACK_OUTPUT_S3_PATH: aws/network
       STACK_OUTPUT_JSON: network_config.json
       STACK_FAIL_DIAGNOSTICS_SCRIPT: aws/cloudformation/cfn_stack_diagnostics.sh
