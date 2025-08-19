@@ -24,7 +24,7 @@ jobs:
         CONTAINER_NAME: tester
         STREAM_PREFIX: ecs
         PROJECT_NAME: mcfpipe
-        ASSIGN_PUBLIC_IP: false
+        ASSIGN_PUBLIC_IP: DISABLED
         LOG_GROUP: /mcfpipe/tester
         DIAGNOSTICS_SCRIPT: issues/010_dbapi_vpce/vpce_diagnostics.sh
 
