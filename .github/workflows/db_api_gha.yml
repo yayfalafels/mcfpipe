@@ -32,7 +32,7 @@ jobs:
       DBAPI_APP: jobdb
       REPO_NAME: mcfpipe-dbapi
       TEMPLATE_CONSTRUCTOR: cf_template_constructor.py
-      CF_DB_API_URL_NAME: DbApiUrl
+      CF_DB_API_ID_KEY: RestApiId
       STACK_OUTPUT_S3_PATH: apps/jobdb
       STACK_OUTPUT_JSON: jobdb_stack_config.json
       TESTER_CLUSTER: mcfpipe-tester
@@ -190,17 +190,17 @@ jobs:
           chmod +x ./$STACK_EXPORT_SCRIPT
           ./$STACK_EXPORT_SCRIPT "${{ env.STACK_NAME }}" "${{ env.AWS_REGION }}" "${{ env.S3_BUCKET }}" "${{ env.STACK_OUTPUT_S3_PATH }}/${{ env.STACK_OUTPUT_JSON }}"
 
-      - name: Get DB API url
-        id: db_api_url
+      - name: Get DB API ID
+        id: db_api_id
         run: |
           OUTPUTS=$(aws cloudformation describe-stacks \
             --stack-name $STACK_NAME \
             --query "Stacks[0].Outputs" \
             --output json)
           echo "$OUTPUTS" > $ARTIFACTS_JSON
-          DB_URL=$(echo "$OUTPUTS" | jq -r --arg k "$CF_DB_API_URL_NAME" \
+          API_ID=$(echo "$OUTPUTS" | jq -r --arg k "$CF_DB_API_ID_KEY" \
             '.[] | select(.OutputKey==$k) | .OutputValue')
-          echo "DB_API_URL=$DB_URL" >> $GITHUB_ENV
+          echo "DB_API_ID=$API_ID" >> $GITHUB_ENV
           
       - name: Test API execute tester ECS task
         id: api_test

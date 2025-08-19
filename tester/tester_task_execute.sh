@@ -6,11 +6,16 @@
 set -euo pipefail
 
 ### --- CONFIG (override via env or flags) -------------------------------------
+AWS_REGION="${AWS_REGION:-ap-southeast-1}"
 CLUSTER="${CLUSTER:-mcfpipe}"
 TASK_DEF="${TASK_DEF:-mcfpipe-tester}"
 SUBNETS_CSV="${SUBNETS_CSV:-subnet-abc123,subnet-def456}"             # comma-separated
 SECURITY_GROUPS_CSV="${SECURITY_GROUPS_CSV:-sg-0123456789abcdef0}"    # comma-separated
 ASSIGN_PUBLIC_IP="${ASSIGN_PUBLIC_IP:-DISABLED}"                      # ENABLED|DISABLED
+VPCE_ID="${VPCE_ID:-}"                                                # VPCE ID
+DB_API_ID="${DB_API_ID:-}"                                            # DB_API_ID
+DEV_ENV="${DEV_ENV:-dev}" 
+STAGE_NAME=$DEV_ENV
 
 # CloudWatch Logs
 LOG_GROUP="${LOG_GROUP:-/mcfpipe/tester}"
@@ -20,7 +25,7 @@ TAG_ROLE="${TAG_ROLE:-Bridges}"                  # role=Bridges
 TAG_PROJECT_NAME="${TAG_PROJECT_NAME:-mcfpipe}"  # project=mcfpipe
 
 # App env
-DB_API_URL="${DB_API_URL:-}"                # REQUIRED (or pass --db-url)
+DB_API_URL="https://${DB_API_ID}-${VPCE_ID}.execute-api.${AWS_REGION}.amazonaws.com/${STAGE_NAME}"                # REQUIRED (or pass --db-url)
 # Optional: override command at run-time (e.g., '["sh","-lc","pytest -q tests.py 2>&1 | tee /var/log/tests.log"]')
 CMD_OVERRIDE_JSON="${CMD_OVERRIDE_JSON:-}"  # leave empty to use the task def CMD
 
