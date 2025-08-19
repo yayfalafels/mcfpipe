@@ -1,0 +1,61 @@
+name: Issue Diagnostics DB API VPCE
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/issue_dbapi_vpce_gha.yml'
+      - 'issues/010_dbapi_vpce/vpce_diagnostics.sh'
+
+jobs:
+  diagnose:
+    name: DB API Diagnostics
+    runs-on: ubuntu-latest
+
+    env:
+        REST_API_ID: 1vrt51wp19
+        VPCE_ID: vpce-0b2f3b1600562fd4f
+        SUBNETS_CSV: subnet-05589520be89eef8e
+        SECURITY_GROUPS_CSV: sg-0bfef5c2d0532d0c6
+        CLUSTER: mcfpipe-tester
+        TASK_DEF: mcfpipe-tester
+        CONTAINER_NAME: tester
+        STREAM_PREFIX: ecs
+        PROJECT_NAME: mcfpipe
+        ASSIGN_PUBLIC_IP: false
+        LOG_GROUP: /mcfpipe/tester
+        DIAGNOSTICS_SCRIPT: issues/010_dbapi_vpce/vpce_diagnostics.sh
+
+    steps:
+      - name: Checkout repository
+        id: repo_checkout
+        uses: actions/checkout@v3
+
+      - name: Load environment config
+        id: env_var_set
+        run: cat $CONFIG_PATH >> $GITHUB_ENV
+
+      - name: Configure AWS credentials
+        id: aws_cred
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get AWS config
+        id: aws_config
+        shell: bash
+        run: |
+          echo "ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)" >> $GITHUB_ENV          
+
+      - name: Install jq
+        id: install_jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Run diagnostics
+        env:
+          STAGE_NAME: ${{ github.event.inputs.stage_name }}
+        run: |
+          chmod +x $DIAGNOSTICS_SCRIPT
+          $DIAGNOSTICS_SCRIPT
