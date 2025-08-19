@@ -205,108 +205,7 @@ The current configuration refreshes the DB API ECR docker image for all GHA trig
 __resolution__
 update the logic in GHA to only refresh the DB API ECR docker image either no image is present OR changes that would affect the docker image, such as any change to `jobdb/*` contents.
 
-### (closed) 09 tester container script failure
-multiple exceptions tester container script failure
-
-multiple sub-issues
-
-| id	| status | sub-issue |
-| 01 | closed |	insufficient IAM permissions on task execution role |
-| 02 | closed |	CW log stream not found |
-| 03 | closed |	unknown flag `--no-follow` |
-
-__(closed) 09.01 insufficient IAM permissions on task execution role__
-
-location: `tester/tester_task_execute.sh` plus possible other locations
-
-CF stack template `aws/cloudformation/tester_stack.yaml`
-GHA `tester_gha.yml`
-
-_situation_
-
-exception: insufficient permissions on tester execution role for ECR: GetAuthorizationToken
-
-```
-Stopped reason: ResourceInitializationError: unable to pull secrets or registry auth: execution resource retrieval failed: unable to retrieve ecr registry auth: service call has been retried 1 time(s): operation error ECR: GetAuthorizationToken, https response error StatusCode: 400, RequestID: 24460c33-1d7d-4ee9-99cf-c259d53e7b44, api error AccessDeniedException: User: arn:aws:sts::***:assumed-role/mcfpipe-tester-TesterExecutionRole-aWok1pIh26Gk/a5209a25e2424cafa8d2f56406f57b35 is not authorized to perform: ecr:GetAuthorizationToken on resource: * because no identity-based policy allows the ecr:GetAuthorizationToken action
-CloudWatch Logs for failed task
-  An error occurred (ResourceNotFoundException) when calling the GetLogEvents operation: The specified log stream does not exist.
-  (could not fetch exact stream, falling back to recent tail)
-  Unknown options: --no-follow
-```
-
-_resolution_
-
-location: `aws/cloudformation/tester_stack.yaml`
-
-```yaml
-attach AmazonECSTaskExecutionRolePolicy to the TesterExecutionRole
-remove the cw-logs inline policy (redundant)
-TesterExecutionRole:
-  Type: AWS::IAM::Role
-  Properties:
-    AssumeRolePolicyDocument:
-      Version: "2012-10-17"
-      Statement:
-        - Effect: Allow
-          Principal: { Service: ecs-tasks.amazonaws.com }
-          Action: sts:AssumeRole
-    ManagedPolicyArns:
-      - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
-```
-
-__(closed) 09.02 CW log stream not found__
-
-_situation_
-
-exception: CW log group not found
-
-```
-CloudWatch Logs for failed task
-  An error occurred (ResourceNotFoundException) when calling the GetLogEvents operation: The specified log stream does not exist.
-  (could not fetch exact stream, falling back to recent tail)
-```
-
-_diagnostics_
-
-symptom of underlying cause for sub-issue 01
-
-__(closed) 09.03 unknown flag no follow__
-
-_situation_
-
-exception 03: unknown flag --no-follow
-
-  Unknown options: --no-follow
-location: `tester/tester_task_execute.sh`
-
-```bash
-### --- On failure: print CW logs to runner output ----------------------------
-if [[ "$EXIT_CODE" != "0" ]]; then
-  echo "::group::CloudWatch Logs for failed task"
-  STREAM="${STREAM_PREFIX}/${CONTAINER_NAME}/${TASK_ID}"
-  # small delay to allow final log flush
-  sleep 3 || true
-  if ! aws logs get-log-events \
-        --region "$REGION" \
-        --log-group-name "$LOG_GROUP" \
-        --log-stream-name "$STREAM" \
-        --query 'events[].message' \
-        --output text ; then
-    echo "(could not fetch exact stream, falling back to recent tail)"
--->   aws logs tail "$LOG_GROUP" --region "$REGION" --since 1h --format short --no-follow || true
-  fi
-  echo "::endgroup::"
-fi
-```
-_resolution_
-
-drop the `--no-follow` argument from the line
-
-```bash
-aws logs tail "$LOG_GROUP" --region "$REGION" --since 1h --format short --no-follow || true
-```
-
-### (open) 10 test 00 basic route fail 400 Forbidden
+### (closed) 10 test 00 basic route fail 400 Forbidden
 Github issue [test 00 basic route fail 400 Forbidden #12](https://github.com/yayfalafels/mcfpipe/issues/13)
 type: `BUG`
 
@@ -402,19 +301,34 @@ __resolution(s)__
         VpcEndpointIds:
           - !Ref ExecuteApiVpceId
 ```
+02.  add a GHA step to ensure that a new deployment is created on each CF redeploy.
 
-02.  add a version hash  on the `ApiDeployment` resource, ex `GitSha` in the description
-  to ensure that a new deployment is created on each CF redeploy.
+location: `.github/workflows/db_api_gha.yml`
 
 ```yaml
-  ApiDeployment:
-    Type: AWS::ApiGateway::Deployment
-    DependsOn:
-      - RestApi
-      - RootAnyMethod
-      - ProxyAnyMethod
-    Properties:
-      RestApiId: !Ref RestApi
-      Description: !Sub "Deployment for ${StageName}:${GitSha}"
+  - name: Force API Gateway Deployment
+    id: api_deploy
+    if: steps.stack_deploy.outcome == 'success'
+    run: |
+```
 
+```bash
+REST_API_ID=$(aws cloudformation describe-stacks \
+  --stack-name $STACK_NAME \
+  --query "Stacks[0].Outputs[?OutputKey=='RestApiId'].OutputValue" \
+  --output text)
+
+STAGE_NAME=$DEV_ENV
+GIT_SHA=${GITHUB_SHA::7}
+
+echo "Creating deployment for API $REST_API_ID at stage $STAGE_NAME ($GIT_SHA)"
+
+DEPLOY_ID=$(aws apigateway create-deployment \
+  --rest-api-id "$REST_API_ID" \
+  --stage-name "$STAGE_NAME" \
+  --description "Manual deploy from GHA: $GIT_SHA" \
+  --query "id" \
+  --output text)
+
+echo "✅ Created deployment: $DEPLOY_ID"
 ```

@@ -6,12 +6,38 @@ release documentation `docs/releases/011_dbapi.md`
 
 session logs are timestamped to Singapore timezone in reverse chronological order, with latest entries at the top, and earlier entries at the bottom.
 
-### VPCE [Developer] diagnostics 2025-08-19 <HH>:<MM>
-issue 10 400 Forbidden
+### Issue API Forbidden [Developer] diagnostics and resolution 2025-08-19 18:30
+Issue [test 00 basic route fail 400 Forbidden #13](https://github.com/yayfalafels/mcfpipe/issues/13) 
+RESOLVED
 
-- run diagnostics bash script from GHA
-- isolated cause to VPCE not attached to API 
-- updated CF template to add VPCE to API `EndpointConfiguration`
+found cause from two issues
+
+01. VPCE not attached to the API
+02. API not re-deployed: [Stack Overflow: getting message forbidden reply from aws api gateway](https://stackoverflow.com/questions/40988051/getting-message-forbidden-reply-from-aws-api-gateway)
+
+01. explicitly attach VPCE to the RestApi resource
+
+```yaml
+  RestApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Sub mcfpipe-dbapi-${StageName}
+      EndpointConfiguration:
+        Types: [PRIVATE]
+        VpcEndpointIds:
+          - !Ref ExecuteApiVpceId
+```
+02.  add a GHA step to ensure that a new deployment is created on each CF redeploy.
+
+location: `.github/workflows/db_api_gha.yml`
+
+```yaml
+  - name: Force API Gateway Deployment
+    id: api_deploy
+    if: steps.stack_deploy.outcome == 'success'
+    run: |
+```
+
 
 ### DB API [Developer] validation 2025-08-18 18:30
 db api stack validate
