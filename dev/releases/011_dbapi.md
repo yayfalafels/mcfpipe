@@ -9,7 +9,9 @@ session logs are timestamped to Singapore timezone in reverse chronological orde
 ### VPCE [Developer] diagnostics 2025-08-19 <HH>:<MM>
 issue 10 400 Forbidden
 
-run diagnostics bash script from GHA
+- run diagnostics bash script from GHA
+- isolated cause to VPCE not attached to API 
+- updated CF template to add VPCE to API `EndpointConfiguration`
 
 ### DB API [Developer] validation 2025-08-18 18:30
 db api stack validate

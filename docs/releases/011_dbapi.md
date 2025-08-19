@@ -326,6 +326,7 @@ tester
 ```
 
 __diagnostics__
+root cause: **VPCE is not attached to the API Gateway**
 
 several diagnostic steps taken, confirmed 
 
@@ -364,4 +365,34 @@ _detailed diagnostic_
   - script `issues/010_dbapi_vpce/vpce_diagnostics.sh`
   - gha `.github/workflows/issue_dbapi_vpce_gha.yml`
 
+- **OK** DNS resolves the API host to a 10.0.x.x address → the request is going through the execute-api VPC endpoint (Private DNS path).
+- **OK** TLS is OK → SGs/NACL/routes are fine.
+- **OK** API type is PRIVATE.
+- **X API Gateway blocking** Both GET / and GET /health return {"message":"Forbidden"} (mapped to 400 by your DEFAULT_4XX) → API Gateway is authoritatively rejecting the request (not Lambda/integration).
 
+initial diagnostics narrow cause to two possible causes
+further diagnostics confirm VPCE is not attached to the API Gateway
+
+--> 01. REST API resource policy (on the API itself)
+02. VPCE endpoint policy (on the interface endpoint)
+
+- only shows `{ "types": ["PRIVATE"] }`
+- does not show VPCE ID
+
+```bash
+aws apigateway get-rest-api --rest-api-id 1vrt51wp19 \
+  --query 'endpointConfiguration'
+```
+
+__resolution__
+
+```yaml
+  RestApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Sub mcfpipe-dbapi-${StageName}
+      EndpointConfiguration:
+        Types: [PRIVATE]
+        VpcEndpointIds:
+          - !Ref ExecuteApiVpceId
+```

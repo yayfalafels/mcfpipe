@@ -149,6 +149,8 @@ Resources:
       Name: !Sub mcfpipe-dbapi-${StageName}
       EndpointConfiguration:
         Types: [PRIVATE]
+        VpcEndpointIds:
+          - !Ref ExecuteApiVpceId
       Policy:
         Version: '2012-10-17'
         Statement:
