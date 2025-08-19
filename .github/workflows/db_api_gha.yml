@@ -184,8 +184,32 @@ jobs:
           echo "DB API deploy failed"
           exit 1
 
+      - name: Force API Gateway Deployment
+        id: api_deploy
+        if: steps.stack_deploy.outcome == 'success'
+        run: |
+          REST_API_ID=$(aws cloudformation describe-stacks \
+            --stack-name $STACK_NAME \
+            --query "Stacks[0].Outputs[?OutputKey=='RestApiId'].OutputValue" \
+            --output text)
+
+          STAGE_NAME=$DEV_ENV
+          GIT_SHA=${GITHUB_SHA::7}
+
+          echo "Creating deployment for API $REST_API_ID at stage $STAGE_NAME ($GIT_SHA)"
+
+          DEPLOY_ID=$(aws apigateway create-deployment \
+            --rest-api-id "$REST_API_ID" \
+            --stage-name "$STAGE_NAME" \
+            --description "Manual deploy from GHA: $GIT_SHA" \
+            --query "id" \
+            --output text)
+
+          echo "✅ Created deployment: $DEPLOY_ID"
+          
       - name: Export stack outputs to S3
         id: stack_outputs
+        if: steps.stack_deploy.outcome == 'success'
         run: |
           chmod +x ./$STACK_EXPORT_SCRIPT
           ./$STACK_EXPORT_SCRIPT "${{ env.STACK_NAME }}" "${{ env.AWS_REGION }}" "${{ env.S3_BUCKET }}" "${{ env.STACK_OUTPUT_S3_PATH }}/${{ env.STACK_OUTPUT_JSON }}"
@@ -204,6 +228,7 @@ jobs:
           
       - name: Test API execute tester ECS task
         id: api_test
+        if: steps.stack_deploy.outcome == 'success'
         run: |
           chmod +x ./$TESTER_TASK_SCRIPT
           CLUSTER=$TESTER_CLUSTER \
