@@ -386,7 +386,21 @@ aws apigateway get-rest-api --rest-api-id 1vrt51wp19 \
 ```
 
 __resolution(s)__
-01.  add a step to GHA to deploy the API after stack deploy
+01.  add a version hash  on the `ApiDeployment` resource, ex `GitSha` in the description
+  to ensure that a new deployment is created on each CF redeploy.
+
+```yaml
+  ApiDeployment:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - RestApi
+      - RootAnyMethod
+      - ProxyAnyMethod
+    Properties:
+      RestApiId: !Ref RestApi
+      Description: !Sub "Deployment for ${StageName}:${GitSha}"
+
+```
 
 02. explicitly attach VPCE to the RestApi resource
 

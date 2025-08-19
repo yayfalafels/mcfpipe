@@ -205,7 +205,6 @@ Resources:
       - ProxyAnyMethod
     Properties:
       RestApiId: !Ref RestApi
-      StageName: !Ref StageName
       Description: !Sub "Deployment for ${StageName}:${GitSha}"
 
   ApiAccessLogs:
