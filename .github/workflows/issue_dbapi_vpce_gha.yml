@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/issue_dbapi_vpce_gha.yml'
       - 'issues/010_dbapi_vpce/vpce_diagnostics.sh'
+      - 'setup/config.env'
 
 jobs:
   diagnose:
@@ -13,6 +14,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
+        CONFIG_PATH: setup/config.env
         REST_API_ID: 1vrt51wp19
         VPCE_ID: vpce-0b2f3b1600562fd4f
         SUBNETS_CSV: subnet-05589520be89eef8e
@@ -54,8 +56,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y jq
 
       - name: Run diagnostics
-        env:
-          STAGE_NAME: ${{ github.event.inputs.stage_name }}
+        id: diagnostics_run
         run: |
           chmod +x $DIAGNOSTICS_SCRIPT
           $DIAGNOSTICS_SCRIPT
