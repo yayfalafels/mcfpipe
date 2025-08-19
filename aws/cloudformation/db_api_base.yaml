@@ -206,6 +206,9 @@ Resources:
     Properties:
       RestApiId: !Ref RestApi
       Description: !Sub "Deployment for ${StageName}:${GitSha}"
+      StageDescription:
+        Variables:
+          redeployToken: !Ref GitSha 
 
   ApiAccessLogs:
     Type: AWS::Logs::LogGroup

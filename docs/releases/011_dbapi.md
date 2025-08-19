@@ -326,7 +326,10 @@ tester
 ```
 
 __diagnostics__
-root cause: **API not yet deployed** [Stack Overflow: getting message forbidden reply from aws api gateway](https://stackoverflow.com/questions/40988051/getting-message-forbidden-reply-from-aws-api-gateway)
+two causes identified
+
+01. VPCE not attached to the API
+02. API not re-deployed: [Stack Overflow: getting message forbidden reply from aws api gateway](https://stackoverflow.com/questions/40988051/getting-message-forbidden-reply-from-aws-api-gateway)
 
 several diagnostic steps taken, some improvements made, explicitly attach VPCE
 but ultimately cause was not yet deployed.
@@ -386,7 +389,21 @@ aws apigateway get-rest-api --rest-api-id 1vrt51wp19 \
 ```
 
 __resolution(s)__
-01.  add a version hash  on the `ApiDeployment` resource, ex `GitSha` in the description
+
+01. explicitly attach VPCE to the RestApi resource
+
+```yaml
+  RestApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Sub mcfpipe-dbapi-${StageName}
+      EndpointConfiguration:
+        Types: [PRIVATE]
+        VpcEndpointIds:
+          - !Ref ExecuteApiVpceId
+```
+
+02.  add a version hash  on the `ApiDeployment` resource, ex `GitSha` in the description
   to ensure that a new deployment is created on each CF redeploy.
 
 ```yaml
@@ -401,18 +418,3 @@ __resolution(s)__
       Description: !Sub "Deployment for ${StageName}:${GitSha}"
 
 ```
-
-02. explicitly attach VPCE to the RestApi resource
-
-```yaml
-  RestApi:
-    Type: AWS::ApiGateway::RestApi
-    Properties:
-      Name: !Sub mcfpipe-dbapi-${StageName}
-      EndpointConfiguration:
-        Types: [PRIVATE]
-        VpcEndpointIds:
-          - !Ref ExecuteApiVpceId
-```
-
- 
