@@ -6,6 +6,9 @@ release documentation `docs/releases/011_dbapi.md`
 
 session logs are timestamped to Singapore timezone in reverse chronological order, with latest entries at the top, and earlier entries at the bottom.
 
+### DB API [Developer] app design 2025-08-20 <>:<>
+
+
 ### Issue API Forbidden [Developer] diagnostics and resolution 2025-08-19 18:30
 Issue [test 00 basic route fail 400 Forbidden #13](https://github.com/yayfalafels/mcfpipe/issues/13) 
 RESOLVED
