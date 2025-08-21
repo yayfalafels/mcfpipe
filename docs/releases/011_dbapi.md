@@ -216,11 +216,12 @@ __requirements__
 
 | id | status | enhancement |
 | - | - | - |
-| 01 | open | CF separate DB storage resources from Gateway API + Lambda |
-| 02 | open | GHA tester image conditional refresh |
-| 03 | open | GHA jobdb image conditional refresh |
+| 01 | closed | CF separate DB storage resources from Gateway API + Lambda |
+| 02 | open | decouple tests to run from tester generic compute |
+| 03 | open | GHA tester image conditional refresh |
+| 04 | open | GHA jobdb image conditional refresh |
 
-### (open) 01. CF separate DB storage resources from Gateway API + Lambda
+### (closed) 01. CF separate DB storage resources from Gateway API + Lambda
 
 _CF templates_
 
@@ -247,6 +248,9 @@ __02 db api stack__
 stack name: `mcfpipe-dbapi`
 resources: API Gateway, URL handler Lambda 
 
+- dropped StageDescription property, caused Stack Fail
+- attached Resource policy -- turns out it is required
+
 _steps_
 
 01. download network config from S3
@@ -256,3 +260,15 @@ _steps_
 05. get stack outputs upload to S3
 06. get API ID
 07. run tests on tester
+
+### (open) 02. decouple tests to run from tester generic compute
+
+_changes_
+
+| id | location | change |
+| - | - | - |
+| 01 | `tester/*` | add a script to import the tests from S3 as file or zip |
+| 02 | `tester_task_execute.sh` | pass the S3 location to and call the S3 import script |
+| 03 | `tester/requirements.txt` | add `boto3` dependency |
+| 04 | ECS task role | Grant the task role s3:GetObject on the tests prefix |
+| 05 | DB API GHA `.github/workflows/db_api_gha.yml` | upload tests.py, or zip `tests/*` to S3 |

@@ -6,16 +6,38 @@ release documentation `docs/releases/011_dbapi.md`
 
 session logs are timestamped to Singapore timezone in reverse chronological order, with latest entries at the top, and earlier entries at the bottom.
 
-### GHA [Developer] conditional refresh 2025-08-21 <HH>:<MM>
-
+### GHA [Developer] conditional refresh 2025-08-21 18:03
 Github issue [GHA and CF conditional refresh #14](https://github.com/yayfalafels/mcfpipe/issues/14)
 type: `ENHANCEMENT`
 
-conditional refresh
- - tester image
- - dbapi image
- - migrate tests.py into jobdb source code
- - separate data tables from DB API stack
+| id | status | enhancement |
+| - | - | - |
+| 01 | closed | CF separate DB storage resources from Gateway API + Lambda |
+| 02 | open | decouple tests to run from tester generic compute |
+| 03 | open | GHA tester image conditional refresh |
+| 04 | open | GHA jobdb image conditional refresh |
+
+_(closed) CF separate DB storage resources from Gateway API + Lambda_
+
+- **db stack**: isolated stack to only the DynamoDB tables generated from DB Schema JSON
+- **db api stack**: dropped the DynamoDB tables
+  - dropped StageDescription property, caused Stack Fail
+  - attached Resource policy -- turns out it is required
+
+_(open) decouple tests to run from tester generic compute_
+
+- listed changes to make
+
+changes
+
+| id | location | change |
+| - | - | - |
+| 01 | `tester/*` | add a script to import the tests from S3 as file or zip |
+| 02 | `tester_task_execute.sh` | pass the S3 location to and call the S3 import script |
+| 03 | `tester/requirements.txt` | add `boto3` dependency |
+| 04 | ECS task role | Grant the task role s3:GetObject on the tests prefix |
+| 05 | DB API GHA `.github/workflows/db_api_gha.yml` | upload tests.py, or zip `tests/*` to S3 |
+
 
 ### DB API [Developer] app design 2025-08-20 16:15
 detailed design `docs/database_api/detailed_design.md`
