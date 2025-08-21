@@ -181,7 +181,7 @@ environment variables are passed to the container by Github actions at the `run-
 | 08 | closed | BUG | [ECS run container name conflict #11](https://github.com/yayfalafels/mcfpipe/issues/11) | container name conflict btw CF template and GHA env variable |
 | 09 | closed | BUG | [tester container script failures #12](https://github.com/yayfalafels/mcfpipe/issues/12) | missing IAM `AmazonECSTaskExecutionRolePolicy` on the `TesterExecutionRole` |
 | 10 | open | BUG | [test 00 basic route fail 400 Forbidden #13](https://github.com/yayfalafels/mcfpipe/issues/13) | test 00 basic route failed 400 Forbidden |
-
+| 11 | open | ENHANCEMENT | [GHA and CF conditional refresh #14](https://github.com/yayfalafels/mcfpipe/issues/14) | GHA and CF conditional refresh |
 
 __Issue details__
 
@@ -205,130 +205,32 @@ The current configuration refreshes the DB API ECR docker image for all GHA trig
 __resolution__
 update the logic in GHA to only refresh the DB API ECR docker image either no image is present OR changes that would affect the docker image, such as any change to `jobdb/*` contents.
 
-### (closed) 10 test 00 basic route fail 400 Forbidden
-Github issue [test 00 basic route fail 400 Forbidden #12](https://github.com/yayfalafels/mcfpipe/issues/13)
-type: `BUG`
+### (open) 11 GHA and CF conditional refresh
+Github issue [GHA and CF conditional refresh #14](https://github.com/yayfalafels/mcfpipe/issues/14)
+type: `ENHANCEMENT`
 
 __situation__
+Current CF stack refreshes the docker images for `tester` and `jobdb` under any trigger for the GHA workflow, many of which do not require an image refresh. Consequence is a build-up of redundant image copies that add clutter and storage costs.  Additionally, the DB API CF stack combines the storage DB schema resources with the compute Gateway API layer and includes a forced deploy refresh on each CF deploy trigger. While it's expected there many be frequent DB Schema changes in the future, the DB API has already been designed as a thin wrapper decoupled from schema specifics, so it shouldn't need to be updated for only DB schema changes.
 
-test 00 fails with status code 400 "Forbidden"
+__requirements__
 
-ECS task CW logs
+| id | status | enhancement |
+| - | - | - |
+| 01 | open | CF separate DB storage resources from Gateway API + Lambda |
+| 02 | open | GHA tester image conditional refresh |
+| 03 | open | GHA jobdb image conditional refresh |
 
-```
-August 18, 2025 at 17:10
-> self.assertEqual(response.status_code, 200, f'expected status code 200, got {response.status_code}. {response.text} from BASE_URL: {BASE_URL}')
-tester
-August 18, 2025 at 17:10
-E AssertionError: 400 != 200 : expected status code 200, got 400. {"message":"Forbidden"} from BASE_URL: https://1vrt51wp19.execute-api.ap-southeast-1.amazonaws.com/prod
-tester
-```
+### (open) 01. CF separate DB storage resources from Gateway API + Lambda
 
-__diagnostics__
-two causes identified
+_CF templates_
 
-01. VPCE not attached to the API
-02. API not re-deployed: [Stack Overflow: getting message forbidden reply from aws api gateway](https://stackoverflow.com/questions/40988051/getting-message-forbidden-reply-from-aws-api-gateway)
+| id | template | location |
+| - | - | - |
+| 01 | db stack base | `aws/cloudformation/db_base.yaml` |
+| 02 | db stack | `aws/cloudformation/db_stack.yaml` |
+| 03 | db api stack | `aws/cloudformation/db_api_stack.yaml` |
 
-several diagnostic steps taken, some improvements made, explicitly attach VPCE
-but ultimately cause was not yet deployed.
+__db stack__
 
-- correct Base URL passed in (print-out in logs)
-- X base URL returns expected response from console 
-  actually this is unexpected because supposed to be PRIVATE
-
-location `aws/cloudformation/db_api_base.yaml`
-
-X REGIONAL (Public IP)
-
-```yaml
-  RestApi:
-    Type: AWS::ApiGateway::RestApi
-    Properties:
-      Name: !Sub mcfpipe-dbapi-${StageName}
-      EndpointConfiguration:
-        Types: [REGIONAL]
-
-```
-
-OK PRIVATE 
-
-```yaml
-  RestApi:
-    Type: AWS::ApiGateway::RestApi
-    Properties:
-      Name: !Sub mcfpipe-dbapi-${StageName}
-      EndpointConfiguration:
-        Types: [PRIVATE]
-
-```
-
-_detailed diagnostic_
-
-  - script `issues/010_dbapi_vpce/vpce_diagnostics.sh`
-  - gha `.github/workflows/issue_dbapi_vpce_gha.yml`
-
-- **OK** DNS resolves the API host to a 10.0.x.x address → the request is going through the execute-api VPC endpoint (Private DNS path).
-- **OK** TLS is OK → SGs/NACL/routes are fine.
-- **OK** API type is PRIVATE.
-- **X API Gateway blocking** Both GET / and GET /health return {"message":"Forbidden"} (mapped to 400 by your DEFAULT_4XX) → API Gateway is authoritatively rejecting the request (not Lambda/integration).
-
-initial diagnostics narrow cause to two possible causes
-further diagnostics confirm VPCE is not attached to the API Gateway
-
---> 01. REST API resource policy (on the API itself)
-02. VPCE endpoint policy (on the interface endpoint)
-
-- only shows `{ "types": ["PRIVATE"] }`
-- does not show VPCE ID
-
-```bash
-aws apigateway get-rest-api --rest-api-id 1vrt51wp19 \
-  --query 'endpointConfiguration'
-```
-
-__resolution(s)__
-
-01. explicitly attach VPCE to the RestApi resource
-
-```yaml
-  RestApi:
-    Type: AWS::ApiGateway::RestApi
-    Properties:
-      Name: !Sub mcfpipe-dbapi-${StageName}
-      EndpointConfiguration:
-        Types: [PRIVATE]
-        VpcEndpointIds:
-          - !Ref ExecuteApiVpceId
-```
-02.  add a GHA step to ensure that a new deployment is created on each CF redeploy.
-
-location: `.github/workflows/db_api_gha.yml`
-
-```yaml
-  - name: Force API Gateway Deployment
-    id: api_deploy
-    if: steps.stack_deploy.outcome == 'success'
-    run: |
-```
-
-```bash
-REST_API_ID=$(aws cloudformation describe-stacks \
-  --stack-name $STACK_NAME \
-  --query "Stacks[0].Outputs[?OutputKey=='RestApiId'].OutputValue" \
-  --output text)
-
-STAGE_NAME=$DEV_ENV
-GIT_SHA=${GITHUB_SHA::7}
-
-echo "Creating deployment for API $REST_API_ID at stage $STAGE_NAME ($GIT_SHA)"
-
-DEPLOY_ID=$(aws apigateway create-deployment \
-  --rest-api-id "$REST_API_ID" \
-  --stage-name "$STAGE_NAME" \
-  --description "Manual deploy from GHA: $GIT_SHA" \
-  --query "id" \
-  --output text)
-
-echo "✅ Created deployment: $DEPLOY_ID"
-```
+resources: only the DynamoDB tables
+parameters: None

@@ -1,0 +1,101 @@
+name: Database DynamoDB
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/db_gha.yml'
+      - 'aws/cloudformation/db_base.yaml'
+      - 'aws/cloudformation/cfn_stack_diagnostics.sh'
+      - 'storage/db_schema.json'
+      - 'setup/config.env'
+
+jobs:
+  db-deploy:
+    name: DB Deploy
+    runs-on: ubuntu-latest
+
+    env:
+      CONFIG_PATH: setup/config.env
+      STACK_NAME: mcfpipe-database
+      CF_TEMPLATE_DIR: aws/cloudformation
+      BASE_TEMPLATE_FILE: db_base.yaml
+      STACK_TEMPLATE_FILE: db_stack.yaml      
+      DB_DIR: storage
+      DB_SCHEMA_JSON: db_schema.json
+      TEMPLATE_CONSTRUCTOR: cf_template_constructor.py
+      STACK_FAIL_DIAGNOSTICS_SCRIPT: aws/cloudformation/cfn_stack_diagnostics.sh
+
+    steps:
+      - name: Init Run Status
+        id: initialize_run_status
+        run: echo "TASK_SUCCESS=true" >> $GITHUB_ENV
+
+      - name: Checkout repository
+        id: repo_checkout
+        uses: actions/checkout@v3
+
+      - name: Load environment config
+        id: env_var_set
+        run: cat $CONFIG_PATH >> $GITHUB_ENV
+
+      - name: Configure AWS credentials
+        id: aws_cred
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Get AWS config
+        id: aws_config
+        shell: bash
+        run: |
+          echo "ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)" >> $GITHUB_ENV                    
+
+      - name: Generate CloudFormation template
+        id: cf_template_generate
+        run: |
+          pip install -r $DB_DIR/requirements.txt >/dev/null
+          python $DB_DIR/$TEMPLATE_CONSTRUCTOR \
+            $DB_DIR/$DB_SCHEMA_JSON \
+            $CF_TEMPLATE_DIR/$BASE_TEMPLATE_FILE \
+            $CF_TEMPLATE_DIR/$STACK_TEMPLATE_FILE \
+            --env $DEV_ENV \
+            --project $PROJECT_NAME
+
+      - name: Deploy CloudFormation Stack
+        id: stack_deploy
+        continue-on-error: true
+        run: |
+          STATE=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" \
+            --query 'Stacks[0].StackStatus' --output text 2>/dev/null || true)
+
+          if [[ "$ALLOW_STACK_DELETE" == "true" ]] && [[ "$STATE" =~ ^(ROLLBACK_COMPLETE|CREATE_FAILED)$ ]]; then
+            aws cloudformation delete-stack --stack-name "$STACK_NAME"
+            aws cloudformation wait stack-delete-complete --stack-name "$STACK_NAME"
+          fi
+
+          aws cloudformation deploy \
+            --template-file $CF_TEMPLATE_DIR/$STACK_TEMPLATE_FILE \
+            --stack-name $STACK_NAME \
+            --capabilities CAPABILITY_NAMED_IAM \
+            --no-fail-on-empty-changeset \
+            --tags \
+              role=$ROLE \
+              project=$PROJECT_NAME
+
+      - name: CFN failure diagnostics
+        id: stack_fail_diagnostics
+        if: steps.stack_deploy.outcome == 'failure'
+        run: |
+          bash $STACK_FAIL_DIAGNOSTICS_SCRIPT "$STACK_NAME" "$AWS_REGION" --nested
+          echo "DB API deploy failed"
+          exit 1
+
+      - name: Fail workflow if build failed
+        id: fail_task
+        if: env.TASK_SUCCESS == 'false'
+        run: |
+          echo "DB deploy failed"
+          exit 1

@@ -122,7 +122,10 @@ def cf_template_generate(db_schema_path, base_template_path, output_path, table_
         f.close()
 
     dynamodb = {"Resources": resources}
-    output["Resources"].update(dynamodb["Resources"])
+    if 'Resources' in output:
+        output['Resources'].update(dynamodb['Resources'])
+    else:
+        output.update(dynamodb)
     
     with open(output_path, "w") as f:
         f.write(dump_yaml(output))

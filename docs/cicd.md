@@ -76,14 +76,12 @@ jobpipe/                 # Analytics ETL python module
     __init__.py
   requirements.txt
   ...
-setup/                  # Initial setup and global configuration
-  config.env            # global env variables ex: S3_BUCKET 
-storage/                # schema and config for storage resources
-  search_profile/
-    ...
-  jobs/
-    ...  
-tester/                # Tester app that runs on Fargate container
+setup/                          # Initial setup and global configuration
+  config.env                    # global env variables ex: S3_BUCKET 
+storage/                        # schema and config for storage resources
+    cf_template_constructor.py  # script to generate DynamoDB CF resources from DB Schema JSON
+    db_schema.json              # db schema JSON
+tester/                         # Tester app that runs on Fargate container
   tester/
     __init__.py
   tests.py
@@ -124,10 +122,11 @@ aws/                      # information for the AWS infrastructure
   ecr/
     containers.json
 storage/
-  db_api.json             # endpoint access for database API
+  db_stack.json           # outputs for DB stack (if any)
   db_schema.json
 user_data/                # user-specific settings and configuration data
   user_#####/
+    search_profile/
     ...
 ```
 
@@ -179,11 +178,12 @@ CloudFormation stack layers
 | id | stack | purpose | resources |
 | - | - | - | - |
 | 01 | network | initial setup S3 bucket, config and network and VPC for public and private subnets | VPC, subnets, security groups, internet gateway |
-| 02 | database api | storage database and connector API | DynamoDB tables, API Gateway, Lambda handler |
+| 02 | database | data storage | DynamoDB tables |
 | 03 | tester | stand-alone tester to validate DB API and other app services | Fargate ECS container |
-| 04 | webscraper | serverless Fargate compute resource for Webscraper | Fargate compute tasks |
-| 05 | html parser | serverless Lambda(s) for HTML parsing and Step Function for `job search` workflow orchestration | Lambda Step Function and Functions |
-| 06 | job scorer | serverless Fargate compute resource for Job scoring and screening | Fargate compute tasks |
+| 04 | db api | database connector API | DB API container image, API Gateway, Lambda handler |
+| 05 | webscraper | serverless Fargate compute resource for Webscraper | Fargate compute tasks |
+| 06 | html parser | serverless Lambda(s) for HTML parsing and Step Function for `job search` workflow orchestration | Lambda Step Function and Functions |
+| 07 | job scorer | serverless Fargate compute resource for Job scoring and screening | Fargate compute tasks |
 
 __AWS CLI__
 Additional resources created outside of the cloudformation stack either manually from local PC or via Github actions. 
@@ -197,6 +197,7 @@ _manual setup resources_
 | 01 | S3 bucket | Github Action | initial setup |
 | 02 | S3 config | Github Action | initial setup after s3 bucket creation |
 | 03 | ECR Dockerimages | Github Action | before the stack they are used in |
+| 04 | API stage deployment | Github Action | after API stack deploy trigger a manual stage deployment |
 
 ## CF Stack deploy
 The stack deploy performed by GHA runner includes
@@ -236,11 +237,12 @@ aws cloudformation deploy \
 | id | workflow | app feature | description |
 | - | - | - | - |
 | 01 | network | initial setup and network | initial setup, create S3 bucket, global IAM roles, network infrastructure |
-| 02 | tester | tester | create docker image for tester Fargate container image, deploy tester stack |
-| 03 | db api | database api | load database schema, deploy database dynamodb tables and db api stack, upload db api config ex API URL |
-| 04 | webscraper | webscraper | create docker image for Webscraper Fargate container image, deploy webscraper stack |
-| 05 | html parser | html parser | create HTML Parser Lambda functions and Step Function to orchestrate the `job search` workflow |
-| 06 | job scorer | job scorer | create docker image for job scorer Fargate container image, deploy job scorer stack  |
+| 02 | database | db storage | load database schema, deploy database dynamodb tables |
+| 03 | tester | tester | create docker image for tester Fargate container image, deploy tester stack |
+| 04 | db api | database api | create db api container image, deploy db api stack, upload db api config, validate db API run tests |
+| 05 | webscraper | webscraper | create docker image for Webscraper Fargate container image, deploy webscraper stack |
+| 06 | html parser | html parser | create HTML Parser Lambda functions and Step Function to orchestrate the `job search` workflow |
+| 07 | job scorer | job scorer | create docker image for job scorer Fargate container image, deploy job scorer stack  |
  
 ### 01 Network setup
 initial setup, create S3 bucket, global IAM roles, network infrastructure
@@ -251,7 +253,7 @@ __Github action steps__
 | - | - | - |
 | 01 | create S3 bucket | |
 | 02 | upload global config | |
-| 03 | deploy network stack |  |
+| 03 | deploy network stack | |
 | 04 | record, upload deploy artifacts to S3 | example: VPC id and endpoints |
 
 __network config parameters__
@@ -268,7 +270,28 @@ format of the network config JSON file
 ]
 ```
 
-### 02 Tester
+### 03 DB API
+load database schema, deploy database dynamodb tables and db api stack, upload db api config 
+ex API URL
+
+__Artifacts__
+
+| id | artifact | file name | source code | S3 |
+| - | - | - | - | - |
+| 01 | db schema | `db_schema.json` | `storage/` | `storage/` |
+| 02 | template constructor script | `cf_template_constructor.py` | `storage/` | - |
+| 03 | CF template base | `db_base.yaml` | `aws/cloudformation/` | - |
+| 04 | CF stack diagnostics script | `cfn_stack_diagnostics.sh` | `aws/cloudformation/` | - |
+
+__Github action steps__
+
+| id | step | description |
+| - | - | - |
+| 01 | schema load | load the db schema to workspace, upload to S3 |
+| 02 | cf template generate | generate the CF template from schema using template constructur script |
+| 03 | stack deploy | deploy the db stack |
+
+### 03 Tester
 create the tester image, register to ECR, deploy tester stack, upload artifacts
 
 __Github action steps__
@@ -294,7 +317,7 @@ __Artifacts__
 | 04 | image manifest | output | `containers.json` | generated in workflow | `aws/ecr` |
 | 05 | CFN stack outputs | output | `tester_config.json` | - | `apps/tester` |
 
-### 03 DB API
+### 04 DB API
 load database schema, deploy database dynamodb tables and db api stack, upload db api config 
 ex API URL
 
@@ -303,26 +326,19 @@ __Artifacts__
 | id | artifact | file name | source code | S3 |
 | - | - | - | - | - |
 | 01 | network config | `network_config.json` | - | `aws/network/` |
-| 01 | db schema | `db_schema.json` | `storage/` | `storage/` |
-| 02 | template constructor script | `cf_template_constructor.py` | `jobdb/` | - |
-| 03 | CF template | `db_api_stack.yaml` | `aws/cloudformation/` | - |
-| 04 | Lambda handler source code | `lambda_sc_jobdb.zip` | `jobdb/*` | `apps/jobdb/` |
-| 05 | db api config | `db_api.json` | - | `storage/` |
+| 02 | CF template | `db_api_stack.yaml` | `aws/cloudformation/` | - |
 
-__DB API Config JSON__
-contents of the DB API config JSON
+__DB API Stack outputs__
+contents of the DB API stack outputs
 
 | id | variable | description |
 | - | - | - |
-| 01 | DB_API_URL | API endpoint |
+| 01 | * | * |
 
 __Github action steps__
 
 | id | step | description |
 | - | - | - |
 | 01 | network config load | load the network config from S3 |
-| 02 | schema load | load the db schema to workspace, upload to S3 |
-| 03 | cf template generate | generate the CF template from schema using template constructur script |
-| 04 | zip lambda handlder | zip and upload the lambda handler function code to S3 |
-| 05 | stack deploy | deploy the db api stack |
-| 06 | artifacts | upload artifacts to config JSON |
+| 02 | stack deploy | deploy the db api stack |
+| 03 | artifacts | upload artifacts to config JSON |

@@ -1,0 +1,302 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: MCFPipe Database (base) — DynamoDB tables and resources
+Resources:
+  ApplyStatusTable:
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: job_id
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: job_id
+          KeyType: HASH
+      TableName: prod_mcfpipe_apply_status
+    Type: AWS::DynamoDB::Table
+  CrmStatusTable:
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: job_id
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: job_id
+          KeyType: HASH
+      TableName: prod_mcfpipe_crm_status
+    Type: AWS::DynamoDB::Table
+  JobDetailsTable:
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: job_id
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: job_id
+          KeyType: HASH
+      TableName: prod_mcfpipe_job_details
+    Type: AWS::DynamoDB::Table
+  JobTable:
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: user_id
+          AttributeType: S
+        - AttributeName: post_id
+          AttributeType: S
+        - AttributeName: company_name
+          AttributeType: S
+        - AttributeName: position
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      GlobalSecondaryIndexes:
+        - IndexName: gsi_user_id_id
+          KeySchema:
+            - AttributeName: user_id
+              KeyType: HASH
+            - AttributeName: id
+              KeyType: RANGE
+          Projection:
+            NonKeyAttributes:
+              - post_id
+              - position
+              - company_name
+              - posted_date
+              - url
+            ProjectionType: INCLUDE
+        - IndexName: gsi_post_id_id
+          KeySchema:
+            - AttributeName: post_id
+              KeyType: HASH
+            - AttributeName: id
+              KeyType: RANGE
+          Projection:
+            ProjectionType: KEYS_ONLY
+        - IndexName: gsi_user_id_company_name
+          KeySchema:
+            - AttributeName: user_id
+              KeyType: HASH
+            - AttributeName: company_name
+              KeyType: RANGE
+          Projection:
+            ProjectionType: KEYS_ONLY
+        - IndexName: gsi_user_id_position
+          KeySchema:
+            - AttributeName: user_id
+              KeyType: HASH
+            - AttributeName: position
+              KeyType: RANGE
+          Projection:
+            ProjectionType: KEYS_ONLY
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+        - AttributeName: user_id
+          KeyType: RANGE
+      TableName: prod_mcfpipe_job
+    Type: AWS::DynamoDB::Table
+  JobTrackTable:
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: track_id
+          AttributeType: S
+        - AttributeName: job_id
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      GlobalSecondaryIndexes:
+        - IndexName: gsi_job_id_track_id
+          KeySchema:
+            - AttributeName: job_id
+              KeyType: HASH
+            - AttributeName: track_id
+              KeyType: RANGE
+          Projection:
+            ProjectionType: KEYS_ONLY
+        - IndexName: gsi_track_id_job_id
+          KeySchema:
+            - AttributeName: track_id
+              KeyType: HASH
+            - AttributeName: job_id
+              KeyType: RANGE
+          Projection:
+            ProjectionType: KEYS_ONLY
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+        - AttributeName: track_id
+          KeyType: RANGE
+      TableName: prod_mcfpipe_job_track
+    Type: AWS::DynamoDB::Table
+  PostDetailsTable:
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: post_id
+          AttributeType: S
+        - AttributeName: url_slug
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      GlobalSecondaryIndexes:
+        - IndexName: gsi_url_slug_post_id
+          KeySchema:
+            - AttributeName: url_slug
+              KeyType: HASH
+            - AttributeName: post_id
+              KeyType: RANGE
+          Projection:
+            ProjectionType: KEYS_ONLY
+      KeySchema:
+        - AttributeName: post_id
+          KeyType: HASH
+      TableName: prod_mcfpipe_post_details
+    Type: AWS::DynamoDB::Table
+  PostSourceTable:
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: N
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      TableName: prod_mcfpipe_post_source
+    Type: AWS::DynamoDB::Table
+  PostTable:
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: posted_date
+          AttributeType: S
+        - AttributeName: status
+          AttributeType: N
+      BillingMode: PAY_PER_REQUEST
+      GlobalSecondaryIndexes:
+        - IndexName: gsi_status_posted_date
+          KeySchema:
+            - AttributeName: status
+              KeyType: HASH
+            - AttributeName: posted_date
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+        - AttributeName: posted_date
+          KeyType: RANGE
+      TableName: prod_mcfpipe_post
+    Type: AWS::DynamoDB::Table
+  RoleTable:
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      TableName: prod_mcfpipe_role
+    Type: AWS::DynamoDB::Table
+  SearchProfileTable:
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: track_id
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: track_id
+          KeyType: HASH
+      TableName: prod_mcfpipe_search_profile
+    Type: AWS::DynamoDB::Table
+  TrackCvTable:
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: track_id
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: track_id
+          KeyType: HASH
+      TableName: prod_mcfpipe_track_cv
+    Type: AWS::DynamoDB::Table
+  TrackScoreTable:
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: job_track_id
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: job_track_id
+          KeyType: HASH
+      TableName: prod_mcfpipe_track_score
+    Type: AWS::DynamoDB::Table
+  TrackTable:
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: user_id
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      GlobalSecondaryIndexes:
+        - IndexName: gsi_user_id
+          KeySchema:
+            - AttributeName: user_id
+              KeyType: HASH
+          Projection:
+            ProjectionType: KEYS_ONLY
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+        - AttributeName: user_id
+          KeyType: RANGE
+      TableName: prod_mcfpipe_track
+    Type: AWS::DynamoDB::Table
+  UserConfigTable:
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: user_id
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: user_id
+          KeyType: HASH
+      TableName: prod_mcfpipe_user_config
+    Type: AWS::DynamoDB::Table
+  UserTable:
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: email
+          AttributeType: S
+        - AttributeName: username
+          AttributeType: S
+        - AttributeName: status
+          AttributeType: N
+      BillingMode: PAY_PER_REQUEST
+      GlobalSecondaryIndexes:
+        - IndexName: gsi_email
+          KeySchema:
+            - AttributeName: email
+              KeyType: HASH
+          Projection:
+            ProjectionType: KEYS_ONLY
+        - IndexName: gsi_username
+          KeySchema:
+            - AttributeName: username
+              KeyType: HASH
+          Projection:
+            ProjectionType: KEYS_ONLY
+        - IndexName: gsi_status
+          KeySchema:
+            - AttributeName: status
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      TableName: prod_mcfpipe_user
+    Type: AWS::DynamoDB::Table
