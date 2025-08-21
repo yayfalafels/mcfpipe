@@ -5,12 +5,10 @@ on:
   push:
     paths:
       - '.github/workflows/db_api_gha.yml'
-      - 'aws/cloudformation/db_api_base.yaml'
       - 'aws/cloudformation/db_api_stack.yaml'
       - 'aws/cloudformation/cfn_stack_diagnostics.sh'
       - 'aws/cloudformation/export_stack_outputs.sh'
       - 'jobdb/**'
-      - 'storage/db_schema.json'
 
 jobs:
   dbapi-deploy:
@@ -21,17 +19,12 @@ jobs:
       CONFIG_PATH: setup/config.env
       STACK_NAME: mcfpipe-dbapi
       CF_TEMPLATE_DIR: aws/cloudformation
-      BASE_TEMPLATE_FILE: db_api_base.yaml
-      STACK_TEMPLATE_FILE: db_api_stack.yaml      
-      STORAGE_S3_DIR: storage
-      DB_SCHEMA_JSON: db_schema.json
-      ARTIFACTS_JSON: db_api.json
+      STACK_TEMPLATE_FILE: db_api_stack.yaml
       NETWORK_CONFIG_JSON: network_config.json
       NETWORK_CONFIG_S3_PATH: aws/network
       DBAPI_APP_DIR: jobdb
       DBAPI_APP: jobdb
       REPO_NAME: mcfpipe-dbapi
-      TEMPLATE_CONSTRUCTOR: cf_template_constructor.py
       CF_DB_API_ID_KEY: RestApiId
       STACK_OUTPUT_S3_PATH: apps/jobdb
       STACK_OUTPUT_JSON: jobdb_stack_config.json
@@ -82,12 +75,6 @@ jobs:
             echo "SG_PRIVATE=$(jq -r "$JQ".SGPrivate $NETWORK_CONFIG_JSON)" >> "$GITHUB_ENV"
             echo "VPCE_ID=$(jq -r "$JQ".VPCExecuteApiId $NETWORK_CONFIG_JSON)" >> "$GITHUB_ENV"
 
-      - name: Upload DB schema to S3
-        id: schema_load
-        run: |
-          aws s3 cp "$STORAGE_S3_DIR/$DB_SCHEMA_JSON" \
-            "s3://$S3_BUCKET/$STORAGE_S3_DIR/$DB_SCHEMA_JSON"
-
       - name: Install jq
         id: install_jq
         run: sudo apt-get update && sudo apt-get install -y jq
@@ -134,17 +121,6 @@ jobs:
             --query 'imageDetails[0].imageDigest' --output text)
           echo "IMAGE_DIGEST=$DIGEST" >> $GITHUB_ENV
 
-      - name: Generate CloudFormation template
-        id: cf_template_generate
-        run: |
-          pip install -r $DBAPI_APP_DIR/requirements.txt >/dev/null
-          python $DBAPI_APP_DIR/$TEMPLATE_CONSTRUCTOR \
-            $STORAGE_S3_DIR/$DB_SCHEMA_JSON \
-            $CF_TEMPLATE_DIR/$BASE_TEMPLATE_FILE \
-            $CF_TEMPLATE_DIR/$STACK_TEMPLATE_FILE \
-            --env $DEV_ENV \
-            --project $PROJECT_NAME
-
       - name: Deploy CloudFormation Stack
         id: stack_deploy
         continue-on-error: true
@@ -184,7 +160,7 @@ jobs:
           echo "DB API deploy failed"
           exit 1
 
-      - name: Force API Gateway Deployment
+      - name: Create API Gateway Deployment
         id: api_deploy
         if: steps.stack_deploy.outcome == 'success'
         run: |
@@ -221,7 +197,6 @@ jobs:
             --stack-name $STACK_NAME \
             --query "Stacks[0].Outputs" \
             --output json)
-          echo "$OUTPUTS" > $ARTIFACTS_JSON
           API_ID=$(echo "$OUTPUTS" | jq -r --arg k "$CF_DB_API_ID_KEY" \
             '.[] | select(.OutputKey==$k) | .OutputValue')
           echo "DB_API_ID=$API_ID" >> $GITHUB_ENV

@@ -22,6 +22,7 @@ jobs:
       BASE_TEMPLATE_FILE: db_base.yaml
       STACK_TEMPLATE_FILE: db_stack.yaml      
       DB_DIR: storage
+      DB_SCHEMA_S3_DIR: storage 
       DB_SCHEMA_JSON: db_schema.json
       TEMPLATE_CONSTRUCTOR: cf_template_constructor.py
       STACK_FAIL_DIAGNOSTICS_SCRIPT: aws/cloudformation/cfn_stack_diagnostics.sh
@@ -52,6 +53,12 @@ jobs:
         shell: bash
         run: |
           echo "ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)" >> $GITHUB_ENV                    
+
+      - name: Upload DB schema to S3
+        id: schema_load
+        run: |
+          aws s3 cp "$DB_DIR/$DB_SCHEMA_JSON" \
+            "s3://$S3_BUCKET/$DB_SCHEMA_S3_DIR/$DB_SCHEMA_JSON"
 
       - name: Generate CloudFormation template
         id: cf_template_generate

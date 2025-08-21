@@ -230,7 +230,29 @@ _CF templates_
 | 02 | db stack | `aws/cloudformation/db_stack.yaml` |
 | 03 | db api stack | `aws/cloudformation/db_api_stack.yaml` |
 
-__db stack__
+__01 db stack__
 
-resources: only the DynamoDB tables
-parameters: None
+stack name: `mcfpipe-database`
+resources: DynamoDB tables
+
+_steps_
+
+01. upload the DB Schema JSON to S3
+02. generate the CF template from DB Schema JSON
+03. deploy tables CF stack
+04. (on failure) report CF stack fail diagnostics
+
+__02 db api stack__
+
+stack name: `mcfpipe-dbapi`
+resources: API Gateway, URL handler Lambda 
+
+_steps_
+
+01. download network config from S3
+02. build container image register to ECR
+03. deploy CF stack
+04. (on failure) report CF stack fail diagnostics
+05. get stack outputs upload to S3
+06. get API ID
+07. run tests on tester
