@@ -6,6 +6,12 @@ release documentation `docs/releases/011_dbapi.md`
 
 session logs are timestamped to Singapore timezone in reverse chronological order, with latest entries at the top, and earlier entries at the bottom.
 
+### GHA [Developer] conditional refresh 2025-08-27 16:00
+_tester import script_
+
+Import unit tests from S3 into local test runner
+- location: `tester/import.py`
+
 ### GHA [Developer] conditional refresh 2025-08-21 18:03
 Github issue [GHA and CF conditional refresh #14](https://github.com/yayfalafels/mcfpipe/issues/14)
 type: `ENHANCEMENT`

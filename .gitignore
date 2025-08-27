@@ -5,6 +5,5 @@ site
 *client_secret.json
 .pytest_cache*
 s3-mcfpipe*
-open-vpce.json
 bot_ec2_key
 bot_ec2_key.pub

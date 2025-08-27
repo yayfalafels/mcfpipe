@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""generates CloudFormation yaml file for DynamoDB tables from DB_SCHEMA JSON file
+"""unit tests for DB API
 """
 # dependencies ------------------------------------------------------------------------
 import os

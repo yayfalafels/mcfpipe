@@ -272,3 +272,34 @@ _changes_
 | 03 | `tester/requirements.txt` | add `boto3` dependency |
 | 04 | ECS task role | Grant the task role s3:GetObject on the tests prefix |
 | 05 | DB API GHA `.github/workflows/db_api_gha.yml` | upload tests.py, or zip `tests/*` to S3 |
+
+__(open) 01 tester: script to import tests__
+add a script to import the tests from S3 as file or zip
+
+_s3 tests directory_
+the tests are located in the S3 location: `apps/tests/*`
+
+S3 bucket: `mcfpipe`
+
+```
+apps/                     # source code for apps
+  jobdb/*
+  tester/*
+  tests/                  # unit tests for tester to run
+    test_jobdb.py         # example: Unit tests for DB API
+    ...
+
+```
+
+_tester tests import script_
+Import unit tests from S3 into local test runner
+
+location: `tester/import.py`
+
+Steps:
+  1) Process CLI args (overrides env defaults).
+  2) Create local directories: tests/ and tmp/tests/.
+  3) Download objects from S3 prefix to tmp/tests/.
+  4) Unzip any *.zip found in tmp/tests/ into tests/.
+  5) Copy other non-zip files from tmp/tests/ into tests/.
+  6) Log activity; capture and report errors.

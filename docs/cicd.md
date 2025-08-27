@@ -63,15 +63,16 @@ jobcrm/                 # CRM Backend API
   requirements.txt
   ...
 jobdb/                   # Database API
-  db/
+  jobdb/
     __init__.py
   requirements.txt
+  test_jobdb.py           # unit test for DB API
 jobmatch/                 # Job recommendation python module
   jobmatch/
     __init__.py
   requirements.txt
   ...
-jobpipe/                 # Analytics ETL python module
+jobpipe/                        # Analytics ETL python module
   jobpipe/
     __init__.py
   requirements.txt
@@ -84,11 +85,10 @@ storage/                        # schema and config for storage resources
 tester/                         # Tester app that runs on Fargate container
   tester/
     __init__.py
-  tests.py
   Dockerfile
   requirements.txt
 .gitignore
-AGENTS.md               # instructions for Developer AI assistants
+AGENTS.md                       # instructions for Developer AI assistants
 LICENSE
 mkdocs.yml
 requirements.txt
@@ -115,6 +115,9 @@ S3 bucket: `mcfpipe`
 apps/                     # source code for apps
   jobdb/*
   tester/*
+  tests/                  # unit tests for tester to run
+    test_jobdb.py         # example: Unit tests for DB API
+    ...
 config/                   # setup infrastructure and app configuration
 aws/                      # information for the AWS infrastructure
   network/
