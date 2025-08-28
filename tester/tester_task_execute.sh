@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # tester_task_execute.sh
-# Run the ECS tester task, inject DB_API_URL, and on failure print its CloudWatch Logs.
-# Intended for GitHub Actions but works locally if AWS creds/region are set.
+# Run the ECS tester task, inject DB_API_URL + importer/env vars, and on failure print CloudWatch Logs.
 
 set -euo pipefail
 
@@ -9,39 +8,56 @@ set -euo pipefail
 AWS_REGION="${AWS_REGION:-ap-southeast-1}"
 CLUSTER="${CLUSTER:-mcfpipe}"
 TASK_DEF="${TASK_DEF:-mcfpipe-tester}"
-SUBNETS_CSV="${SUBNETS_CSV:-subnet-abc123,subnet-def456}"             # comma-separated
-SECURITY_GROUPS_CSV="${SECURITY_GROUPS_CSV:-sg-0123456789abcdef0}"    # comma-separated
-ASSIGN_PUBLIC_IP="${ASSIGN_PUBLIC_IP:-DISABLED}"                      # ENABLED|DISABLED
-VPCE_ID="${VPCE_ID:-}"                                                # VPCE ID
-DB_API_ID="${DB_API_ID:-}"                                            # DB_API_ID
-DEV_ENV="${DEV_ENV:-dev}" 
-STAGE_NAME=$DEV_ENV
+SUBNETS_CSV="${SUBNETS_CSV:-subnet-abc123,subnet-*}"     # comma-separated
+SECURITY_GROUPS_CSV="${SECURITY_GROUPS_CSV:-sg-*}"       # comma-separated
+ASSIGN_PUBLIC_IP="${ASSIGN_PUBLIC_IP:-DISABLED}"         # ENABLED|DISABLED
+VPCE_ID="${VPCE_ID:-}"                                   # API GW VPC endpoint id (if private)
+DB_API_ID="${DB_API_ID:-}"                               # API GW id (rest api id)
+DEV_ENV="${DEV_ENV:-dev}"                                # stage name
+STAGE_NAME="$DEV_ENV"
+REGION="$AWS_REGION"                                     # for consistency below
 
-# CloudWatch Logs
+# CloudWatch Logs (should match your task def log config)
 LOG_GROUP="${LOG_GROUP:-/mcfpipe/tester}"
-STREAM_PREFIX="${STREAM_PREFIX:-ecs}"            # should match awslogs-stream-prefix in task def
+STREAM_PREFIX="${STREAM_PREFIX:-ecs}"            # must match awslogs-stream-prefix in task def
 CONTAINER_NAME="${CONTAINER_NAME:-tester}"       # containerDefinitions[].name
-TAG_ROLE="${TAG_ROLE:-Bridges}"                  # role=Bridges
-TAG_PROJECT_NAME="${TAG_PROJECT_NAME:-mcfpipe}"  # project=mcfpipe
+TAG_ROLE="${TAG_ROLE:-Bridges}"                  # tag: role
+TAG_PROJECT_NAME="${TAG_PROJECT_NAME:-mcfpipe}"  # tag: project
 
-# App env
-DB_API_URL="https://${DB_API_ID}-${VPCE_ID}.execute-api.${AWS_REGION}.amazonaws.com/${STAGE_NAME}"                # REQUIRED (or pass --db-url)
-# Optional: override command at run-time (e.g., '["sh","-lc","pytest -q tests.py 2>&1 | tee /var/log/tests.log"]')
-CMD_OVERRIDE_JSON="${CMD_OVERRIDE_JSON:-}"  # leave empty to use the task def CMD
+# ---- App/Test env injected into container -----------------------------------
+# DB endpoint (allow explicit --db-url to override)
+DB_API_URL_DEFAULT="https://${DB_API_ID}-${VPCE_ID}.execute-api.${AWS_REGION}.amazonaws.com/${STAGE_NAME}"
+DB_API_URL="${DB_API_URL:-$DB_API_URL_DEFAULT}"
 
-REGION="${AWS_REGION:-ap-southeast-1}"
+# Importer/env for import.py -> tests/
+S3_BUCKET="${S3_BUCKET:-mcfpipe}"
+TESTS_S3_DIR="${TESTS_S3_DIR:-apps/tests}"            # e.g., apps/jobdb/tests/$GITHUB_SHA
+IMPORT_LOG_FILE="${IMPORT_LOG_FILE:-/var/log/import_tests.log}"
+LOGGING_LEVEL="${LOGGING_LEVEL:-INFO}"
+
+# Pytest verbosity / selection (container uses: pytest ${PYTEST_ARGS} ${TESTS_LOCAL_DIR})
+PYTEST_ARGS="${PYTEST_ARGS:--q}"
+
+# Optional: override container command (JSON array), e.g.:
+# CMD_OVERRIDE_JSON='["sh","-lc","/app/import_run_tests.sh"]'
+CMD_OVERRIDE_JSON="${CMD_OVERRIDE_JSON:-}"
 
 ### --- USAGE ------------------------------------------------------------------
 usage() {
   cat <<EOF
 Usage: $(basename "$0") [--db-url URL]
 
-Env overrides:
-  CLUSTER, TASK_DEF, SUBNETS_CSV, SECURITY_GROUPS_CSV, ASSIGN_PUBLIC_IP
-  LOG_GROUP, STREAM_PREFIX, CONTAINER_NAME, AWS_REGION
-  CMD_OVERRIDE_JSON  (optional JSON array for "command" override)
+Env overrides (commonly set by GHA):
+  AWS_REGION, CLUSTER, TASK_DEF, SUBNETS_CSV, SECURITY_GROUPS_CSV, ASSIGN_PUBLIC_IP
+  VPCE_ID, DB_API_ID, DEV_ENV
+  LOG_GROUP, STREAM_PREFIX, CONTAINER_NAME
+  S3_BUCKET, TESTS_S3_DIR, LOGGING_LEVEL, PYTEST_ARGS
+  CMD_OVERRIDE_JSON  (optional JSON array to override container command)
+
 Examples:
-  DB_API_URL="https://abc.execute-api.${REGION}.amazonaws.com/prod" \\
+  GITHUB_SHA=\$(git rev-parse --short HEAD)
+  TESTS_S3_DIR="apps/jobdb/tests/\$GITHUB_SHA" \\
+  DB_API_URL="https://abc123-vpce-xyz.execute-api.${REGION}.amazonaws.com/prod" \\
   SUBNETS_CSV="subnet-1,subnet-2" SECURITY_GROUPS_CSV="sg-1" \\
   $(basename "$0")
 EOF
@@ -52,32 +68,53 @@ while [[ $# -gt 0 ]]; do
     --db-url) DB_API_URL="${2:-}"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown arg: $1" >&2; usage; exit 2 ;;
-    esac
+  esac
 done
 
-if [[ -z "${DB_API_URL}" ]]; then
-  echo "ERROR: DB_API_URL is required (env or --db-url)." >&2
-  exit 2
-fi
+[[ -z "$DB_API_URL" ]] && { echo "ERROR: DB_API_URL is required (env or --db-url)."; exit 2; }
 
 # deps
 command -v aws >/dev/null 2>&1 || { echo "aws CLI not found"; exit 127; }
 command -v jq  >/dev/null 2>&1 || { echo "jq not found"; exit 127; }
 
-echo "Cluster: $CLUSTER"
-echo "TaskDef: $TASK_DEF"
-echo "Region : $REGION"
-echo "DB_API_URL: $DB_API_URL"
+echo "Cluster         : $CLUSTER"
+echo "TaskDef         : $TASK_DEF"
+echo "Region          : $REGION"
+echo "DB_API_URL      : $DB_API_URL"
+echo "S3_BUCKET       : $S3_BUCKET"
+echo "TESTS_S3_DIR    : $TESTS_S3_DIR"
+echo "LOGGING_LEVEL   : $LOGGING_LEVEL"
+echo "PYTEST_ARGS     : $PYTEST_ARGS"
+[[ -n "$CMD_OVERRIDE_JSON" ]] && echo "CMD override    : $CMD_OVERRIDE_JSON"
 
 ### --- Build overrides JSON ---------------------------------------------------
-# containerOverrides: env var injection; optional command override
-OVERRIDES="$(jq -nc --arg name "$CONTAINER_NAME" --arg url "$DB_API_URL" \
+# Build environment array dynamically so we don't inject empties.
+OVERRIDES_ENV_JSON="$(jq -nc \
+  --arg DB_API_URL   "$DB_API_URL" \
+  --arg AWS_REGION   "$AWS_REGION" \
+  --arg S3_BUCKET    "$S3_BUCKET" \
+  --arg TESTS_S3_DIR "$TESTS_S3_DIR" \
+  --arg LOGGING_LEVEL   "$LOGGING_LEVEL" \
+  --arg PYTEST_ARGS     "$PYTEST_ARGS" '
+  [
+    {name:"DB_API_URL", value:$DB_API_URL},
+    {name:"AWS_REGION", value:$AWS_REGION},
+    {name:"S3_BUCKET", value:$S3_BUCKET},
+    {name:"TESTS_S3_DIR", value:$TESTS_S3_DIR},
+    {name:"IMPORT_LOG_FILE", value:$IMPORT_LOG_FILE},
+    {name:"LOGGING_LEVEL", value:$LOGGING_LEVEL},
+    {name:"PYTEST_ARGS", value:$PYTEST_ARGS}
+  ] | map(select(.value != null and .value != ""))')"
+
+OVERRIDES="$(jq -nc \
+  --arg name "$CONTAINER_NAME" \
+  --argjson env "$OVERRIDES_ENV_JSON" \
   --arg cmd "$CMD_OVERRIDE_JSON" '
   {
     containerOverrides: [
       {
         name: $name,
-        environment: [{name:"DB_API_URL", value:$url}]
+        environment: $env
       }
     ]
   } as $base
@@ -98,7 +135,7 @@ RUN_OUT=$(aws ecs run-task \
   --network-configuration "awsvpcConfiguration={subnets=[$SUBNETS_CSV],securityGroups=[$SECURITY_GROUPS_CSV],assignPublicIp=$ASSIGN_PUBLIC_IP}" \
   --overrides "$OVERRIDES" \
   --tags key=project,value="${TAG_PROJECT_NAME}" key=role,value="${TAG_ROLE}"
-  )
+)
 
 FAILURES=$(echo "$RUN_OUT" | jq -r '.failures | length')
 if [[ "$FAILURES" != "0" ]]; then
@@ -126,7 +163,7 @@ echo "Stopped reason: $STOPPED_REASON"
 if [[ "$EXIT_CODE" != "0" ]]; then
   echo "::group::CloudWatch Logs for failed task"
   STREAM="${STREAM_PREFIX}/${CONTAINER_NAME}/${TASK_ID}"
-  # small delay to allow final log flush
+  # tiny delay for final log flush
   sleep 3 || true
   if ! aws logs get-log-events \
         --region "$REGION" \
@@ -134,7 +171,7 @@ if [[ "$EXIT_CODE" != "0" ]]; then
         --log-stream-name "$STREAM" \
         --query 'events[].message' \
         --output text ; then
-    echo "(could not fetch exact stream, falling back to recent tail)"
+    echo "(could not fetch exact stream, tailing recent logs)"
     aws logs tail "$LOG_GROUP" --region "$REGION" --since 1h --format short || true
   fi
   echo "::endgroup::"

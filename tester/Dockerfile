@@ -12,8 +12,10 @@ RUN pip install --upgrade pip && \
 # create logs dir
 RUN mkdir -p /var/log
 
-# copy working directory
-COPY . .
+# stage runtime helpers
+COPY import.py /app/import.py
+COPY import_run_tests.sh /app/import_run_tests.sh
+RUN chmod +x /app/import_run_tests.sh
 
-# run pytest tests.py. exits container non‑zero if tests fail.
-CMD ["sh","-lc","set -o pipefail; pytest -q tests.py 2>&1 | tee /var/log/tests.log"]
+# default entry: import tests at runtime, then run pytest on tests/
+CMD ["sh","-lc","/app/import_run_tests.sh"]

@@ -265,13 +265,13 @@ _steps_
 
 _changes_
 
-| id | location | change |
-| - | - | - |
-| 01 | `tester/*` | add a script to import the tests from S3 as file or zip |
-| 02 | `tester_task_execute.sh` | pass the S3 location to and call the S3 import script |
-| 03 | `tester/requirements.txt` | add `boto3` dependency |
-| 04 | ECS task role | Grant the task role s3:GetObject on the tests prefix |
-| 05 | DB API GHA `.github/workflows/db_api_gha.yml` | upload tests.py, or zip `tests/*` to S3 |
+| id | status | location | change |
+| - | - |  - | - |
+| 01 | closed | `tester/*` | add a script to import the tests from S3 as file or zip |
+| 02 | closed | `tester_task_execute.sh` | pass the S3 location to and call the S3 import script |
+| 03 | closed | `tester/requirements.txt` | add `boto3` dependency |
+| 04 | open | ECS task role | Grant the task role s3:GetObject on the tests prefix |
+| 05 | open | DB API GHA `.github/workflows/db_api_gha.yml` | upload tests.py, or zip `tests/*` to S3 |
 
 __(open) 01 tester: script to import tests__
 add a script to import the tests from S3 as file or zip
@@ -303,3 +303,43 @@ Steps:
   4) Unzip any *.zip found in tmp/tests/ into tests/.
   5) Copy other non-zip files from tmp/tests/ into tests/.
   6) Log activity; capture and report errors.
+
+_import and run script_
+location: `tester/import_run_tests.sh`
+new script to call the `import.py` script to download and import tests from S3, 
+and then run `pytests -q tests`
+
+```bash
+# ---- Import tests -----------------------------------------------------------
+echo "[import_run_tests] importing tests from s3://${S3_BUCKET}/${TESTS_S3_DIR} -> ${TESTS_LOCAL_DIR}"
+python /app/import.py \
+  --region "${AWS_REGION}" \
+  --bucket "${S3_BUCKET}" \
+  --s3-dir "${TESTS_S3_DIR}" \
+  --tests-dir "${TESTS_LOCAL_DIR}" \
+  --tmp-dir "${TMP_TESTS_DIR}" \
+  --log-file "${IMPORT_LOG_FILE}" \
+  --clean-tmp
+
+# ---- Run tests --------------------------------------------------------------
+echo "[import_run_tests] running: pytest ${PYTEST_ARGS} ${TESTS_LOCAL_DIR}"
+
+# keep the old log piping behavior
+set -o pipefail
+pytest ${PYTEST_ARGS} "${TESTS_LOCAL_DIR}" 2>&1 | tee /var/log/tests.log
+```
+
+_Dockerfile entrypoint_
+change entry point to run bash script `import_run_tests.sh`
+
+```Dockerfile  
+
+# stage runtime helpers
+COPY import.py /app/import.py
+COPY import_run_tests.sh /app/import_run_tests.sh
+RUN chmod +x /app/import_run_tests.sh
+
+# default entry: import tests at runtime, then run pytest on tests/
+CMD ["sh","-lc","/app/import_run_tests.sh"]
+
+```

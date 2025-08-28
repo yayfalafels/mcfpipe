@@ -6,6 +6,13 @@ release documentation `docs/releases/011_dbapi.md`
 
 session logs are timestamped to Singapore timezone in reverse chronological order, with latest entries at the top, and earlier entries at the bottom.
 
+### GHA [Developer] conditional refresh 2025-08-28 <>:<>
+_tester import script_
+
+- import and run bash script
+  - location: `tester/import_run_tests.sh`
+- Dockerfile change entrypoint to import and run script
+
 ### GHA [Developer] conditional refresh 2025-08-27 16:00
 _tester import script_
 
