@@ -273,7 +273,7 @@ _changes_
 | 04 | open | ECS task role | Grant the task role s3:GetObject on the tests prefix |
 | 05 | open | DB API GHA `.github/workflows/db_api_gha.yml` | upload tests.py, or zip `tests/*` to S3 |
 
-__(open) 01 tester: script to import tests__
+__(closed) 01 tester: script to import tests__
 add a script to import the tests from S3 as file or zip
 
 _s3 tests directory_
@@ -341,5 +341,41 @@ RUN chmod +x /app/import_run_tests.sh
 
 # default entry: import tests at runtime, then run pytest on tests/
 CMD ["sh","-lc","/app/import_run_tests.sh"]
+
+```
+
+__(open) 04 ECS task IAM role: Grant s3:GetObject on the tests prefix__
+
+ECS Task IAM role
+- Grant s3:GetObject on the tests prefix
+
+location: `aws/cloudformation/tester_stack.yaml`
+
+```yaml
+  TesterTaskRoleS3Policy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: tester-s3-read-tests
+      Roles: [ !Ref TesterTaskRole ]
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          # allow listing only inside your tests prefix
+          - Sid: ListTestsPrefix
+            Effect: Allow
+            Action: s3:ListBucket
+            Resource: !Sub arn:aws:s3:::${S3Bucket}
+            Condition:
+              StringLike:
+                s3:prefix:
+                  - !Ref TestsS3Prefix
+                  - !Sub '${TestsS3Prefix}*'
+          # allow reading any object within the tests prefix
+          - Sid: GetObjectsInPrefix
+            Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:GetObjectVersion
+            Resource: !Sub arn:aws:s3:::${S3Bucket}/${TestsPrefix}*
 
 ```

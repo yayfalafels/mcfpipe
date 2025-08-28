@@ -21,6 +21,12 @@ Parameters:
   Memory:
     Type: Number
     Default: 512
+  S3Bucket:
+    Type: String
+    Default: mcfpipe
+  TestsS3Prefix:
+    Type: String
+    Default: /apps/tests
 
 Resources:
   Logs:
@@ -50,6 +56,32 @@ Resources:
           - Effect: Allow
             Principal: { Service: ecs-tasks.amazonaws.com }
             Action: sts:AssumeRole
+
+  TesterTaskRoleS3Policy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: tester-s3-read-tests
+      Roles: [ !Ref TesterTaskRole ]
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          # allow listing only inside your tests prefix
+          - Sid: ListTestsPrefix
+            Effect: Allow
+            Action: s3:ListBucket
+            Resource: !Sub arn:aws:s3:::${S3Bucket}
+            Condition:
+              StringLike:
+                s3:prefix:
+                  - !Ref TestsS3Prefix
+                  - !Sub '${TestsS3Prefix}*'
+          # allow reading any object within the tests prefix
+          - Sid: GetObjectsInPrefix
+            Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:GetObjectVersion
+            Resource: !Sub arn:aws:s3:::${S3Bucket}/${TestsPrefix}*
 
   Cluster:
     Type: AWS::ECS::Cluster
