@@ -81,7 +81,7 @@ Resources:
             Action:
               - s3:GetObject
               - s3:GetObjectVersion
-            Resource: !Sub arn:aws:s3:::${S3Bucket}/${TestsS3Prefix}*
+            Resource: !Sub arn:aws:s3:::${S3Bucket}/*
 
   Cluster:
     Type: AWS::ECS::Cluster
