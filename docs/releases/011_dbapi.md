@@ -270,8 +270,8 @@ _changes_
 | 01 | closed | `tester/*` | add a script to import the tests from S3 as file or zip |
 | 02 | closed | `tester_task_execute.sh` | pass the S3 location to and call the S3 import script |
 | 03 | closed | `tester/requirements.txt` | add `boto3` dependency |
-| 04 | open | ECS task role | Grant the task role s3:GetObject on the tests prefix |
-| 05 | open | DB API GHA `.github/workflows/db_api_gha.yml` | upload tests.py, or zip `tests/*` to S3 |
+| 04 | closed | ECS task role | Grant the task role s3:GetObject on the tests prefix |
+| 05 | open | DB API GHA `.github/workflows/db_api_gha.yml` | upload tests.py, or zip `tests/*` to S3 and pass S3 location to ECS task execute *.sh script |
 
 __(closed) 01 tester: script to import tests__
 add a script to import the tests from S3 as file or zip
@@ -344,8 +344,7 @@ CMD ["sh","-lc","/app/import_run_tests.sh"]
 
 ```
 
-__(open) 04 ECS task IAM role: Grant s3:GetObject on the tests prefix__
-
+__(closed) 04 ECS task IAM role: Grant s3:GetObject on the tests prefix__
 ECS Task IAM role
 - Grant s3:GetObject on the tests prefix
 
@@ -379,3 +378,11 @@ location: `aws/cloudformation/tester_stack.yaml`
             Resource: !Sub arn:aws:s3:::${S3Bucket}/${TestsPrefix}*
 
 ```
+
+__(open) 05 DB API GHA: upload tests to S3 as file or zip__
+upload tests.py, or zip `tests/*` to S3 and pass S3 location to ECS task execute *.sh script
+
+01. upload tests.py, or zip `tests/*` to S3
+02. pass S3 location to ECS task execute *.sh script
+
+

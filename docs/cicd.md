@@ -66,7 +66,8 @@ jobdb/                   # Database API
   jobdb/
     __init__.py
   requirements.txt
-  test_jobdb.py           # unit test for DB API
+  tests/
+      test_jobdb.py       # unit test for DB API
 jobmatch/                 # Job recommendation python module
   jobmatch/
     __init__.py
@@ -113,10 +114,13 @@ s3-mcfpipe*           # local copy of the contents of the S3 directory
 S3 bucket: `mcfpipe`
 ```
 apps/                     # source code for apps
-  jobdb/*
+  jobdb/
+    ...
   tester/*
-  tests/                  # unit tests for tester to run
-    test_jobdb.py         # example: Unit tests for DB API
+  tests/
+    jobdb/                # unit tests for tester to run
+      tests.zip           # example: Unit tests for DB API
+      (test_jobdb.py)     # example: alternate single unit test
     ...
 config/                   # setup infrastructure and app configuration
 aws/                      # information for the AWS infrastructure

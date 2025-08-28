@@ -12,6 +12,8 @@ _tester import script_
 - import and run bash script
   - location: `tester/import_run_tests.sh`
 - Dockerfile change entrypoint to import and run script
+- ECS Task IAM role: Grant s3:GetObject on the tests prefix
+  - location: `aws/cloudformation/tester_stack.yaml`
 
 ### GHA [Developer] conditional refresh 2025-08-27 16:00
 _tester import script_

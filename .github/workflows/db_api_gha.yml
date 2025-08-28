@@ -28,11 +28,14 @@ jobs:
       CF_DB_API_ID_KEY: RestApiId
       STACK_OUTPUT_S3_PATH: apps/jobdb
       STACK_OUTPUT_JSON: jobdb_stack_config.json
+      TESTS_UPLOAD_SCRIPT: tester/tests_upload_to_s3.sh
       TESTER_CLUSTER: mcfpipe-tester
       TESTER_TASK: mcfpipe-tester
       TESTER_CONTAINER: tester
       TESTER_TASK_SCRIPT: tester/tester_task_execute.sh
       TESTER_LOG_GROUP: /mcfpipe/tester
+      TESTER_S3_PREFIX: apps/tests/jobdb
+      PYTEST_ARGS: -q
       STACK_EXPORT_SCRIPT: aws/cloudformation/export_stack_outputs.sh
       STACK_FAIL_DIAGNOSTICS_SCRIPT: aws/cloudformation/cfn_stack_diagnostics.sh
 
