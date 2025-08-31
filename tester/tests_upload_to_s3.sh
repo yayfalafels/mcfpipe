@@ -70,7 +70,7 @@ ZIP_FILE_NAME=tests.zip
 SINGLE_FILE_NAME=test_.py
 TESTS_DIR="${ROOT%/}/tests"
 SINGLE_FILE="${ROOT%/}/${SINGLE_FILE_NAME}"
-STAGING_DIR="$(mktemp -d -t tests-upload.xxxxxx)"
+STAGING_DIR="$(mktemp -d -t tests-upload.XXXXXX)"
 
 # Final prefix: apps/jobdb/tests/
 TESTS_S3_DIR="${PREFIX_BASE}/"
