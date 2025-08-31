@@ -9,7 +9,6 @@
 #     --root {app_name} \
 #     --bucket mcfpipe \
 #     --prefix-base apps/tests/{app_name} \
-#     --sha "$(git rev-parse HEAD)"
 #
 # Usage (GitHub Actions step):
 #   run: |
@@ -17,14 +16,12 @@
 #     --root {app_name} \
 #       --bucket "${S3_BUCKET}" \
 #       --prefix-base "${TESTS_PREFIX_BASE}" \
-#       --sha "${GITHUB_SHA}"
 #
 set -euo pipefail
 
 ROOT=""
 BUCKET=""
 PREFIX_BASE=""
-SHA=""
 QUIET=0
 
 usage() {
@@ -35,8 +32,6 @@ Required:
   --root PATH             # repo-relative path holding tests (e.g., tester)
   --bucket NAME           # S3 bucket name (e.g., mcfpipe)
   --prefix-base PREFIX    # S3 prefix base w/o leading slash (e.g., apps/tests/jobdb)
-  --sha SHA               # commit SHA (full or short; script will derive SHORT_SHA)
-
   --quiet                 # suppress non-essential output
   -h | --help
 
@@ -54,17 +49,13 @@ while [[ $# -gt 0 ]]; do
     --root) ROOT="$2"; shift 2 ;;
     --bucket) BUCKET="$2"; shift 2 ;;
     --prefix-base) PREFIX_BASE="$2"; shift 2 ;;
-    --sha) SHA="$2"; shift 2 ;;
-    --kms-key-id) KMS_KEY_ID="$2"; shift 2 ;;
-    --acl) ACL="$2"; shift 2 ;;
-    --content-type) CONTENT_TYPE="$2"; shift 2 ;;
     --quiet) QUIET=1; shift 1 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown arg: $1" >&2; usage; exit 2 ;;
   esac
 done
 
-[[ -z "$ROOT" ]] || [[ -z "$BUCKET" ]] || [[ -z "$PREFIX_BASE" ]] || [[ -z "$SHA" ]] && { usage; exit 2; }
+[[ -z "$ROOT" ]] || [[ -z "$BUCKET" ]] || [[ -z "$PREFIX_BASE" ]] && { usage; exit 2; }
 
 # ---------- deps ----------
 command -v aws >/dev/null || { echo "aws CLI not found" >&2; exit 127; }
@@ -74,7 +65,6 @@ command -v zip >/dev/null || { echo "zip not found (apt-get install -y zip)" >&2
 # no leading slash in prefix base; single trailing slash handled later
 PREFIX_BASE="${PREFIX_BASE#/}"            # strip leading /
 PREFIX_BASE="${PREFIX_BASE%/}"            # strip trailing /
-SHORT_SHA="${SHA:0:7}"
 
 ZIP_FILE_NAME=tests.zip
 SINGLE_FILE_NAME=test_.py

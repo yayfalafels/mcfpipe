@@ -124,6 +124,15 @@ jobs:
             --query 'imageDetails[0].imageDigest' --output text)
           echo "IMAGE_DIGEST=$DIGEST" >> $GITHUB_ENV
 
+      - name: Upload tests to S3
+        id: tests_upload_s3
+        run: |
+          chmod +x $TESTS_UPLOAD_SCRIPT
+          ./$TESTS_UPLOAD_SCRIPT \
+            --root $DBAPI_APP_DIR \
+            --bucket "${S3_BUCKET}" \
+            --prefix-base "$TESTER_S3_PREFIX" \
+
       - name: Deploy CloudFormation Stack
         id: stack_deploy
         continue-on-error: true
@@ -215,6 +224,9 @@ jobs:
           DB_API_URL=$DB_API_URL \
           SUBNETS_CSV=$PRIVATE_SUBNET \
           SECURITY_GROUPS_CSV=$SG_PRIVATE \
+          S3_BUCKET="$S3_BUCKET" \
+          TESTS_S3_DIR="$TESTER_S3_PREFIX" \
+          LOGGING_LEVEL="$LOGGING_LEVEL" \
           LOG_GROUP="$TESTER_LOG_GROUP" \
           TAG_ROLE="$ROLE" \
           TAG_PROJECT_NAME="$PROJECT_NAME" \

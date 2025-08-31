@@ -385,4 +385,53 @@ upload tests.py, or zip `tests/*` to S3 and pass S3 location to ECS task execute
 01. upload tests.py, or zip `tests/*` to S3
 02. pass S3 location to ECS task execute *.sh script
 
+location: `.github/workflows/db_api_gha.yml`
 
+_GHA env variables_
+
+```yaml
+    env:
+      DBAPI_APP_DIR: jobdb
+      TESTS_UPLOAD_SCRIPT: tester/tests_upload_to_s3.sh
+      TESTER_TASK_SCRIPT: tester/tester_task_execute.sh
+      TESTER_S3_PREFIX: apps/tests/jobdb
+      PYTEST_ARGS: -q
+```
+
+_GHA step: upload tests to S3_
+
+```yaml
+  - name: Upload tests to S3
+    id: tests_upload_s3
+    run: |
+      chmod +x $TESTS_UPLOAD_SCRIPT
+      ./$TESTS_UPLOAD_SCRIPT \
+        --root $DBAPI_APP_DIR \
+        --bucket "${S3_BUCKET}" \
+        --prefix-base "$TESTER_S3_PREFIX" \
+
+```
+
+_GHA step: execute tests for DBI API_
+
+```yaml
+      - name: Test API execute tester ECS task
+        id: api_test
+        if: steps.stack_deploy.outcome == 'success'
+        run: |
+          chmod +x ./$TESTER_TASK_SCRIPT
+          CLUSTER=$TESTER_CLUSTER \
+          TASK_DEF=$TESTER_TASK \
+          CONTAINER_NAME=$TESTER_CONTAINER \
+          DB_API_URL=$DB_API_URL \
+          SUBNETS_CSV=$PRIVATE_SUBNET \
+          SECURITY_GROUPS_CSV=$SG_PRIVATE \
+          S3_BUCKET="$S3_BUCKET" \
+          TESTS_S3_DIR="$TESTER_S3_PREFIX" \
+          LOGGING_LEVEL="$LOGGING_LEVEL" \
+          LOG_GROUP="$TESTER_LOG_GROUP" \
+          TAG_ROLE="$ROLE" \
+          TAG_PROJECT_NAME="$PROJECT_NAME" \
+          ./$TESTER_TASK_SCRIPT          
+
+```
