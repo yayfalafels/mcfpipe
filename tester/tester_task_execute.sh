@@ -101,7 +101,6 @@ OVERRIDES_ENV_JSON="$(jq -nc \
     {name:"AWS_REGION", value:$AWS_REGION},
     {name:"S3_BUCKET", value:$S3_BUCKET},
     {name:"TESTS_S3_DIR", value:$TESTS_S3_DIR},
-    {name:"IMPORT_LOG_FILE", value:$IMPORT_LOG_FILE},
     {name:"LOGGING_LEVEL", value:$LOGGING_LEVEL},
     {name:"PYTEST_ARGS", value:$PYTEST_ARGS}
   ] | map(select(.value != null and .value != ""))')"
