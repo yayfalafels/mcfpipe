@@ -15,7 +15,6 @@ VPCE_ID="${VPCE_ID:-}"                                   # API GW VPC endpoint i
 DB_API_ID="${DB_API_ID:-}"                               # API GW id (rest api id)
 DEV_ENV="${DEV_ENV:-dev}"                                # stage name
 STAGE_NAME="$DEV_ENV"
-REGION="$AWS_REGION"                                     # for consistency below
 
 # CloudWatch Logs (should match your task def log config)
 LOG_GROUP="${LOG_GROUP:-/mcfpipe/tester}"
@@ -57,7 +56,7 @@ Env overrides (commonly set by GHA):
 Examples:
   GITHUB_SHA=\$(git rev-parse --short HEAD)
   TESTS_S3_DIR="apps/jobdb/tests/\$GITHUB_SHA" \\
-  DB_API_URL="https://abc123-vpce-xyz.execute-api.${REGION}.amazonaws.com/prod" \\
+  DB_API_URL="https://abc123-vpce-xyz.execute-api.${AWS_REGION}.amazonaws.com/prod" \\
   SUBNETS_CSV="subnet-1,subnet-2" SECURITY_GROUPS_CSV="sg-1" \\
   $(basename "$0")
 EOF
@@ -79,7 +78,7 @@ command -v jq  >/dev/null 2>&1 || { echo "jq not found"; exit 127; }
 
 echo "Cluster         : $CLUSTER"
 echo "TaskDef         : $TASK_DEF"
-echo "Region          : $REGION"
+echo "Region          : $AWS_REGION"
 echo "DB_API_URL      : $DB_API_URL"
 echo "S3_BUCKET       : $S3_BUCKET"
 echo "TESTS_S3_DIR    : $TESTS_S3_DIR"
@@ -90,12 +89,12 @@ echo "PYTEST_ARGS     : $PYTEST_ARGS"
 ### --- Build overrides JSON ---------------------------------------------------
 # Build environment array dynamically so we don't inject empties.
 OVERRIDES_ENV_JSON="$(jq -nc \
-  --arg DB_API_URL   "$DB_API_URL" \
-  --arg AWS_REGION   "$AWS_REGION" \
-  --arg S3_BUCKET    "$S3_BUCKET" \
-  --arg TESTS_S3_DIR "$TESTS_S3_DIR" \
-  --arg LOGGING_LEVEL   "$LOGGING_LEVEL" \
-  --arg PYTEST_ARGS     "$PYTEST_ARGS" '
+  --arg DB_API_URL     "$DB_API_URL" \
+  --arg AWS_REGION     "$AWS_REGION" \
+  --arg S3_BUCKET      "$S3_BUCKET" \
+  --arg TESTS_S3_DIR   "$TESTS_S3_DIR" \
+  --arg LOGGING_LEVEL  "$LOGGING_LEVEL" \
+  --arg PYTEST_ARGS    "$PYTEST_ARGS" '
   [
     {name:"DB_API_URL", value:$DB_API_URL},
     {name:"AWS_REGION", value:$AWS_REGION},
@@ -130,11 +129,13 @@ RUN_OUT=$(aws ecs run-task \
   --cluster "$CLUSTER" \
   --launch-type FARGATE \
   --task-definition "$TASK_DEF" \
-  --region "$REGION" \
+  --region "$AWS_REGION" \
   --network-configuration "awsvpcConfiguration={subnets=[$SUBNETS_CSV],securityGroups=[$SECURITY_GROUPS_CSV],assignPublicIp=$ASSIGN_PUBLIC_IP}" \
   --overrides "$OVERRIDES" \
   --tags key=project,value="${TAG_PROJECT_NAME}" key=role,value="${TAG_ROLE}"
 )
+
+echo "$RUN_OUT" | jq .
 
 FAILURES=$(echo "$RUN_OUT" | jq -r '.failures | length')
 if [[ "$FAILURES" != "0" ]]; then
@@ -149,9 +150,9 @@ echo "TASK_ARN=$TASK_ARN"
 echo "TASK_ID=$TASK_ID"
 
 ### --- Wait for stop ----------------------------------------------------------
-aws ecs wait tasks-stopped --cluster "$CLUSTER" --tasks "$TASK_ARN" --region "$REGION"
+aws ecs wait tasks-stopped --cluster "$CLUSTER" --tasks "$TASK_ARN" --region "$AWS_REGION"
 
-DESC=$(aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$TASK_ARN" --region "$REGION")
+DESC=$(aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$TASK_ARN" --region "$AWS_REGION")
 EXIT_CODE=$(echo "$DESC" | jq -r '.tasks[0].containers[] | select(.name=="'"$CONTAINER_NAME"'") | .exitCode // -1')
 STOPPED_REASON=$(echo "$DESC" | jq -r '.tasks[0].stoppedReason // ""')
 
@@ -165,13 +166,13 @@ if [[ "$EXIT_CODE" != "0" ]]; then
   # tiny delay for final log flush
   sleep 3 || true
   if ! aws logs get-log-events \
-        --region "$REGION" \
+        --region "$AWS_REGION" \
         --log-group-name "$LOG_GROUP" \
         --log-stream-name "$STREAM" \
         --query 'events[].message' \
         --output text ; then
     echo "(could not fetch exact stream, tailing recent logs)"
-    aws logs tail "$LOG_GROUP" --region "$REGION" --since 1h --format short || true
+    aws logs tail "$LOG_GROUP" --region "$AWS_REGION" --since 1h --format short || true
   fi
   echo "::endgroup::"
 fi
