@@ -6,10 +6,61 @@ release documentation `docs/releases/011_dbapi.md`
 
 session logs are timestamped to Singapore timezone in reverse chronological order, with latest entries at the top, and earlier entries at the bottom.
 
-### GHA [Developer] conditional refresh 2025-08-31 <>:<>
+### GHA conditional refresh [Developer] tester conditional refresh 2025-09-01 <>:<>
+__tester conditional refresh__
 
+_validation_
 
-### GHA [Developer] conditional refresh 2025-08-28 18:18
+_requirements_
+only rebuild the tester image on changes to tester source code `tester/*`
+skip on other changes; CF stack template, etc..
+
+_implementation_
+
+| id | status | task | description |
+| - | - | - | - |
+| 01 | closed | detect file changes `tester/*` | use path filter action `dorny/paths-filter@v3` to set a variable `tester_changed` |
+| 02 | closed | add manual image refresh | add `workflow_dispatch` input `force_rebuild` |
+| 03 | closed | add conditional logic to image tasks  | use variables `tester_changed` and `force_rebuild`, steps: docker image build/publish, ECR login |
+
+### tester decoupled [Developer] GHA upload tests to S3 validate 2025-09-01 13:08
+validate: DB API GHA upload tests to S3
+
+_issues_
+
+ - (closed): task failed to execute
+  - location: `tester/tester_task_execute.sh`
+  - exact cause unknown, most likely due to typo wrong argument spelling for `AWS_REGION`
+ - (closed): task exception: reference before assignment 'e'
+  - location: `tester/import.py`    `logger.info(f'Ensured directory exists: {d}. {e} ')`
+  - remove the `{e}` default behavior in try-except is to include exception so this is redundant
+
+### tester decoupled [Developer] GHA upload tests to S3 2025-08-31 20:25
+_DB API GHA: upload tests to S3_
+
+- GHA DB API declare additional env variables
+
+- **TESTS_UPLOAD_SCRIPT**: `tester/tests_upload_to_s3.sh`
+- **TESTER_TASK_SCRIPT**: `tester/tester_task_execute.sh`
+- **TESTER_S3_PREFIX**: `apps/tests/jobdb`
+- **PYTEST_ARGS**: `-q`
+
+- GHA DB API upload tests to S3
+ - location: `.github/workflows/db_api_gha.yml`
+ - add env variables `TESTS_UPLOAD_SCRIPT`, `TESTER_S3_PREFIX`
+ - call S3 upload script
+
+- S3 upload script
+ - location: `tester/tests_upload_to_s3.sh`
+ - uploads flexibly either as *.zip or single file
+ - uploads to common `apps/tests` S3 dir to simplify task execution and S3 permissions
+
+- tester task execute script additional args S3 to ECS task run 
+ - location: `tester/tester_task_execute.sh`
+ - additional args: `S3_BUCKET`, `TESTS_S3_DIR`, `LOGGING_LEVEL`, `PYTEST_ARGS`
+ - GHA pass tests S3 args to ECS task execute via execute script
+
+### tester decoupled [Developer] tester import script 2025-08-28 18:18
 _tester import script_
 
 - import and run bash script
@@ -18,13 +69,13 @@ _tester import script_
 - ECS Task IAM role: Grant s3:GetObject on the tests prefix
   - location: `aws/cloudformation/tester_stack.yaml`
 
-### GHA [Developer] conditional refresh 2025-08-27 16:00
+### tester decoupled [Developer] tester import script 2025-08-27 16:00
 _tester import script_
 
 Import unit tests from S3 into local test runner
 - location: `tester/import.py`
 
-### GHA [Developer] conditional refresh 2025-08-21 18:03
+### tester decoupled [Developer] separate storage and compute stacks 2025-08-21 18:03
 Github issue [GHA and CF conditional refresh #14](https://github.com/yayfalafels/mcfpipe/issues/14)
 type: `ENHANCEMENT`
 

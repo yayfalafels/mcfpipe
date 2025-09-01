@@ -181,7 +181,7 @@ environment variables are passed to the container by Github actions at the `run-
 | 08 | closed | BUG | [ECS run container name conflict #11](https://github.com/yayfalafels/mcfpipe/issues/11) | container name conflict btw CF template and GHA env variable |
 | 09 | closed | BUG | [tester container script failures #12](https://github.com/yayfalafels/mcfpipe/issues/12) | missing IAM `AmazonECSTaskExecutionRolePolicy` on the `TesterExecutionRole` |
 | 10 | open | BUG | [test 00 basic route fail 400 Forbidden #13](https://github.com/yayfalafels/mcfpipe/issues/13) | test 00 basic route failed 400 Forbidden |
-| 11 | open | ENHANCEMENT | [GHA and CF conditional refresh #14](https://github.com/yayfalafels/mcfpipe/issues/14) | GHA and CF conditional refresh |
+| 11 | closed | ENHANCEMENT | [GHA and CF conditional refresh #14](https://github.com/yayfalafels/mcfpipe/issues/14) | GHA and CF conditional refresh |
 
 __Issue details__
 
@@ -217,7 +217,7 @@ __requirements__
 | id | status | enhancement |
 | - | - | - |
 | 01 | closed | CF separate DB storage resources from Gateway API + Lambda |
-| 02 | open | decouple tests to run from tester generic compute |
+| 02 | closed | decouple tests to run from tester generic compute |
 | 03 | open | GHA tester image conditional refresh |
 | 04 | open | GHA jobdb image conditional refresh |
 
@@ -261,7 +261,7 @@ _steps_
 06. get API ID
 07. run tests on tester
 
-### (open) 02. decouple tests to run from tester generic compute
+### (closed) 02. decouple tests to run from tester generic compute
 
 _changes_
 
@@ -271,7 +271,7 @@ _changes_
 | 02 | closed | `tester_task_execute.sh` | pass the S3 location to and call the S3 import script |
 | 03 | closed | `tester/requirements.txt` | add `boto3` dependency |
 | 04 | closed | ECS task role | Grant the task role s3:GetObject on the tests prefix |
-| 05 | open | DB API GHA `.github/workflows/db_api_gha.yml` | upload tests.py, or zip `tests/*` to S3 and pass S3 location to ECS task execute *.sh script |
+| 05 | closed | DB API GHA `.github/workflows/db_api_gha.yml` | upload tests.py, or zip `tests/*` to S3 and pass S3 location to ECS task execute *.sh script |
 
 __(closed) 01 tester: script to import tests__
 add a script to import the tests from S3 as file or zip
@@ -379,13 +379,16 @@ location: `aws/cloudformation/tester_stack.yaml`
 
 ```
 
-__(open) 05 DB API GHA: upload tests to S3 as file or zip__
+__(closed) 05 DB API GHA: upload tests to S3 as file or zip__
 upload tests.py, or zip `tests/*` to S3 and pass S3 location to ECS task execute *.sh script
 
 01. upload tests.py, or zip `tests/*` to S3
 02. pass S3 location to ECS task execute *.sh script
 
 location: `.github/workflows/db_api_gha.yml`
+
+ - add env variables `TESTS_UPLOAD_SCRIPT`, `TESTER_S3_PREFIX`
+ - call S3 upload script
 
 _GHA env variables_
 
@@ -397,6 +400,12 @@ _GHA env variables_
       TESTER_S3_PREFIX: apps/tests/jobdb
       PYTEST_ARGS: -q
 ```
+
+_bash script: upload tests to S3_
+
+ - location: `tester/tests_upload_to_s3.sh`
+ - uploads flexibly either as *.zip or single file
+ - uploads to common `apps/tests` S3 dir to simplify task execution and S3 permissions
 
 _GHA step: upload tests to S3_
 
@@ -414,8 +423,13 @@ _GHA step: upload tests to S3_
 
 _GHA step: execute tests for DBI API_
 
+- tester task execute script additional args S3 to ECS task run 
+ - location: `tester/tester_task_execute.sh`
+ - additional args: `S3_BUCKET`, `TESTS_S3_DIR`, `LOGGING_LEVEL`, `PYTEST_ARGS`
+ - GHA pass tests S3 args to ECS task execute via execute script
+
 ```yaml
-      - name: Test API execute tester ECS task
+       - name: Test API execute tester ECS task
         id: api_test
         if: steps.stack_deploy.outcome == 'success'
         run: |
@@ -435,3 +449,67 @@ _GHA step: execute tests for DBI API_
           ./$TESTER_TASK_SCRIPT          
 
 ```
+
+### (open) 03. GHA tester image conditional refresh
+
+_requirements_
+only rebuild the tester image on changes to tester source code `tester/*`
+skip on other changes; CF stack template, etc..
+
+_implementation_
+
+| id | status | task | description |
+| - | - | - | - |
+| 01 | closed | detect file changes `tester/*` | use path filter action `dorny/paths-filter@v3` to set a variable `tester_changed` |
+| 02 | closed | add manual image refresh | add `workflow_dispatch` input `force_rebuild` |
+| 03 | closed | add conditional logic to image tasks  | use variables `tester_changed` and `force_rebuild`, steps: docker image build/publish, ECR login |
+
+_GHA step: detect changes to tester image dir_
+
+```yaml
+  - name: Detect changes affecting tester image
+    id: change_detect_tester_dir
+    uses: dorny/paths-filter@v3
+    with:
+      filters: |
+        {
+          "tester": ["${{ env.APP_DIR }}/**"]
+        }
+
+```
+
+_GHA step: add manual image refresh_
+
+```yaml
+on:
+  workflow_dispatch:
+    inputs:
+      force_rebuild:
+        type: boolean
+        default: false
+
+```
+
+_GHA: add conditional logic to image tasks_
+
+add GHA step line `if: steps.changed.outputs.tester == 'true' || inputs.force_rebuild == true`
+
+steps to add
+
+01. ecr_login
+02. ecr_repo_exists
+03. docker_image_build
+04. docker_image_ecr
+
+```yaml
+- name: Login to ECR
+  id: ecr_login
+  if: steps.changed.outputs.tester == 'true' || inputs.force_rebuild == true
+  run: |
+    aws ecr get-login-password --region "$AWS_REGION" \
+      | docker login --username AWS --password-stdin "${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+
+```
+
+### (open) 04. GHA jobdb image conditional refresh
+
