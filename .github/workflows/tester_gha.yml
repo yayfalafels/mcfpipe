@@ -43,12 +43,16 @@ jobs:
 
       - name: Checkout repository
         id: repo_checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0        
 
       - name: Detect changes affecting tester image
         id: tester_dir_change
         uses: dorny/paths-filter@v3
         with:
+          base: "${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || (github.event_name == 'push' && format('{0}^', github.sha) || github.sha) }}"
+          ref: "${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
           filters: |
             {
               "tester": ["${{ env.APP_DIR }}/**"]

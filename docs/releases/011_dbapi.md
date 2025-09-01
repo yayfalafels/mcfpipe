@@ -531,3 +531,22 @@ _implementation_
 | 01 | open | detect file changes `jobdb/*` | use path filter action `dorny/paths-filter@v3` to set a variable `app_changed` |
 | 02 | open | add manual image refresh | add `workflow_dispatch` input `force_rebuild` |
 | 03 | open | add conditional logic to image tasks  | use variables `app_changed` and `force_rebuild`, steps: docker image build/publish, ECR login |
+
+_issue: diff ref for same-branch commits and PR_
+the reference for diff is different for same-branch commits vs pull requests
+the initial implementation for `dorny/paths-filter@v3` is for PR and detects all changes relative to `main`
+
+the desired behavior is to conditionally change the ref
+
+- pull requests: `main`
+- same branch commits: `HEAD^` vs `HEAD`
+
+```yaml
+    with:
+      base: "${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || (github.event_name == 'push' && format('{0}^', github.sha) || github.sha) }}"
+      ref: "${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
+      filters: |
+        {
+          "tester": ["${{ env.APP_DIR }}/**"]
+        }
+```
