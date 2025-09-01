@@ -136,6 +136,7 @@ jobs:
           fi
 
           echo "IMAGE_URI=${IMAGE_URI}" | tee -a "$GITHUB_OUTPUT"
+          echo "IMAGE_URI=${IMAGE_URI}" >> "$GITHUB_ENV" 
 
       - name: Ensure ECR repo exists
         id: ecr_repo_exists
