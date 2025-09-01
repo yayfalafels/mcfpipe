@@ -75,6 +75,8 @@ STAGING_DIR="$(mktemp -d -t tests-upload.XXXXXX)"
 # Final prefix: apps/jobdb/tests/
 TESTS_S3_DIR="${PREFIX_BASE}/"
 
+# image rebuild trigger
+
 # ---------- package ----------
 UPLOAD_SRC=""
 TESTS_KEY=""
