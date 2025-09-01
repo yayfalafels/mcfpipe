@@ -561,8 +561,8 @@ implementation uses a support bash script `.github/scripts/diff_detect.sh`
         id: tester_dir_change
         uses: dorny/paths-filter@v3
         with:
-          base: ${{ steps.diff.outputs.base }}
-          ref:  ${{ steps.diff.outputs.ref }}
+          base: ${{ steps.diff_range_set.outputs.base }}
+          ref:  ${{ steps.diff_range_set.outputs.ref }}
           filters: |
             {
               "tester": ["${{ env.APP_DIR }}/**"]

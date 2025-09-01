@@ -52,12 +52,28 @@ jobs:
 
       - name: Checkout repository
         id: repo_checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0        
+
+      - name: Compute diff range
+        id: diff_range_set
+        run: |
+          chmod +x $DIFF_DETECT_SCRIPT
+          EVENT_NAME="${{ github.event_name }}" \
+          PR_BASE_SHA="${{ github.event.pull_request.base.sha }}" \
+          PR_HEAD_SHA="${{ github.event.pull_request.head.sha }}" \
+          PUSH_BEFORE_SHA="${{ github.event.before }}" \
+          GITHUB_SHA_IN="${{ github.sha }}" \
+          REF_NAME="${{ github.ref_name }}" \
+          $DIFF_DETECT_SCRIPT
 
       - name: Detect changes affecting app image
         id: app_dir_change
         uses: dorny/paths-filter@v3
         with:
+          base: ${{ steps.diff_range_set.outputs.base }}
+          ref:  ${{ steps.diff_range_set.outputs.ref }}
           filters: |
             {
               "app": ["${{ env.DBAPI_APP_DIR }}/**"]
