@@ -69,7 +69,7 @@ def create_dirs(tmp_dir: str, tests_dir: str, logger: logging.Logger) -> None:
     for d in {tmp_dir, tests_dir}:
         try:
             os.makedirs(d, exist_ok=True)
-            logger.info(f'Ensured directory exists: {d}. {e}')
+            logger.info(f'Ensured directory exists: {d}.')
         except Exception as e:
             logger.exception(f'Failed to create directory: {d}.')
             raise
