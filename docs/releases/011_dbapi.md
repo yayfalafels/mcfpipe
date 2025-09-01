@@ -541,12 +541,31 @@ the desired behavior is to conditionally change the ref
 - pull requests: `main`
 - same branch commits: `HEAD^` vs `HEAD`
 
+implementation uses a support bash script `.github/scripts/diff_detect.sh`
+
 ```yaml
-    with:
-      base: "${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || (github.event_name == 'push' && format('{0}^', github.sha) || github.sha) }}"
-      ref: "${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}"
-      filters: |
-        {
-          "tester": ["${{ env.APP_DIR }}/**"]
-        }
+
+      - name: Compute diff range
+        id: diff_range_set
+        run: |
+          chmod +x $DIFF_DETECT_SCRIPT
+          EVENT_NAME="${{ github.event_name }}" \
+          PR_BASE_SHA="${{ github.event.pull_request.base.sha }}" \
+          PR_HEAD_SHA="${{ github.event.pull_request.head.sha }}" \
+          PUSH_BEFORE_SHA="${{ github.event.before }}" \
+          GITHUB_SHA_IN="${{ github.sha }}" \
+          REF_NAME="${{ github.ref_name }}" \
+          $DIFF_DETECT_SCRIPT
+
+      - name: Detect changes affecting tester image
+        id: tester_dir_change
+        uses: dorny/paths-filter@v3
+        with:
+          base: ${{ steps.diff.outputs.base }}
+          ref:  ${{ steps.diff.outputs.ref }}
+          filters: |
+            {
+              "tester": ["${{ env.APP_DIR }}/**"]
+            }
+
 ```

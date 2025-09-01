@@ -9,6 +9,7 @@ on:
   push:
     paths:
       - '.github/workflows/db_api_gha.yml'
+      - '.github/scripts/diff_detect.sh'
       - 'aws/cloudformation/db_api_stack.yaml'
       - 'aws/cloudformation/cfn_stack_diagnostics.sh'
       - 'aws/cloudformation/export_stack_outputs.sh'
@@ -22,6 +23,7 @@ jobs:
     env:
       CONFIG_PATH: setup/config.env
       STACK_NAME: mcfpipe-dbapi
+      DIFF_DETECT_SCRIPT: .github/scripts/diff_detect.sh
       CF_TEMPLATE_DIR: aws/cloudformation
       STACK_TEMPLATE_FILE: db_api_stack.yaml
       NETWORK_CONFIG_JSON: network_config.json
