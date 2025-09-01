@@ -532,7 +532,7 @@ _implementation_
 | 02 | open | add manual image refresh | add `workflow_dispatch` input `force_rebuild` |
 | 03 | open | add conditional logic to image tasks  | use variables `app_changed` and `force_rebuild`, steps: docker image build/publish, ECR login |
 
-_issue: diff ref for same-branch commits and PR_
+_(closed) issue 01: diff ref for same-branch commits and PR_
 the reference for diff is different for same-branch commits vs pull requests
 the initial implementation for `dorny/paths-filter@v3` is for PR and detects all changes relative to `main`
 
@@ -567,5 +567,43 @@ implementation uses a support bash script `.github/scripts/diff_detect.sh`
             {
               "tester": ["${{ env.APP_DIR }}/**"]
             }
+
+```
+
+_(open) issue 02: always pull the latest URI image
+
+situation: the current behavior sets the `IMAGE_URI` from the current branch SHA, 
+however, when the image rebuild is skipped, then this resolves to an invalid `IMAGE_URI`
+instead, it should pull from the most recent valid `IMAGE_URI`
+
+```yaml
+- name: Resolve IMAGE_URI (conditional, fallback to newest in ECR)
+  id: image_tag_name
+  env:
+    REBUILD:    ${{ steps.decide.outputs.rebuild }}
+  run: |
+    set -euo pipefail
+    SHORT_SHA="${GITHUB_SHA::7}"
+    REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+    IMAGE_REPO="${REGISTRY}/${REPO_NAME}"
+
+    if [[ "${REBUILD}" == "true" ]]; then
+      IMAGE_URI="${IMAGE_REPO}:sha-${SHORT_SHA}"
+    else
+      # Pull the most recently pushed TAGGED image (any tag)
+      # If you only want sha-* tags, add a jq filter: select(.imageTags[]|test("^sha-"))
+      IMAGE_TAG="$(aws ecr describe-images \
+        --repository-name "${REPO_NAME}" \
+        --filter tagStatus=TAGGED \
+        --query 'reverse(sort_by(imageDetails,&imagePushedAt))[0].imageTags[0]' \
+        --output text)"
+      if [[ -z "${IMAGE_TAG}" || "${IMAGE_TAG}" == "None" ]]; then
+        echo "No tagged images found in ECR for ${REPO_NAME}" >&2
+        exit 1
+      fi
+      IMAGE_URI="${IMAGE_REPO}:${IMAGE_TAG}"
+    fi
+
+    echo "IMAGE_URI=${IMAGE_URI}" | tee -a "$GITHUB_OUTPUT"
 
 ```
