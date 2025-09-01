@@ -2,6 +2,10 @@ name: Database API
 
 on:
   workflow_dispatch:
+    inputs:
+      force_rebuild:
+        type: boolean
+        default: false
   push:
     paths:
       - '.github/workflows/db_api_gha.yml'
@@ -48,6 +52,15 @@ jobs:
         id: repo_checkout
         uses: actions/checkout@v3
 
+      - name: Detect changes affecting app image
+        id: app_dir_change
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            {
+              "app": ["${{ env.DBAPI_APP_DIR }}/**"]
+            }
+
       - name: Load environment config
         id: env_var_set
         run: cat $CONFIG_PATH >> $GITHUB_ENV
@@ -84,6 +97,7 @@ jobs:
 
       - name: ECR Login
         id: ecr_login
+        if: steps.app_dir_change.outputs.app == 'true' || inputs.force_rebuild == true
         run: |
           aws ecr get-login-password --region "$AWS_REGION" \
             | docker login --username AWS --password-stdin "${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
@@ -104,18 +118,21 @@ jobs:
 
       - name: Ensure ECR repo exists
         id: ecr_repo_exists
+        if: steps.app_dir_change.outputs.app == 'true' || inputs.force_rebuild == true
         run: |
           aws ecr describe-repositories --repository-names "$REPO_NAME" >/dev/null 2>&1 || \
           aws ecr create-repository --repository-name "$REPO_NAME" >/dev/null
 
       - name: Build DB API image
         id: docker_image_build
+        if: steps.app_dir_change.outputs.app == 'true' || inputs.force_rebuild == true
         working-directory:  ${{ env.DBAPI_APP_DIR }}
         run: |
           docker build -t "$IMAGE_REPO:$IMAGE_TAG" .
 
       - name: Push image to ECR
         id: docker_image_ecr
+        if: steps.app_dir_change.outputs.app == 'true' || inputs.force_rebuild == true
         run: |
           docker push "$IMAGE_URI"
           DIGEST=$(aws ecr describe-images \
@@ -126,6 +143,7 @@ jobs:
 
       - name: Upload tests to S3
         id: tests_upload_s3
+        if: steps.app_dir_change.outputs.app == 'true' || inputs.force_rebuild == true
         run: |
           chmod +x $TESTS_UPLOAD_SCRIPT
           ./$TESTS_UPLOAD_SCRIPT \
@@ -212,10 +230,10 @@ jobs:
           API_ID=$(echo "$OUTPUTS" | jq -r --arg k "$CF_DB_API_ID_KEY" \
             '.[] | select(.OutputKey==$k) | .OutputValue')
           echo "DB_API_ID=$API_ID" >> $GITHUB_ENV
-# trigger          
+
       - name: Test API execute tester ECS task
         id: api_test
-        if: steps.stack_deploy.outcome == 'success'
+        if: steps.stack_deploy.outcome == 'success' && (steps.app_dir_change.outputs.app == 'true' || inputs.force_rebuild == true)
         run: |
           chmod +x ./$TESTER_TASK_SCRIPT
           CLUSTER=$TESTER_CLUSTER \

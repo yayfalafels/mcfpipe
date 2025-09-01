@@ -6,10 +6,24 @@ release documentation `docs/releases/011_dbapi.md`
 
 session logs are timestamped to Singapore timezone in reverse chronological order, with latest entries at the top, and earlier entries at the bottom.
 
-### GHA conditional refresh [Developer] tester conditional refresh 2025-09-01 <>:<>
-__tester conditional refresh__
+### GHA conditional refresh [Developer] jobdb conditional refresh 2025-09-01 <>:<>
+__jobdb conditional refresh__
 
-_validation_
+_requirements_
+only rebuild the DB API container image on changes to jobdb source code `jobdb/*`
+skip on other changes; GHA, CF stack template, etc..
+
+_implementation_
+
+| id | status | task | description |
+| - | - | - | - |
+| 01 | open | detect file changes `jobdb/*` | use path filter action `dorny/paths-filter@v3` to set a variable `app_changed` |
+| 02 | open | add manual image refresh | add `workflow_dispatch` input `force_rebuild` |
+| 03 | open | add conditional logic to image tasks  | use variables `app_changed` and `force_rebuild`, steps: docker image build/publish, ECR login |
+
+
+### GHA conditional refresh [Developer] tester conditional refresh 2025-09-01 14:55
+__tester conditional refresh__
 
 _requirements_
 only rebuild the tester image on changes to tester source code `tester/*`
@@ -22,6 +36,10 @@ _implementation_
 | 01 | closed | detect file changes `tester/*` | use path filter action `dorny/paths-filter@v3` to set a variable `tester_changed` |
 | 02 | closed | add manual image refresh | add `workflow_dispatch` input `force_rebuild` |
 | 03 | closed | add conditional logic to image tasks  | use variables `tester_changed` and `force_rebuild`, steps: docker image build/publish, ECR login |
+
+_validation issues_
+- reference correct step name
+- treat filter output value as string, not bool
 
 ### tester decoupled [Developer] GHA upload tests to S3 validate 2025-09-01 13:08
 validate: DB API GHA upload tests to S3

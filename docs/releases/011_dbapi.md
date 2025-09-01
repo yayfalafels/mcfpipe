@@ -218,7 +218,7 @@ __requirements__
 | - | - | - |
 | 01 | closed | CF separate DB storage resources from Gateway API + Lambda |
 | 02 | closed | decouple tests to run from tester generic compute |
-| 03 | open | GHA tester image conditional refresh |
+| 03 | closed | GHA tester image conditional refresh |
 | 04 | open | GHA jobdb image conditional refresh |
 
 ### (closed) 01. CF separate DB storage resources from Gateway API + Lambda
@@ -450,7 +450,7 @@ _GHA step: execute tests for DBI API_
 
 ```
 
-### (open) 03. GHA tester image conditional refresh
+### (closed) 03. GHA tester image conditional refresh
 
 _requirements_
 only rebuild the tester image on changes to tester source code `tester/*`
@@ -464,11 +464,17 @@ _implementation_
 | 02 | closed | add manual image refresh | add `workflow_dispatch` input `force_rebuild` |
 | 03 | closed | add conditional logic to image tasks  | use variables `tester_changed` and `force_rebuild`, steps: docker image build/publish, ECR login |
 
+_validation issues_
+- reference correct step name
+- treat filter output value as string 'true', not bool true
+
 _GHA step: detect changes to tester image dir_
+
+step id: `tester_dir_change`
 
 ```yaml
   - name: Detect changes affecting tester image
-    id: change_detect_tester_dir
+    id: tester_dir_change
     uses: dorny/paths-filter@v3
     with:
       filters: |
@@ -492,7 +498,7 @@ on:
 
 _GHA: add conditional logic to image tasks_
 
-add GHA step line `if: steps.changed.outputs.tester == 'true' || inputs.force_rebuild == true`
+add GHA step line `if: steps.tester_dir_change.outputs.tester == 'true' || inputs.force_rebuild == true`
 
 steps to add
 
@@ -504,7 +510,7 @@ steps to add
 ```yaml
 - name: Login to ECR
   id: ecr_login
-  if: steps.changed.outputs.tester == 'true' || inputs.force_rebuild == true
+  if: steps.tester_dir_change.outputs.tester == 'true' || inputs.force_rebuild == true
   run: |
     aws ecr get-login-password --region "$AWS_REGION" \
       | docker login --username AWS --password-stdin "${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
@@ -513,3 +519,15 @@ steps to add
 
 ### (open) 04. GHA jobdb image conditional refresh
 
+_requirements_
+only rebuild the DB API container image on changes to jobdb source code `jobdb/*`
+skip on other changes; GHA, CF stack template, etc..
+
+_implementation_
+(details similar to steps for step 03 tester image)
+
+| id | status | task | description |
+| - | - | - | - |
+| 01 | open | detect file changes `jobdb/*` | use path filter action `dorny/paths-filter@v3` to set a variable `app_changed` |
+| 02 | open | add manual image refresh | add `workflow_dispatch` input `force_rebuild` |
+| 03 | open | add conditional logic to image tasks  | use variables `app_changed` and `force_rebuild`, steps: docker image build/publish, ECR login |
