@@ -17,9 +17,28 @@ _implementation_
 
 | id | status | task | description |
 | - | - | - | - |
-| 01 | open | detect file changes `jobdb/*` | use path filter action `dorny/paths-filter@v3` to set a variable `app_changed` |
-| 02 | open | add manual image refresh | add `workflow_dispatch` input `force_rebuild` |
-| 03 | open | add conditional logic to image tasks  | use variables `app_changed` and `force_rebuild`, steps: docker image build/publish, ECR login |
+| 01 | closed | detect file changes `jobdb/*` | use path filter action `dorny/paths-filter@v3` to set a variable `app_changed` |
+| 02 | closed | add manual image refresh | add `workflow_dispatch` input `force_rebuild` |
+| 03 | closed | add conditional logic to image tasks  | use variables `app_changed` and `force_rebuild`, steps: docker image build/publish, ECR login |
+
+_validation issues_
+
+_(closed) issue 01: diff ref for same-branch commits and PR_
+the reference for diff is different for same-branch commits vs pull requests
+the initial implementation for `dorny/paths-filter@v3` is for PR and detects all changes relative to `main`
+
+the desired behavior is to conditionally change the ref
+
+- pull requests: `main`
+- same branch commits: `HEAD^` vs `HEAD`
+
+implementation uses a support bash script `.github/scripts/diff_detect.sh`
+
+_(closed) issue 02: always pull the latest URI image
+
+situation: the current behavior sets the `IMAGE_URI` from the current branch SHA, 
+however, when the image rebuild is skipped, then this resolves to an invalid `IMAGE_URI`
+instead, it should pull from the most recent valid `IMAGE_URI`
 
 
 ### GHA conditional refresh [Developer] tester conditional refresh 2025-09-01 14:55

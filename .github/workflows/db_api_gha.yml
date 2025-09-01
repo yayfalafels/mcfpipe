@@ -162,7 +162,7 @@ jobs:
         if: steps.app_dir_change.outputs.app == 'true' || inputs.force_rebuild == true
         working-directory:  ${{ env.DBAPI_APP_DIR }}
         run: |
-          docker build -t "$IMAGE_REPO:$IMAGE_TAG" .
+          docker build -t "$IMAGE_URI" .
 
       - name: Push image to ECR
         id: docker_image_ecr

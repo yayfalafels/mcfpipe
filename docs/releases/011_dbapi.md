@@ -219,7 +219,7 @@ __requirements__
 | 01 | closed | CF separate DB storage resources from Gateway API + Lambda |
 | 02 | closed | decouple tests to run from tester generic compute |
 | 03 | closed | GHA tester image conditional refresh |
-| 04 | open | GHA jobdb image conditional refresh |
+| 04 | closed | GHA jobdb image conditional refresh |
 
 ### (closed) 01. CF separate DB storage resources from Gateway API + Lambda
 
@@ -517,7 +517,7 @@ steps to add
 
 ```
 
-### (open) 04. GHA jobdb image conditional refresh
+### (closed) 04. GHA jobdb image conditional refresh
 
 _requirements_
 only rebuild the DB API container image on changes to jobdb source code `jobdb/*`
@@ -528,9 +528,11 @@ _implementation_
 
 | id | status | task | description |
 | - | - | - | - |
-| 01 | open | detect file changes `jobdb/*` | use path filter action `dorny/paths-filter@v3` to set a variable `app_changed` |
-| 02 | open | add manual image refresh | add `workflow_dispatch` input `force_rebuild` |
-| 03 | open | add conditional logic to image tasks  | use variables `app_changed` and `force_rebuild`, steps: docker image build/publish, ECR login |
+| 01 | closed | detect file changes `jobdb/*` | use path filter action `dorny/paths-filter@v3` to set a variable `app_changed` |
+| 02 | closed | add manual image refresh | add `workflow_dispatch` input `force_rebuild` |
+| 03 | closed | add conditional logic to image tasks  | use variables `app_changed` and `force_rebuild`, steps: docker image build/publish, ECR login |
+
+_validation issues_
 
 _(closed) issue 01: diff ref for same-branch commits and PR_
 the reference for diff is different for same-branch commits vs pull requests
@@ -570,7 +572,7 @@ implementation uses a support bash script `.github/scripts/diff_detect.sh`
 
 ```
 
-_(open) issue 02: always pull the latest URI image
+_(closed) issue 02: always pull the latest URI image
 
 situation: the current behavior sets the `IMAGE_URI` from the current branch SHA, 
 however, when the image rebuild is skipped, then this resolves to an invalid `IMAGE_URI`
