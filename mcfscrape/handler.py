@@ -2,6 +2,8 @@
 """MCF Webscraper entry point
 """
 
+# trigger
+
 def run():
     pass
 
