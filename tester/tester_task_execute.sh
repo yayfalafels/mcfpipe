@@ -135,8 +135,6 @@ RUN_OUT=$(aws ecs run-task \
   --tags key=project,value="${TAG_PROJECT_NAME}" key=role,value="${TAG_ROLE}"
 )
 
-echo "$RUN_OUT" | jq .
-
 FAILURES=$(echo "$RUN_OUT" | jq -r '.failures | length')
 if [[ "$FAILURES" != "0" ]]; then
   echo "ECS run-task returned failures:"

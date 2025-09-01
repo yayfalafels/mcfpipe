@@ -212,7 +212,7 @@ jobs:
           API_ID=$(echo "$OUTPUTS" | jq -r --arg k "$CF_DB_API_ID_KEY" \
             '.[] | select(.OutputKey==$k) | .OutputValue')
           echo "DB_API_ID=$API_ID" >> $GITHUB_ENV
-          
+# trigger          
       - name: Test API execute tester ECS task
         id: api_test
         if: steps.stack_deploy.outcome == 'success'
