@@ -122,17 +122,33 @@ jobs:
 
       - name: Set image tags and ECR URI
         id: image_tag_name
+        env:
+          REBUILD: ${{ steps.decide.outputs.rebuild }}
         run: |
           set -euo pipefail
-          IMAGE_TAG="${GITHUB_SHA::7}"
-          IMAGE_REPO="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${REPO_NAME}"
-          IMAGE_URI="${IMAGE_REPO}:${IMAGE_TAG}"
+          SHORT_SHA="${GITHUB_SHA::7}"
+          REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+          IMAGE_REPO="${REGISTRY}/${REPO_NAME}"
 
-          {
-            echo "IMAGE_TAG=${IMAGE_TAG}"
-            echo "IMAGE_REPO=${IMAGE_REPO}"
-            echo "IMAGE_URI=${IMAGE_URI}"
-          } >> "$GITHUB_ENV"          
+          if [[ "${REBUILD}" == "true" ]]; then
+            IMAGE_URI="${IMAGE_REPO}:sha-${SHORT_SHA}"
+          else
+            # Pull the most recently pushed TAGGED image (any tag)
+            # If you only want sha-* tags, add a jq filter: select(.imageTags[]|test("^sha-"))
+            IMAGE_TAG="$(aws ecr describe-images \
+              --repository-name "${REPO_NAME}" \
+              --filter tagStatus=TAGGED \
+              --query 'reverse(sort_by(imageDetails,&imagePushedAt))[0].imageTags[0]' \
+              --output text)"
+            if [[ -z "${IMAGE_TAG}" || "${IMAGE_TAG}" == "None" ]]; then
+              echo "No tagged images found in ECR for ${REPO_NAME}" >&2
+              exit 1
+            fi
+            IMAGE_URI="${IMAGE_REPO}:${IMAGE_TAG}"
+          fi
+
+          echo "IMAGE_URI=${IMAGE_URI}" | tee -a "$GITHUB_OUTPUT"
+          echo "IMAGE_URI=${IMAGE_URI}" >> "$GITHUB_ENV" 
 
       - name: Ensure ECR repo exists
         id: ecr_repo_exists
