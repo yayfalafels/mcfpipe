@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: MCFPipe Tester - ECS Fargate task in private subnet
+Description: MCFPipe Tester - ECS Fargate task in public subnet
 
 Parameters:
   TesterImageUri:

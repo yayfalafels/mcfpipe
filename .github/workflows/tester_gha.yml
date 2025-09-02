@@ -14,7 +14,7 @@ on:
       - 'aws/cloudformation/cfn_stack_diagnostics.sh'
       - 'aws/cloudformation/export_stack_outputs.sh'
       - 'tester/**'
-# trigger
+
 jobs:
   tester-deploy:
     name: Tester Image Build and Stack Deploy
@@ -98,7 +98,7 @@ jobs:
       - name: Set image tags and ECR URI
         id: image_tag_name
         env:
-          REBUILD: ${{ steps.decide.outputs.rebuild }}
+          REBUILD: ${{ steps.tester_dir_change.outputs.rebuild }}
         run: |
           set -euo pipefail
           SHORT_SHA="${GITHUB_SHA::7}"
@@ -173,7 +173,7 @@ jobs:
               TesterImageUri=$IMAGE_URI \
               LogGroupName=/$PROJECT_NAME/$APP_NAME \
               S3Bucket=$S3_BUCKET \
-              TestS3Prefix=$TESTS_S3_DIR \
+              TestsS3Prefix=$TESTS_S3_DIR \
             --tags \
               role=$ROLE \
               project=$PROJECT_NAME
