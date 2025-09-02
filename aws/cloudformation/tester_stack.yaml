@@ -2,13 +2,6 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: MCFPipe Tester - ECS Fargate task in private subnet
 
 Parameters:
-  VpcId:
-    Type: String
-  PrivateSubnetIds:
-    Type: List<AWS::EC2::Subnet::Id>
-  TesterSecurityGroupId:
-    Type: AWS::EC2::SecurityGroup::Id
-    Description: Private SG that allows egress to VPC endpoints
   TesterImageUri:
     Type: String
     Description: ECR image URI (e.g. 123456789012.dkr.ecr.ap-southeast-1.amazonaws.com/tester:latest)

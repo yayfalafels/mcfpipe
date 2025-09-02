@@ -190,6 +190,8 @@ environment variables are passed to the container by Github actions at the `run-
 | 09 | closed | BUG | [tester container script failures #12](https://github.com/yayfalafels/mcfpipe/issues/12) | missing IAM `AmazonECSTaskExecutionRolePolicy` on the `TesterExecutionRole` |
 | 10 | open | BUG | [test 00 basic route fail 400 Forbidden #13](https://github.com/yayfalafels/mcfpipe/issues/13) | test 00 basic route failed 400 Forbidden |
 | 11 | closed | ENHANCEMENT | [GHA and CF conditional refresh #14](https://github.com/yayfalafels/mcfpipe/issues/14) | GHA and CF conditional refresh |
+| 12 | open | ENHANCEMENT | [duplicate VPCE costs tester private subnet #15](https://github.com/yayfalafels/mcfpipe/issues/15) | switch tester to public subnet, delete unnecessary VPCE |
+
 
 __Issue details__
 
@@ -213,407 +215,72 @@ The current configuration refreshes the DB API ECR docker image for all GHA trig
 __resolution__
 update the logic in GHA to only refresh the DB API ECR docker image either no image is present OR changes that would affect the docker image, such as any change to `jobdb/*` contents.
 
-### (closed) 11 GHA and CF conditional refresh
-Github issue [GHA and CF conditional refresh #14](https://github.com/yayfalafels/mcfpipe/issues/14)
+### (open) 12 duplicate VPCE costs tester private subnet
+Github issue [duplicate VPCE costs tester private subnet #15](https://github.com/yayfalafels/mcfpipe/issues/15)
 type: `ENHANCEMENT`
 
 __situation__
-Current CF stack refreshes the docker images for `tester` and `jobdb` under any trigger for the GHA workflow, many of which do not require an image refresh. Consequence is a build-up of redundant image copies that add clutter and storage costs.  Additionally, the DB API CF stack combines the storage DB schema resources with the compute Gateway API layer and includes a forced deploy refresh on each CF deploy trigger. While it's expected there many be frequent DB Schema changes in the future, the DB API has already been designed as a thin wrapper decoupled from schema specifics, so it shouldn't need to be updated for only DB schema changes.
+Currently there are **4x Interface VPC endpoints** attached to the private subnet
 
-__requirements__
+ - Execute-API
+ - ECR API
+ - ECR DKR
+ - CloudWatch Logs
 
-| id | status | enhancement |
-| - | - | - |
-| 01 | closed | CF separate DB storage resources from Gateway API + Lambda |
-| 02 | closed | decouple tests to run from tester generic compute |
-| 03 | closed | GHA tester image conditional refresh |
-| 04 | closed | GHA jobdb image conditional refresh |
+The network spec explicitly defines the Execute-API and ECR endpoints in the VPC config and outputs, with guidance that private-only tasks need those endpoints (or a NAT) to work. Keeping four always-on VPCEs means **idle hourly charges accumulate** with little data processed.
 
-#### (closed) 01. CF separate DB storage resources from Gateway API + Lambda
+The reason for the extra VPCE is that the **Tester** runs in a **private subnet**  
 
-_CF templates_
+__resolution__
 
-| id | template | location |
-| - | - | - |
-| 01 | db stack base | `aws/cloudformation/db_base.yaml` |
-| 02 | db stack | `aws/cloudformation/db_stack.yaml` |
-| 03 | db api stack | `aws/cloudformation/db_api_stack.yaml` |
+- **Keep only one Interface VPCE: API Gateway Execute-API** — this preserves a **private** DB API surface reachable within the VPC and avoids NAT costs for DB API calls.  
+- **Run the Tester in a public subnet with `assignPublicIp: ENABLED`** so it can pull from ECR and write logs over the internet (no ECR/Logs VPCEs needed).  
+- DB API remains on API Gateway + Lambda; the API stays private and restricted via the Execute-API VPCE allow-list (no policy churn).
 
-__01 db stack__
+__implementation__
 
-stack name: `mcfpipe-database`
-resources: DynamoDB tables
-
-_steps_
-
-01. upload the DB Schema JSON to S3
-02. generate the CF template from DB Schema JSON
-03. deploy tables CF stack
-04. (on failure) report CF stack fail diagnostics
-
-__02 db api stack__
-
-stack name: `mcfpipe-dbapi`
-resources: API Gateway, URL handler Lambda 
-
-- dropped StageDescription property, caused Stack Fail
-- attached Resource policy -- turns out it is required
-
-_steps_
-
-01. download network config from S3
-02. build container image register to ECR
-03. deploy CF stack
-04. (on failure) report CF stack fail diagnostics
-05. get stack outputs upload to S3
-06. get API ID
-07. run tests on tester
-
-#### (closed) 02. decouple tests to run from tester generic compute
-
-_changes_
-
-| id | status | location | change |
-| - | - |  - | - |
-| 01 | closed | `tester/*` | add a script to import the tests from S3 as file or zip |
-| 02 | closed | `tester_task_execute.sh` | pass the S3 location to and call the S3 import script |
-| 03 | closed | `tester/requirements.txt` | add `boto3` dependency |
-| 04 | closed | ECS task role | Grant the task role s3:GetObject on the tests prefix |
-| 05 | closed | DB API GHA `.github/workflows/db_api_gha.yml` | upload tests.py, or zip `tests/*` to S3 and pass S3 location to ECS task execute *.sh script |
-
-__(closed) 01 tester: script to import tests__
-add a script to import the tests from S3 as file or zip
-
-_s3 tests directory_
-the tests are located in the S3 location: `apps/tests/*`
-
-S3 bucket: `mcfpipe`
-
-```
-apps/                     # source code for apps
-  jobdb/*
-  tester/*
-  tests/                  # unit tests for tester to run
-    test_jobdb.py         # example: Unit tests for DB API
-    ...
-
-```
-
-_tester tests import script_
-Import unit tests from S3 into local test runner
-
-location: `tester/import.py`
-
-Steps:
-  1) Process CLI args (overrides env defaults).
-  2) Create local directories: tests/ and tmp/tests/.
-  3) Download objects from S3 prefix to tmp/tests/.
-  4) Unzip any *.zip found in tmp/tests/ into tests/.
-  5) Copy other non-zip files from tmp/tests/ into tests/.
-  6) Log activity; capture and report errors.
-
-_import and run script_
-location: `tester/import_run_tests.sh`
-new script to call the `import.py` script to download and import tests from S3, 
-and then run `pytests -q tests`
-
-```bash
-# ---- Import tests -----------------------------------------------------------
-echo "[import_run_tests] importing tests from s3://${S3_BUCKET}/${TESTS_S3_DIR} -> ${TESTS_LOCAL_DIR}"
-python /app/import.py \
-  --region "${AWS_REGION}" \
-  --bucket "${S3_BUCKET}" \
-  --s3-dir "${TESTS_S3_DIR}" \
-  --tests-dir "${TESTS_LOCAL_DIR}" \
-  --tmp-dir "${TMP_TESTS_DIR}" \
-  --log-file "${IMPORT_LOG_FILE}" \
-  --clean-tmp
-
-# ---- Run tests --------------------------------------------------------------
-echo "[import_run_tests] running: pytest ${PYTEST_ARGS} ${TESTS_LOCAL_DIR}"
-
-# keep the old log piping behavior
-set -o pipefail
-pytest ${PYTEST_ARGS} "${TESTS_LOCAL_DIR}" 2>&1 | tee /var/log/tests.log
-```
-
-_Dockerfile entrypoint_
-change entry point to run bash script `import_run_tests.sh`
-
-```Dockerfile  
-
-# stage runtime helpers
-COPY import.py /app/import.py
-COPY import_run_tests.sh /app/import_run_tests.sh
-RUN chmod +x /app/import_run_tests.sh
-
-# default entry: import tests at runtime, then run pytest on tests/
-CMD ["sh","-lc","/app/import_run_tests.sh"]
-
-```
-
-__(closed) 04 ECS task IAM role: Grant s3:GetObject on the tests prefix__
-ECS Task IAM role
-- Grant s3:GetObject on the tests prefix
-
-location: `aws/cloudformation/tester_stack.yaml`
-
-```yaml
-  TesterTaskRoleS3Policy:
-    Type: AWS::IAM::Policy
-    Properties:
-      PolicyName: tester-s3-read-tests
-      Roles: [ !Ref TesterTaskRole ]
-      PolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          # allow listing only inside your tests prefix
-          - Sid: ListTestsPrefix
-            Effect: Allow
-            Action: s3:ListBucket
-            Resource: !Sub arn:aws:s3:::${S3Bucket}
-            Condition:
-              StringLike:
-                s3:prefix:
-                  - !Ref TestsS3Prefix
-                  - !Sub '${TestsS3Prefix}*'
-          # allow reading any object within the tests prefix
-          - Sid: GetObjectsInPrefix
-            Effect: Allow
-            Action:
-              - s3:GetObject
-              - s3:GetObjectVersion
-            Resource: !Sub arn:aws:s3:::${S3Bucket}/${TestsPrefix}*
-
-```
-
-__(closed) 05 DB API GHA: upload tests to S3 as file or zip__
-upload tests.py, or zip `tests/*` to S3 and pass S3 location to ECS task execute *.sh script
-
-01. upload tests.py, or zip `tests/*` to S3
-02. pass S3 location to ECS task execute *.sh script
-
-location: `.github/workflows/db_api_gha.yml`
-
- - add env variables `TESTS_UPLOAD_SCRIPT`, `TESTER_S3_PREFIX`
- - call S3 upload script
-
-_GHA env variables_
-
-```yaml
-    env:
-      DBAPI_APP_DIR: jobdb
-      TESTS_UPLOAD_SCRIPT: tester/tests_upload_to_s3.sh
-      TESTER_TASK_SCRIPT: tester/tester_task_execute.sh
-      TESTER_S3_PREFIX: apps/tests/jobdb
-      PYTEST_ARGS: -q
-```
-
-_bash script: upload tests to S3_
-
- - location: `tester/tests_upload_to_s3.sh`
- - uploads flexibly either as *.zip or single file
- - uploads to common `apps/tests` S3 dir to simplify task execution and S3 permissions
-
-_GHA step: upload tests to S3_
-
-```yaml
-  - name: Upload tests to S3
-    id: tests_upload_s3
-    run: |
-      chmod +x $TESTS_UPLOAD_SCRIPT
-      ./$TESTS_UPLOAD_SCRIPT \
-        --root $DBAPI_APP_DIR \
-        --bucket "${S3_BUCKET}" \
-        --prefix-base "$TESTER_S3_PREFIX" \
-
-```
-
-_GHA step: execute tests for DBI API_
-
-- tester task execute script additional args S3 to ECS task run 
- - location: `tester/tester_task_execute.sh`
- - additional args: `S3_BUCKET`, `TESTS_S3_DIR`, `LOGGING_LEVEL`, `PYTEST_ARGS`
- - GHA pass tests S3 args to ECS task execute via execute script
-
-```yaml
-       - name: Test API execute tester ECS task
-        id: api_test
-        if: steps.stack_deploy.outcome == 'success'
-        run: |
-          chmod +x ./$TESTER_TASK_SCRIPT
-          CLUSTER=$TESTER_CLUSTER \
-          TASK_DEF=$TESTER_TASK \
-          CONTAINER_NAME=$TESTER_CONTAINER \
-          DB_API_URL=$DB_API_URL \
-          SUBNETS_CSV=$PRIVATE_SUBNET \
-          SECURITY_GROUPS_CSV=$SG_PRIVATE \
-          S3_BUCKET="$S3_BUCKET" \
-          TESTS_S3_DIR="$TESTER_S3_PREFIX" \
-          LOGGING_LEVEL="$LOGGING_LEVEL" \
-          LOG_GROUP="$TESTER_LOG_GROUP" \
-          TAG_ROLE="$ROLE" \
-          TAG_PROJECT_NAME="$PROJECT_NAME" \
-          ./$TESTER_TASK_SCRIPT          
-
-```
-
-#### (closed) 03. GHA tester image conditional refresh
-
-_requirements_
-only rebuild the tester image on changes to tester source code `tester/*`
-skip on other changes; CF stack template, etc..
-
-_implementation_
-
-| id | status | task | description |
+| id | resource | task | description |
 | - | - | - | - |
-| 01 | closed | detect file changes `tester/*` | use path filter action `dorny/paths-filter@v3` to set a variable `tester_changed` |
-| 02 | closed | add manual image refresh | add `workflow_dispatch` input `force_rebuild` |
-| 03 | closed | add conditional logic to image tasks  | use variables `tester_changed` and `force_rebuild`, steps: docker image build/publish, ECR login |
+| 01 | network stack | remove 3x VPCE | ECR API, ECR DKR and CW Logs |
+| 02 | Tester stack | switch to public subnet | with Public IP Enabled |
 
-_validation issues_
-- reference correct step name
-- treat filter output value as string 'true', not bool true
+__Network CF stack__
 
-_GHA step: detect changes to tester image dir_
+- **Remove** ECR Interface endpoints from template/outputs: `VpceEcrApiId`, `VpceEcrDkrId` (and Logs VPCE if present).  
+- **Keep** only `VPCExecuteApiId` for **API Gateway Execute-API**.  
+- Regenerate and re-upload `aws/network/network_config.json` without ECR/Logs endpoint outputs.
 
-step id: `tester_dir_change`
+__DB API stack__
 
-```yaml
-  - name: Detect changes affecting tester image
-    id: tester_dir_change
-    uses: dorny/paths-filter@v3
-    with:
-      filters: |
-        {
-          "tester": ["${{ env.APP_DIR }}/**"]
-        }
+- **No policy change** needed; continue restricting the private API to your **Execute-API VPCE**.  
+- Confirm stack outputs (URL, stage, RestApiId) remain intact after network changes.
 
-```
+__Tester stack and GHA__
 
-_GHA step: add manual image refresh_
+tester stack
+ - location: `aws/cloudformation/tester_stack.yaml` 
+ - remove references to VPC information
 
-```yaml
-on:
-  workflow_dispatch:
-    inputs:
-      force_rebuild:
-        type: boolean
-        default: false
+tester GHA
+ - location: `.github/workflows/tester_gha.yml` 
+ - remove the network config lookup step
+ - pass parameters for tests bucket and dir to CF stack deploy
 
-```
+__Tester run__
 
-_GHA: add conditional logic to image tasks_
+- **Use public subnet(s)** for Tester runs instead of the private subnet.  
+- In the **GHA `run-task`** call, set:
+ - `awsvpcConfiguration.subnets=[PublicSubnetXId]`
+ - `awsvpcConfiguration.assignPublicIp=ENABLED`
+ - SG with outbound egress only (e.g., `SGHTTP` or a dedicated egress SG).  
+ - Ensure the **task execution role** keeps `AmazonECSTaskExecutionRolePolicy` for ECR auth/logs drivers.
 
-add GHA step line `if: steps.tester_dir_change.outputs.tester == 'true' || inputs.force_rebuild == true`
+__CICD updates__
 
-steps to add
+ - **Stop creating/managing ECR/Logs VPCEs** in network workflow; only publish the Execute-API VPCE ID to S3 config for downstream stacks.
+ - Adjust any scripts that read `network_config.json` to **not expect** ECR/Logs VPCE outputs.
 
-01. ecr_login
-02. ecr_repo_exists
-03. docker_image_build
-04. docker_image_ecr
+__Cleanup__
 
-```yaml
-- name: Login to ECR
-  id: ecr_login
-  if: steps.tester_dir_change.outputs.tester == 'true' || inputs.force_rebuild == true
-  run: |
-    aws ecr get-login-password --region "$AWS_REGION" \
-      | docker login --username AWS --password-stdin "${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
-
-```
-
-#### (closed) 04. GHA jobdb image conditional refresh
-
-_requirements_
-only rebuild the DB API container image on changes to jobdb source code `jobdb/*`
-skip on other changes; GHA, CF stack template, etc..
-
-_implementation_
-(details similar to steps for step 03 tester image)
-
-| id | status | task | description |
-| - | - | - | - |
-| 01 | closed | detect file changes `jobdb/*` | use path filter action `dorny/paths-filter@v3` to set a variable `app_changed` |
-| 02 | closed | add manual image refresh | add `workflow_dispatch` input `force_rebuild` |
-| 03 | closed | add conditional logic to image tasks  | use variables `app_changed` and `force_rebuild`, steps: docker image build/publish, ECR login |
-
-_validation issues_
-
-_(closed) issue 01: diff ref for same-branch commits and PR_
-the reference for diff is different for same-branch commits vs pull requests
-the initial implementation for `dorny/paths-filter@v3` is for PR and detects all changes relative to `main`
-
-the desired behavior is to conditionally change the ref
-
-- pull requests: `main`
-- same branch commits: `HEAD^` vs `HEAD`
-
-implementation uses a support bash script `.github/scripts/diff_detect.sh`
-
-```yaml
-
-      - name: Compute diff range
-        id: diff_range_set
-        run: |
-          chmod +x $DIFF_DETECT_SCRIPT
-          EVENT_NAME="${{ github.event_name }}" \
-          PR_BASE_SHA="${{ github.event.pull_request.base.sha }}" \
-          PR_HEAD_SHA="${{ github.event.pull_request.head.sha }}" \
-          PUSH_BEFORE_SHA="${{ github.event.before }}" \
-          GITHUB_SHA_IN="${{ github.sha }}" \
-          REF_NAME="${{ github.ref_name }}" \
-          $DIFF_DETECT_SCRIPT
-
-      - name: Detect changes affecting tester image
-        id: tester_dir_change
-        uses: dorny/paths-filter@v3
-        with:
-          base: ${{ steps.diff_range_set.outputs.base }}
-          ref:  ${{ steps.diff_range_set.outputs.ref }}
-          filters: |
-            {
-              "tester": ["${{ env.APP_DIR }}/**"]
-            }
-
-```
-
-_(closed) issue 02: always pull the latest URI image
-
-situation: the current behavior sets the `IMAGE_URI` from the current branch SHA, 
-however, when the image rebuild is skipped, then this resolves to an invalid `IMAGE_URI`
-instead, it should pull from the most recent valid `IMAGE_URI`
-
-```yaml
-- name: Resolve IMAGE_URI (conditional, fallback to newest in ECR)
-  id: image_tag_name
-  env:
-    REBUILD:    ${{ steps.decide.outputs.rebuild }}
-  run: |
-    set -euo pipefail
-    SHORT_SHA="${GITHUB_SHA::7}"
-    REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
-    IMAGE_REPO="${REGISTRY}/${REPO_NAME}"
-
-    if [[ "${REBUILD}" == "true" ]]; then
-      IMAGE_URI="${IMAGE_REPO}:sha-${SHORT_SHA}"
-    else
-      # Pull the most recently pushed TAGGED image (any tag)
-      # If you only want sha-* tags, add a jq filter: select(.imageTags[]|test("^sha-"))
-      IMAGE_TAG="$(aws ecr describe-images \
-        --repository-name "${REPO_NAME}" \
-        --filter tagStatus=TAGGED \
-        --query 'reverse(sort_by(imageDetails,&imagePushedAt))[0].imageTags[0]' \
-        --output text)"
-      if [[ -z "${IMAGE_TAG}" || "${IMAGE_TAG}" == "None" ]]; then
-        echo "No tagged images found in ECR for ${REPO_NAME}" >&2
-        exit 1
-      fi
-      IMAGE_URI="${IMAGE_REPO}:${IMAGE_TAG}"
-    fi
-
-    echo "IMAGE_URI=${IMAGE_URI}" | tee -a "$GITHUB_OUTPUT"
-
-```
+- Delete existing **ECR API**, **ECR DKR**, and **Logs** interface endpoints.  
+- Tag stacks/resources to reflect the simplified design for future cost attribution.

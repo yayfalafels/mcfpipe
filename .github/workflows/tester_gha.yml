@@ -27,11 +27,9 @@ jobs:
       CF_TEMPLATE_DIR: aws/cloudformation
       STACK_TEMPLATE_FILE: tester_stack.yaml
       APP_SC_S3_DIR: apps/tester
+      TESTS_S3_DIR: apps/tests
       APP_DIR: tester
       APP_NAME: tester
-      CF_DB_API_URL_NAME: DbAPIUrl
-      NETWORK_CONFIG_JSON: network_config.json
-      NETWORK_CONFIG_S3_PATH: aws/network
       STACK_OUTPUT_S3_PATH: apps/tester
       STACK_OUTPUT_JSON: tester_stack_config.json
       STACK_EXPORT_SCRIPT: aws/cloudformation/export_stack_outputs.sh
@@ -90,17 +88,6 @@ jobs:
         run: |
           echo "ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)" >> $GITHUB_ENV
           
-      - name: Download and parse network config
-        id: network_config
-        shell: bash
-        run: |
-            set -euo pipefail
-            aws s3 cp "s3://$S3_BUCKET/$NETWORK_CONFIG_S3_PATH/$NETWORK_CONFIG_JSON" $NETWORK_CONFIG_JSON
-            JQ='map({(.OutputKey): .OutputValue})|add'
-            echo "VPC_ID=$(jq -r "$JQ".VpcId $NETWORK_CONFIG_JSON)" >> "$GITHUB_ENV"
-            echo "PRIVATE_SUBNET=$(jq -r "$JQ".PrivateSubnetId $NETWORK_CONFIG_JSON)" >> "$GITHUB_ENV"
-            echo "SG_PRIVATE=$(jq -r "$JQ".SGPrivate $NETWORK_CONFIG_JSON)" >> "$GITHUB_ENV"
-
       - name: Login to ECR
         id: ecr_login
         if: steps.tester_dir_change.outputs.tester == 'true' || inputs.force_rebuild == true
@@ -183,12 +170,10 @@ jobs:
             --capabilities CAPABILITY_NAMED_IAM \
             --no-fail-on-empty-changeset \
             --parameter-overrides \
-              VpcId=$VPC_ID \
-              PrivateSubnetIds=$PRIVATE_SUBNET \
-              VpcId=$VPC_ID \
-              PrivateSubnetIds=$PRIVATE_SUBNET \
-              TesterSecurityGroupId=$SG_PRIVATE \
               TesterImageUri=$IMAGE_URI \
+              LogGroupName=/$PROJECT_NAME/$APP_NAME \
+              S3Bucket=$S3_BUCKET \
+              TestS3Prefix=$TESTS_S3_DIR \
             --tags \
               role=$ROLE \
               project=$PROJECT_NAME

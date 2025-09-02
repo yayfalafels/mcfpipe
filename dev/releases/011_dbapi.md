@@ -6,8 +6,27 @@ release documentation `docs/releases/011_dbapi.md`
 
 session logs are timestamped to Singapore timezone in reverse chronological order, with latest entries at the top, and earlier entries at the bottom.
 
-### DB API [Developer] design 2025-09-02 <>:<>
+### high costs VPCE [Developer] 2025-09-02 <>:<>
+__tester run in public subnet__
 
+tester stack
+ - location: `aws/cloudformation/tester_stack.yaml` 
+ - remove references to VPC information
+
+tester GHA
+ - location: `.github/workflows/tester_gha.yml` 
+ - remove the network config lookup step
+ - pass parameters for tests bucket and dir to CF stack deploy
+
+### high costs VPCE [Developer] issue diagnostics 2025-09-02 16:45
+Github issue [duplicate VPCE costs tester private subnet #15](https://github.com/yayfalafels/mcfpipe/issues/15)
+type: `ENHANCEMENT`
+
+- **cost explorer**: found monthly costs high $40.55 SGD for Aug 2025
+- **diagnostics** found cause from 4x VPCE
+  - may only need 1x for API Gateway endpoint, 
+  - rest 3x for tester ECR API, ECR DKR and CW Logs not needed 
+- **resolution**: run tester in **public** subnet
 
 ### GHA conditional refresh [Developer] jobdb conditional refresh 2025-09-01 18:29
 __jobdb conditional refresh__
