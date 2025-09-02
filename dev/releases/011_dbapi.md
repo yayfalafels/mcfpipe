@@ -6,7 +6,10 @@ release documentation `docs/releases/011_dbapi.md`
 
 session logs are timestamped to Singapore timezone in reverse chronological order, with latest entries at the top, and earlier entries at the bottom.
 
-### GHA conditional refresh [Developer] jobdb conditional refresh 2025-09-01 <>:<>
+### DB API [Developer] design 2025-09-02 <>:<>
+
+
+### GHA conditional refresh [Developer] jobdb conditional refresh 2025-09-01 18:29
 __jobdb conditional refresh__
 
 _requirements_

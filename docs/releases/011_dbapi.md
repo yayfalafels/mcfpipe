@@ -30,9 +30,10 @@ Cloudformation stack layers
 
 | id | stack | purpose | resources |
 | - | - | - | - |
-| 01 | networking | network and VPC for public and private subnets | VPC, subnets, security groups, internet gateway |
-| 02 | tester | serverless Fargate compute resource for validating app resources | Fargate compute task(s) |
-| 03 | db api | storage database and connector API | DynamoDB tables, API Gateway + Lambda handler |
+| 01 | network | initial setup S3 bucket, config and network and VPC for public and private subnets | VPC, subnets, security groups, internet gateway |
+| 02 | database | data storage | DynamoDB tables |
+| 03 | tester | stand-alone tester to validate DB API and other app services | Fargate ECS container |
+| 04 | db api | database connector API | DB API container image, API Gateway, Lambda handler |
 
 __Dev stack: EC2 vs Fargate__
 It may be necessary to have two parallel stacks for each compute resources 
@@ -101,30 +102,37 @@ ex API URL
 
 __Artifacts__
 
-| id | artifact | file name | source code | S3 |
+| id | artifact | file name | source code | AWS / S3 |
 | - | - | - | - | - |
 | 01 | db schema | `db_schema.json` | `storage/` | `storage/` |
-| 02 | template constructor script | `cf_template_constructor.py` | `jobdb/` | - |
+| 02 | template constructor script | `cf_template_constructor.py` | `storage/` | - |
 | 03 | CF template | `db_api_stack.yaml` | `aws/cloudformation/` | - |
-| 04 | Lambda handler source code | `lambda_sc_jobdb.zip` | `jobdb/*` | `apps/jobdb/` |
-| 05 | db api config | `db_api.json` | - | `storage/` |
+| 04 | Lambda container image        | (ECR)  | `jobdb/*`  | ECR repo: `mcfpipe-dbapi` |
+| 05 | stack outputs | `jobdb_stack_config.json` | - | `apps/jobdb/` |
 
-__Config JSON__
-contents of the DB API config JSON
+__Stack outputs__
+contents of the DB API stack config JSON
 
-| id | variable | description |
-| - | - | - |
-| 01 | DB_API_URL | API endpoint |
+| key                 | description                           |
+| ------------------- | ------------------------------------- |
+| DbApiUrl            | Base URL for the deployed stage       |
+| RestApiId           | API Gateway RestApi ID                |
+| ApiStageName        | Stage name                            |
+| RootResourceId      | Resource ID of `/`                    |
+| ProxyResourceId     | Resource ID of `/{proxy+}`            |
+| DbLambdaFunctionName| Name of the DB API Lambda function    |
+| DbLambdaRoleArn     | ARN of the Lambda IAM role            |
 
 __Github action steps__
 
 | id | step | description |
 | - | - | - |
 | 01 | schema load | load the db schema to workspace, upload to S3 |
-| 02 | cf template generate | generate the CF template from schema using template constructur script |
-| 03 | zip lambda handlder | zip and upload the lambda handler function code to S3 |
-| 04 | stack deploy | deploy the db api stack |
-| 05 | artifacts | upload artifacts to config JSON |
+| 02 | (conditional) build container image | build image from source code register in ECR. Conditional when `jobdb/**` changed or `force_rebuild` |
+| 03 | stack deploy | deploy the db api stack, pass container image either new created in GHA or latest. on stack failure, print diagnostics |
+| 04 | artifacts | upload artifacts to config JSON |
+| 05 | tests upload | upload unit tests to S3 |
+| 06 | tests run | run tests on the DB API routes |
 
 ## Design
 
@@ -205,7 +213,7 @@ The current configuration refreshes the DB API ECR docker image for all GHA trig
 __resolution__
 update the logic in GHA to only refresh the DB API ECR docker image either no image is present OR changes that would affect the docker image, such as any change to `jobdb/*` contents.
 
-### (open) 11 GHA and CF conditional refresh
+### (closed) 11 GHA and CF conditional refresh
 Github issue [GHA and CF conditional refresh #14](https://github.com/yayfalafels/mcfpipe/issues/14)
 type: `ENHANCEMENT`
 
@@ -221,7 +229,7 @@ __requirements__
 | 03 | closed | GHA tester image conditional refresh |
 | 04 | closed | GHA jobdb image conditional refresh |
 
-### (closed) 01. CF separate DB storage resources from Gateway API + Lambda
+#### (closed) 01. CF separate DB storage resources from Gateway API + Lambda
 
 _CF templates_
 
@@ -261,7 +269,7 @@ _steps_
 06. get API ID
 07. run tests on tester
 
-### (closed) 02. decouple tests to run from tester generic compute
+#### (closed) 02. decouple tests to run from tester generic compute
 
 _changes_
 
@@ -450,7 +458,7 @@ _GHA step: execute tests for DBI API_
 
 ```
 
-### (closed) 03. GHA tester image conditional refresh
+#### (closed) 03. GHA tester image conditional refresh
 
 _requirements_
 only rebuild the tester image on changes to tester source code `tester/*`
@@ -517,7 +525,7 @@ steps to add
 
 ```
 
-### (closed) 04. GHA jobdb image conditional refresh
+#### (closed) 04. GHA jobdb image conditional refresh
 
 _requirements_
 only rebuild the DB API container image on changes to jobdb source code `jobdb/*`

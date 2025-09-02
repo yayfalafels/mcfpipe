@@ -6,7 +6,7 @@ Deployment from source code
 - **Github repository**: [mcfpipe](https://github.com/yayfalafels/mcfpipe) source code storage
 - **Github Actions**: deployment engine
 - **AWS CloudFormation**: IaC templates for managing cloud infrastructure on AWS
-- **Tester App**: Tester module runs on a dedicated Fargate container in the public subnet
+- **Tester App**: Tester module runs on a dedicated Fargate container in the private subnet
 
 ## repository layout
 the repository files are organized in the following structure
@@ -14,25 +14,14 @@ the repository files are organized in the following structure
 /root
 ```
 .github/
-  workflows/            # github deploy actions
+  workflows/            # github deploy actions (GHA)
+  scripts/              # helper bash scripts for GHA workflows
      ...
-aws/                    # cloudformation templates and specifications for AWS infrastructure
-  dynamodb/
-    ...
-  ecs/
-    tasks/
-      ...
-  ecr/
-    ...
-  lambda/
-    ...
-  s3/
-    ...
-compute/                # source code and config for compute resources
-  webscraper/
+aws/                    
+  cloudformation/       # cloudformation templates and specifications for AWS infrastructure
     ...
 dev/
-  releases/             # documentation for each release
+  releases/             # development session notes
     ...
 docs/                   # app documentation
   ...
@@ -159,22 +148,6 @@ It may be necessary to have two parallel stacks for each compute resources
 
 1. **DEV**: on EC2 for dev, diagnostic and troubleshooting, can SSH into instance
 2. **PROD**: Fargate container cost-optimized for production, limited SSH need to use ECS Exec to run specific diagnostic commands.
-
-## Tester
-The tester app uses the test module `tester` and runs on a dedicated AWS Fargate container
-The app runs `tests.py` which uses `requests` package to send HTTPS requests to the API endpoint.
-
-__docker image__
-
-- base image: `python:3.11-slim`
-- minimal python dependencies [pytest, requests]
-
-__environment variables__
-environment variables are passed to the container by Github actions at the `run-task` cli command
-
-| id | variable | description |
-| - | - | - |
-| 01 | DB_API_URL | API endpoint |
 
 ## AWS Infrastructure
 The AWS infrastructure is organized into layered CloudFormation stacks, segregated by function and coupled through the repository via parameters and configuration files.

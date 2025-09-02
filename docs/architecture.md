@@ -27,53 +27,14 @@ __Compute__
 | 10 | DynamoDB API | DynamoDB interface API | - | API Gateway + Lambda |
 | 11 | Network | VPC and network infrastructure | - | Networking |
 
-
 ## AWS Infrastructure
 The AWS infrastructure is organized into layered CloudFormation stacks, segregated by function and coupled through the repository via parameters and configuration files.
 
-__Cloudformation stacks__
-Cloudformation stack layers
+## Documentation sections
 
-| id | stack | purpose | resources |
-| - | - | - | - |
-| 01 | networking | network and VPC for public and private subnets | VPC, subnets, security groups, internet gateway |
-| 02 | database | storage database and connector API | DynamoDB tables |
-| 03 | webscraper | serverless Fargate compute resource for Webscraper | Fargate compute tasks |
-
-__AWS CLI__
-Additional resources created outside of the cloudformation stack either manually from local PC or via Github actions. 
-
-These resources must be deleted in a separate cleanup workflow.
-
-_manual setup resources_
-
-| id | resource | executor | sequence |
-| - | - | - | - |
-| 01 | S3 bucket | Github Action | initial setup |
-| 02 | S3 config | Github Action | initial setup after s3 bucket creation |
-| 03 | ECR Dockerimage | Github Action | before Webscraper stack deploy |
-
-## Network 
-Network access control requirements for AWS-based components in the application architecture. 
-
-- All public subnets must be associated with an **Internet Gateway**.
-- VPC endpoints are required for private subnets that need to reach the internet
-- Security groups should be tightly scoped to match access intent (SSH only, HTTP only, etc.).
-- Where possible, use **least privilege IAM roles** and **environment-specific configuration**.
-
-__Access Groups__
-
-| id | access group   | access control  | resources  |
-|----|---|----|--|
-| 01 | global AWS managed  | IAM credentials | S3, Athena, Glue Catalog |
-| 02 | private subnet | VPC + IAM | Lambda ETL, DB API, Glue jobs |
-| 03 | public subnet: outbound only + SSH  | IAM + SSH key, no inbound HTTP allowed | Webscraper, Sheets UI, test EC2 |
-| 04 | public subnet: inbound/outbound HTTP| IAM + app-level authentication | CRM API (e.g., Flask on EC2/ALB/Fargate) |
-
-
-## Database API
-The Database API is a single interface point to the backend DynamoDB database
-
+ - **Cloudformation**: details of the cloudformation stacks and deployment is found in docs section **CICD**
+ - **Network infrastructure**: details of the network infrastructure are found in the docs section **Network**
+ - **Database API**: details of the Database API can be found in the docs section **Database API**
 
 ## Webscraper container
 The webscraper runs on a **Fargate** container and runs the following tasks.

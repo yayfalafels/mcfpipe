@@ -1,6 +1,25 @@
 # Validation
 
 ## Tester
+The tester app uses the test module `tester` and runs on a dedicated AWS Fargate container.
+The app runs in the private subnet and reaches the API endpoint via VPC Endpoint.
+The app runs `tests.py` which uses `requests` package to send HTTPS requests to the API endpoint.
+
+__docker image__
+
+- base image: `python:3.11-slim`
+- minimal python dependencies [pytest, requests, boto3]
+
+__environment variables__
+environment variables are passed to the container by Github actions at the `run-task` cli command
+
+| id | variable | description |
+| - | - | - |
+| 01 | DB_API_URL | API endpoint |
+| 02 | S3_BUCKET | S3 storage bucket for tests |
+| 03 | TESTS_S3_DIR | specific S3 location for tests |
+| 04 | LOGGING_LEVEL | [DEBUG, INFO, WARNING] |
+| 05 | PYTEST_ARGS | optional flags for running `pytest` `-q` |
 
 
 ## Test cases
