@@ -1,300 +1,567 @@
-# Database API
+# Design Specification
+Implementation target: AWS Lambda (zip or container image) behind API Gateway (private) in a VPC.
+Style: config-driven routing, re-usable core, thin domain layer.
 
-The `Database API` provides a RESTful interface for CRUD operations on DynamoDB tables defined in the system data model. The API is implemented as a **generic Lambda function** behind API Gateway, supporting dynamic routing based on path parameters and validating requests using the canonical schema file `db_schema.json`.
-
-This service is designed to act as a **thin, schema-aware wrapper** over the DynamoDB backend to enable flexible, centralized, and secure access to all operational data in the jobsearch system.
-
-## Design Principles
+## Design principles
 
 - **Generic Routing**: Dynamic table access via path parameters.
-- **Schema Enforcement**: All incoming payloads are validated against `db_schema.json`.
+- **Schema Enforcement**: All incoming payloads are validated against a DB Schema config JSON.
 - **Minimal Endpoints**: A small set of HTTP routes supports all CRUD and batch operations.
 - **Modular**: Tables can be added/updated without code changes.
-- **Internal Use**: This API is intended for trusted internal services (e.g., ingestion, screening, CRM).
-- **API Gateway Thin Infra wrapper** use API gateway as a thin infrastructure wrapper, leave most of the implementation to the main `jobdb` api app. 
+- **Internal Use**: API is intended for trusted internal services (e.g., ingestion, screening, CRM).
+- **API Gateway Thin Infra wrapper**: API Gateway acts only as a thin infrastructure layer; the main jobdb app handles routing, validation, and business rules.
 
-## Route Definitions
+__AWS Deployment__
 
-__Single Record Operations__
+- **API Gateway (private)**: runs in VPC private subnets, not publicly accessible.
+- **Routing strategy**: catch-all {proxy+} route forwards to Lambda; all validation handled in jobdb.
+- **Execution environment**: Lambda runs as container from Amazon ECR image.
+- **Image versioning**: GitHub Actions tags image by commit SHA; hot reload supported for schema/config.
+- **Logging**: output auto-forwarded to CloudWatch Logs.
 
-| Method | Path                    | Description                 |
-|--------|-------------------------|-----------------------------|
-| GET    | `/[table]/{id}`         | Fetch item by primary key   |
-| PUT    | `/[table]/{id}`         | Replace existing item       |
-| DELETE | `/[table]/{id}`         | Delete item by primary key  |
+## 01 Functional Requirements
 
-__Bulk Operations__
+### 1.1 Core
 
-| Method | Path                     | Description                                |
-|--------|--------------------------|--------------------------------------------|
-| POST   | `/[table]`               | Create a new item                          |
-| POST   | `/[table]/batch`         | Create or update multiple items            |
-| GET    | `/[table]/search`        | Query items using secondary keys           |
-| POST   | `/[table]/delete`        | Delete multiple items (by key list)        |
+- CRUD for multiple logical tables in DynamoDB, defined by a shared db_schema.json.
+- Batch write and batch delete.
+- Query/search with optional GSI support and pagination.
+- Config-driven routes (no code change to add/remove endpoints).
+- Hot reload of schema/config without redeploy.
+- Health/version endpoints.
 
-## Path Parameters
+### 1.2 Non-Functional
 
-| Param       | Type   | Description                     |
-|-------------|--------|---------------------------------|
-| `table`     | string | Target table name from schema   |
-| `id`        | string | Primary key value               |
+- Cold-start efficient; minimal imports in handler path.
+- Idempotent writes (opt-in via header).
+- Structured, single-line logging.
+- Rate/size limits per route (configurable).
+- Works as ZIP or Container image.
+- Private API only accessible via VPC Endpoint; optional auth (JWT/API key/allowlist).
 
-## Body Format
+## 02 Primary Use Cases
 
-### POST /[table]
-sample body for POST `/{job}` request
+01. **Create** in a table from an internal service.
+02. **Read** item by key
+03. Replace/**Update** item by primary key (and optional sort key).
+04. **Delete** item by key.
+05. **Batch** write/delete from background jobs.
+06. **Search** by partition key + index (with pagination).
+07. **Admin**: refresh schema/config after S3 updates.
+08. **Health**: check liveness/version from tester job.
 
-request
+## 03 Routes
+
+All routes and behaviors are declared in routes config file `config/routes.json`. Below is the default set.
+
+| Name | Method |  Path |  Operation | Request | Response | 
+| - | - | - | - | - | - | 
+| root | GET | `/` | version | – | `{"service":"dbapi","version":"x.y.z","stage":"prod"}` |
+| get-item | GET | `/{table}/{id}` | Table.get(id) | – | 200 item or 404 |
+| create-item | POST | `/{table}` | Table.create(body) | JSON body | 201 {"id":…} |
+| put-item | PUT | `/{table}/{id}` | Table.put(id, body) | JSON body | 200 {"id":…} |
+| delete-item | DELETE | `/{table}/{id}` | Table.delete(id) | – | 200 {"id":…} |
+| batch-write | POST | `/{table}/batch` | Table.batch_write(items) | `{"items":[...]}` or [...] | 200 `{"success":N,"failed":[...]}` |
+| batch-delete | POST | `/{table}/delete` | Table.batch_delete(keys) | `{"keys":[{id},...]}` | 200 `{"success":N,"failed":[...]}` |
+| search | GET | `/{table}/search` | Table.search(...) | querystring | 200 `{"items":[...],"next":"token?"}` |
+| admin-reload | GET | `/__admin/refresh` | Engine.reload() | – | 200 `{"reloaded_at": epoch}` |
+| health | GET | `/__admin/health` | ping | – | 200 `{"success":true}` |
+
+### 3.1 Path Parameters
+
+- **table** → target table name
+- **id** → primary key value
+
+### 3.2 Search Query Parameters (default mapping)
+
+- **index** → GSI name (optional)
+- **limit** → page size (default 100, max 1000)
+- **next** → pagination token (opaque base64)
+
+Equality conditions:
+
+- pk=…, sk=… (mapped into KeyConditionExpression)
+- Optional filters: eq[field]=val, begins[field]=prefix (mapped to FilterExpression)
+
+You can override/extend this mapping per table via the `search_maps` module.
+
+### 3.3 Sample request/response bodies
+
+__POST /{table}__
+
+_Request_
 ```json
 {
   "posted_date": "2025-08-01",
   "position": "Data Engineer",
-  "url": "https://example.com/jobs/abc123",
-  ...
+  "url": "https://example.com/jobs/abc123"
 }
 ```
 
-response body
+_Response_
 ```json
-{
-    "status": 1,
-    "ids": ["abc123"]
-}
-
+{"id":"abc123"}
 ```
 
-### POST /[table]/batch
-sample body for batch POST `/{job}/batch` request
+__POST /{table}/batch__
 
-request
+_Request_
 ```json
 [
-  {
-      "posted_date": "2025-08-02",
-      "position": "ML Engineer",
-      "load_status": 0
-  },
-  {
-      "posted_date": "2025-08-05",
-      "position": "Data Analyst",
-      "load_status": 0
-  }
+  {"posted_date": "2025-08-02", "position": "ML Engineer"},
+  {"posted_date": "2025-08-05", "position": "Data Analyst"}
 ]
 ```
 
-response body
+_Response_
 ```json
-[
-  {
-      "id": "job_0000001",
-      "posted_date": "2025-08-02",
-      "position": "ML Engineer",
-      "load_status": 0
-  },
-  {
-      "id": "job_0000002",
-      "posted_date": "2025-08-05",
-      "position": "Data Analyst",
-      "load_status": 0
-  }
-]
-```
-## DynamoDB
-
-**table name prefix** to uniquely identify the DynamoDB tables in the account, table names include a prefix for `<env>_mcfpipe_`, so the full DynamoDB table name is `<env>_mcfpipe_<table_name>`. Since the API requests and responses are based on the base `table_name`, the full path to the DDB resource must be resolved by the API handler.
-
-## Search
-
-**GET** `/{table}/search`
-
-- **table must exist** in `db_schema.json`.
-- **Primary (partition) key** queries are available on any table
-- **Global Secondary Indexes (GSI)** extend search to other declared columns.
-
-### Global Secondary Indexes (GSI)
-
-- the GSI must be declared in the DynamoDB table definition
-- DynamoDB requires an `IndexName` for non-PK queries; this API exposes a thin, validated façade over `Query`.
-
-__GSI specification__
-
-_Data model_
-
-GSI specification for `job` table in the data model `docs/data_model.md`
-
-```md
-### Table: job
-
-...
-
-__Global Secondary Indexes__
-
-| id | Partition key   | Sort key | Projection  | Purpose |
-|----|----------|----------|----|-------|
-| 01 | user_id  | id | INCLUDE [post_id, position, company_name, posted_date, url] | Per-user timeline & list (newest-first)   |
-| 02 | post_id  | id | KEYS_ONLY  | Dedupe / fetch job by post |
-| 04 | user_id  | company_name | KEYS_ONLY  | Filter a user’s jobs by company |
-| 05 | user_id  | position | KEYS_ONLY  | Filter a user’s jobs by position |
-
+{
+  "success":[
+      {"id": "abc123", "posted_date": "2025-08-02", "position": "ML Engineer"}, 
+      ...
+  ],
+  "failed":[]
+}
 ```
 
-_DB schema JSON_
+## 04 Authentication & Authorization
 
-GSI specification for `job` table in the DB schema JSON file `storage/db_schema.json`
+__Authentication modes__
+
+- **VPC-only**: API Gateway resource policy allows traffic only from vpce-*. No per-request auth.
+- **Bearer JWT (future release)**: Validate Authorization: Bearer <JWT> (Cognito/JWKS). Configurable issuer, audience, JWKS URL.
+
+## 05 Validation
+
+- **DB Schema**: (S3 primary, bundled fallback). Describes each table’s keys and allowed attributes.
+- **Request**: Body/params validated against table spec. Optional jsonschema rules per table/route.
+- **Hard rules**: PK presence, type coercion (string/number/bool), size caps, reserved attribute bans (_internal, etc.).
+
+## 06 Error Model Responses
+All responses are JSON with this envelope:
 
 ```json
 {
-  "table_name": "job",
-  ...
-  "secondary_indexes": {
-    "global": [
-      { "partition_key": "user_id", "sort_key": "created", "projection": {"type": "INCLUDE", "attributes": ["post_id", "position", "company_name", "posted_date", "url"]}},
-      { "partition_key": "post_id", "sort_key": "id", "projection": {"type": "KEYS_ONLY"}},
-      { "partition_key": "user_id", "sort_key": "company_name", "projection": {"type": "KEYS_ONLY" }},
-      { "partition_key": "user_id", "sort_key": "position", "projection": {"type": "KEYS_ONLY" }}
-    ]
+  "status": 400,
+  "error": "validation_error",
+  "message": "Missing required field: id",
+  "request_id": "aws-request-id",
+  "hint": "See docs for table Users",
+  "details": { "field": "id" }
+}
+```
+
+__Error Mapping__
+
+| http code | error |
+| - | - |
+| 400 | validation_error, bad_request |
+| 401 | unauthorized |
+| 403 | forbidden |
+| 404 | not_found |
+| 409 | conflict (conditional check failed / idempotency) |
+| 413 | payload_too_large |
+| 429 | rate_limited |
+| 500 | internal_error (include request_id, masked details) |
+
+## 07 Logging and Metrics
+
+One structured single line per request:
+
+```
+[ts, request_id, method, path, route, table, op, user/principal?, status, duration_ms, items_count, stage, version]
+```
+
+- Errors include error_code and compact stack trace.
+- Optionally emit CloudWatch EMF for ok_count, error_count, throttle_count.
+
+## 08 OOP Architecture
+
+### 8.1 Core Classes 
+re-usable design
+
+| Class | description |
+| - | - |
+| DBEngine | Loads schema/config from S3 (with local fallback) |
+|  | Builds Table registry |
+|  | reload() hot-reloads schema & configs |
+|  | Settings: table prefix, limits, auth mode |
+| Table | Encapsulates DynamoDB table (pk, sk?, GSIs, allowed columns) |
+|  | Ops: get, create, put, delete, batch_write, batch_delete, search |
+|  | Optional validator mixin |
+| Router | Loads routes.json; tokenizes paths, matches (method, path) |
+|  | Dispatches to Table or Engine |
+| Auth | Pluggable strategies: none/jwt/key |
+| Validator | Core field/type/required checks; optional jsonschema |
+| Expr | Helpers to build KeyCondition/Filter expressions |
+| Responses | Helpers to produce standardized HTTP responses |
+| Log | Structured logger |
+
+### 8.2 Domain Layer
+project-specific
+
+- **hooks**: before_*/after_* for cross-cutting transforms.
+- **search_maps**: custom query builders per table/index.
+- **policies**: route/table guardrails (e.g., block delete in prod).
+- **auth**: glue code to chosen auth mode (e.g., Cognito claim mapping).
+
+## 09 Directory Layout
+
+```
+/jobdb
+├─ handler.py                       # Lambda entrypoint: def handler(event, context)
+├─ core/                            # reusable framework
+│  ├─ __init__.py
+│  ├─ engine.py
+│  ├─ table.py
+│  ├─ router.py
+│  ├─ validators.py
+│  ├─ expressions.py
+│  ├─ responses.py
+│  ├─ logging.py
+│  └─ util.py
+├─ domain/                          # project-specific
+│  ├─ __init__.py
+│  ├─ hooks.py
+│  ├─ search_maps.py
+│  ├─ policies.py
+│  └─ auth.py
+├─ config/                          # default/bundled configs
+│  ├─ routes.json
+│  ├─ policies.json
+│  ├─ settings.json
+│  └─ schema_map.json
+├─ schemas/
+│  └─ db_schema.json                # fallback
+├─ tests/
+│  ├─ test_router.py
+│  ├─ test_engine.py
+│  ├─ test_table.py
+│  └─ test_integration_smoke.py
+├─ VERSION
+└─ requirements.txt
+```
+
+__Packaging__
+
+Container dockerfile
+
+```dockerfile
+# jobdb/Dockerfile
+FROM public.ecr.aws/lambda/python:3.12
+ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
+
+WORKDIR /var/task
+
+# install dependencies
+COPY requirements.txt .
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# copy working directory
+COPY . .
+
+# point to the entry point
+CMD ["handler.lambda_handler"]
+```
+
+## 10 Config Specifications
+
+__10.1 Settings__
+
+```json
+{
+  "stage": "prod",
+  "log_level": "INFO",
+  "cors_origins": ["*"],
+  "auth": { "mode": "none" },
+  "limits": {
+    "max_batch": 25,
+    "max_body_kb": 512,
+    "default_page_size": 100,
+    "max_page_size": 1000
   }
 }
-
 ```
 
-_DynamoDB resource in CF Template_
+__10.2 Routes__
 
-GSI specification for `job` DynamoDB table resource in the CloudFormation template `aws/cloudformation/db_api_stack.yaml`
-
-```yaml
-Resources:
-  JobTable:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      TableName: job
-      BillingMode: PAY_PER_REQUEST
-       ...
-      GlobalSecondaryIndexes:
-        - IndexName: gsi_user_id_created
-          KeySchema:
-            - AttributeName: user_id
-              KeyType: HASH
-            - AttributeName: created
-              KeyType: RANGE
-          Projection:
-            ProjectionType: INCLUDE
-            NonKeyAttributes:
-              - post_id
-              - position
-              - company_name
-              - posted_date
-              - url
-        - IndexName: gsi_post_id_id
-          KeySchema:
-            - AttributeName: post_id
-              KeyType: HASH
-            - AttributeName: id
-              KeyType: RANGE
-          Projection:
-            ProjectionType: KEYS_ONLY
-        - IndexName: gsi_user_id_company_name
-          KeySchema:
-            - AttributeName: user_id
-              KeyType: HASH
-            - AttributeName: company_name
-              KeyType: RANGE
-          Projection:
-            ProjectionType: KEYS_ONLY
-        - IndexName: gsi_user_id_position
-          KeySchema:
-            - AttributeName: user_id
-              KeyType: HASH
-            - AttributeName: position
-              KeyType: RANGE
-          Projection:
-            ProjectionType: KEYS_ONLY
-
+```json
+{
+  "routes": [
+    {"name":"root","method":"GET","path":"/","op":"meta.version"},
+    {"name":"get-item","method":"GET","path":"/{table}/{id}","op":"table.get"},
+    {"name":"create-item","method":"POST","path":"/{table}","op":"table.create","body":"json"},
+    {"name":"put-item","method":"PUT","path":"/{table}/{id}","op":"table.put","body":"json"},
+    {"name":"delete-item","method":"DELETE","path":"/{table}/{id}","op":"table.delete"},
+    {"name":"batch-write","method":"POST","path":"/{table}/batch","op":"table.batch_write","body":"json"},
+    {"name":"batch-delete","method":"POST","path":"/{table}/delete","op":"table.batch_delete","body":"json"},
+    {"name":"search","method":"GET","path":"/{table}/search","op":"table.search",
+     "query_to_search": {"index":"index","limit":"limit","next":"next",
+       "eq":["pk","sk"], "begins":[],"filters":[]}},
+    {"name":"admin-reload","method":"GET","path":"/__admin/refresh","op":"engine.reload"},
+    {"name":"health","method":"GET","path":"/__admin/health","op":"meta.health"}
+  ]
+}
 ```
 
-__specification mapping JSON to YAML__
+__10.3 Policies__
 
-GSI mapping method in `generate_table_resource()` function in python constructor `jobdb/cf_template_constructor.py`
+```json
+{
+  "deny_in_prod": [
+    {"method":"DELETE","path":"/{table}/{id}"},
+    {"method":"POST","path":"/{table}/delete"}
+  ],
+  "rate_limits": [
+    {"name":"writes","match":{"method":"POST|PUT"},"rps":50,"burst":100}
+  ],
+  "body_size_kb": [
+    {"match":{"path":"/{table}/batch"},"max":1024}
+  ],
+  "auth": {
+    "mode": "none",
+    "jwt": {"issuer":"https://cognito-idp...","audience":"...","jwks_uri":"..."},
+    "api_keys_sha256": ["<hash>","<hash2>"]
+  }
+}
+```
+
+__10.4 DB SCHEMA__
+
+```json
+{
+  "tables": [
+    {
+      "table_name": "Jobs",
+      "primary_key": "job_id",
+      "sort_key": null,
+      "columns": [
+        {"name":"job_id","type":"string","required":true},
+        {"name":"title","type":"string","required":true},
+        {"name":"company","type":"string"},
+        {"name":"created_at","type":"number"}
+      ],
+      "gsis": [
+        {"name":"CompanyIndex","pk":"company","sk":"created_at"}
+      ]
+    }
+  ]
+}
+```
+
+### 10.5 Environment Variables
+
+__from CloudFormation__
+
+_S3 locations_
+
+- **schema**: `SCHEMA_S3_BUCKET`, `SCHEMA_S3_KEY`
+- **config**: `CONFIG_S3_BUCKET`, `ROUTES_S3_KEY`, `POLICIES_S3_KEY`, `SETTINGS_S3_KEY`
+
+_database_
+
+- `TABLE_PREFIX`
+
+_operational_
+
+- `LOG_LEVEL`
+- `STAGE`
+- `IDEMPOTENCY_TTL_SECONDS`
+
+## 11 DynamoDB and GSI Mapping
+The GSI specification mapping is consistent across:
+This ensures GSIs declared in schema are correctly realized in CFN and exposed in API search.
+
+- Data model
+- DB schema JSON
+- CloudFormation template
+- Constructor script
+
+**Table name prefix**: `<env>_mcfpipe_<table_name>` e.g., `prod_mcfpipe_job`.
+
+## 12 Module Specifications
+_selected methods_
+
+### 12.1 core/engine.py
 
 ```python
-def generate_table_resource(table, table_prefix: str=''):
-    stem_name = table.get('table_name', '')
-    table_name = f'{table_prefix}{stem_name}' if table_prefix else stem_name
-    logical_name = f"{to_cfn_logical_id(stem_name)}Table"
-    ...
-
-    # GSIs
-    gsi_list = []
-    for gsi in table.get("secondary_indexes", {}).get("global", []):
-        gpk = gsi["partition_key"]
-        gsk = gsi.get("sort_key")
-        gpk_dtype = next(c for c in table["columns"] if c["column_name"] == gpk)["data_type"]
-        ensure_attr(gpk, gpk_dtype)
-        if gsk:
-            gsk_dtype = next(c for c in table["columns"] if c["column_name"] == gsk)["data_type"]
-            ensure_attr(gsk, gsk_dtype)
-
-        index_name = f"gsi_{gpk}" + (f"_{gsk}" if gsk else "")
-
-        # projection handling
-        proj = gsi.get("projection", "ALL")
-        proj_type = proj["type"] if isinstance(proj, dict) else str(proj)
-        proj_block = {"ProjectionType": proj_type}
-
-        if isinstance(proj, dict) and proj_type.upper() == "INCLUDE":
-            attrs = proj.get("attributes", [])
-            # DynamoDB limit is 20 non-key attributes for INCLUDE
-            if len(attrs) > 20:
-                raise ValueError(f"{table_name}:{index_name} INCLUDE has >20 attributes")
-            proj_block["NonKeyAttributes"] = attrs
-
-        gsi_entry = {
-            "IndexName": index_name,
-            "KeySchema": [{"AttributeName": gpk, "KeyType": "HASH"}],
-            "Projection": proj_block
-        }
-        if gsk:
-            gsi_entry["KeySchema"].append({"AttributeName": gsk, "KeyType": "RANGE"})
-
-        gsi_list.append(gsi_entry)
-
-    props = {
-        "TableName": table_name,
-        "BillingMode": "PAY_PER_REQUEST",
-        "AttributeDefinitions": attr_defs,
-        "KeySchema": key_schema
-    }
-    if gsi_list:
-        props["GlobalSecondaryIndexes"] = gsi_list
-
+class DBEngine:
+    def __init__(self, schema_src, config_src, table_prefix="", now=None): ...
+    def reload(self) -> dict: ...
+    def table(self, name:str) -> "Table": ...
+    def meta(self) -> dict: ...  # version, stage, loaded_at
 ```
 
-## Deployment Resources
+### 12.2 core/table.py
 
-### API Gateway + Lambda (Private)
+```python
+class Table:
+    def __init__(self, boto_table, name, pk, sk=None, columns=None, gsis=None): ...
+    def get(self, id_, sort=None) -> dict|None: ...
+    def create(self, item:dict, idem_key:str|None=None) -> dict: ...
+    def put(self, id_, payload:dict, sort=None, idem_key:str|None=None) -> dict: ...
+    def delete(self, id_, sort=None) -> dict: ...
+    def batch_write(self, items:list[dict]) -> dict: ...
+    def batch_delete(self, keys:list[dict]) -> dict: ...
+    def search(self, index=None, key_conditions=None, filters=None, limit=100, next_token=None) -> dict: ...
+```
 
-- **Isolation**: Both API Gateway and the Lambda function run inside the VPC private subnets.  
-  - They are **not directly reachable from the public internet**.  
-  - Access is restricted to internal services (e.g., tester Fargate, other backend modules) via VPC endpoints and security groups.
-- **Routing strategy**: API Gateway acts only as a thin wrapper, forwarding all HTTP methods to Lambda.  
-  - A catch-all `{proxy+}` route is configured to pass requests through to the handler.  
-  - Request validation, routing, and schema checks are implemented inside the `jobdb` application.
-- **Execution environment**: Lambda runs from a Docker image hosted in Amazon ECR 
-  - This allows bundling Python dependencies and the `jobdb` app into a single immutable image.
-- **Logging**: Log output is automatically forwarded to CloudWatch Logs.
+### 12.3 core/router.py
 
-### Compute: Docker Image in ECR
+```python
+class Router:
+    def __init__(self, routes_config, engine, domain_hooks=None, policies=None, auth=None): ...
+    def dispatch(self, event:dict) -> dict: ...
+```
 
-The DB API Lambda function executes inside a container built from the following image:
+### 12.4 domain/hooks.py
 
-- **Base image**: [`public.ecr.aws/lambda/python:3.12`](https://gallery.ecr.aws/lambda/python)  
-  Provides AWS Lambda runtime with Python 3.12 preinstalled.
-- **Build contents**:  
-  - Installs dependencies from `jobdb/requirements.txt`.  
-  - Copies application source under `jobdb/*` including `handler.py`.  
-  - Exposes entry point: `handler.lambda_handler`.  
-- **Versioning**:  
-  - Image is tagged by GitHub Actions with the short commit SHA.  
-  - Each commit to the repo refreshes the image and triggers redeployment.  
-  - Old image versions are retained in ECR unless pruned by a cleanup workflow.
+```python
+def before_create(table_name, item, ctx): return item
+def after_get(table_name, item, ctx): return item
 
+# Similar hooks: before_put, before_delete, before_search
+```
+
+### 12.5 domain/search_maps.py
+
+```python
+def build_conditions(table_name, qs:dict) -> dict:
+    """Return dict suitable for Table.search: {KeyConditionExpression,...}"""
+```
+
+## 13 Coding Patterns
+
+- Early return in router; smallest possible if chain
+- Pure functions in domain hooks, deterministic transforms
+- Backoff and retry on ProvisionedThroughputExceededException (jitter)
+- Idempotency: honor Idempotency-Key header by writing a small token record (optional table) or using conditional writes
+- Pagination tokens: encode DynamoDB LastEvaluatedKey as URL-safe base64
+
+## 14 Dependencies
+Minimal, pinned:
+
+requirements.txt
+```
+boto3==1.34.*
+botocore==1.34.*
+python-jose[cryptography]==3.3.0     # if JWT mode enabled
+jsonschema==4.23.0                   # optional, for strict validation
+```
+
+## 15 Test Plan
+
+### 15.1 Unit Tests
+python module: `pytest`
+
+| test module | tests, sequence |
+| - | - |
+| `engine` | loads schema/config (S3 mocked) |
+| | reload() rebuilds registry |
+| `table` | create/get/put/delete happy paths (boto3 stubber) |
+| | conditional write conflict ⇒ 409 |
+| | batch write/delete partial failures ⇒ failed list |
+| | search builds correct expressions |
+| `router` | route matching and param extraction |
+| | body parsing, error on malformed JSON |
+| | policies deny in prod (DELETE) |
+| | auth modes (none/key/jwt) happy + failure |
+
+### 15.2 Integration
+local
+
+- Lambda handler invoked with synthetic API Gateway events
+- Verify response envelopes, status codes, headers
+
+## 15.3 End-to-end
+within-VPC
+
+Tester container runs:
+
+| test route | expected response |
+| - | - |
+| GET /__admin/health | 200 |
+| POST /Jobs | 201 |
+| GET /Jobs/{id} | 200 |
+| PUT /Jobs/{id} | 200 |
+| GET /Jobs/search?pk=... | 200 with items |
+| DELETE /Jobs/{id} | (blocked in prod by policy) 403/200 in dev |
+| Pagination across 2+ pages | |
+| Rate limit behavior | 429 under stress |
+
+## 16 Handler
+skeleton snippet
+
+```python
+# handler.py
+from core.router import Router
+from core.engine import DBEngine
+from core.responses import to_http
+from domain import hooks, auth as domain_auth
+from core.util import load_config_bundle
+
+engine = DBEngine(schema_src="s3+fallback", config_src="s3+fallback")
+routes, policies, settings = load_config_bundle()
+router = Router(routes, engine, domain_hooks=hooks, policies=policies, auth=domain_auth.make(settings))
+
+def handler(event, context):
+    resp = router.dispatch(event)
+    return to_http(resp)
+```
+
+## 17 Operational Notes
+
+- **CloudWatch Logs**: Lambda logs auto-ingested; ensure a log retention policy (e.g., 14–30 days).
+- **Limits**: Keep payloads < 1 MB typical; compression can be enabled on clients.
+
+## 18 Security Considerations
+
+- stricter authentication for sensitive tables
+- Deny destructive routes in prod via policies JSON
+- Input validation on every write; strip unknown fields unless allow_unknown=true per table.
+- Log redaction for fields listed in policies.json (e.g., password, ssn).
+- Strict JSON parsing (Content-Type: application/json required for bodies).
+
+## 19 Acceptance Criteria
+
+- All default routes functional with schema-defined tables.
+- Configs can be updated via S3 and picked up by /__admin/refresh.
+- Unit coverage **≥ 80%** of core.
+- E2E tester passes all CRUD/search flows in VPC.
+- Logs are single-line JSON and include request id and duration.
+- Auth mode selectable by config and enforced.
+
+## 20 Appendix — Sample Events and Responses
+
+__Create__
+
+_request_
+
+```
+POST /Jobs
+Content-Type: application/json
+Idempotency-Key: 3c1a...
+
+{"title":"DE","company":"RSK"}
+```
+
+_response_
+
+```json
+201 {"id":"J123"}
+```
+
+__Search__
+
+_request_
+
+```sql
+GET /Jobs/search?pk=RSK&index=CompanyIndex&limit=50
+```
+
+_response_
+
+```json
+{"items":[{...}], "next":"eyJMYXN0RXZhbHVhdGVkS2V5Ijp7..."} 
+```
