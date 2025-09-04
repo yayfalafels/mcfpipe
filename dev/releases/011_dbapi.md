@@ -6,7 +6,7 @@ release documentation `docs/releases/011_dbapi.md`
 
 session logs are timestamped to Singapore timezone in reverse chronological order, with latest entries at the top, and earlier entries at the bottom.
 
-### high costs VPCE [Developer] 2025-09-02 <>:<>
+### high costs VPCE [Developer] 2025-09-02 17:10
 __tester run in public subnet__
 
 tester stack

@@ -105,9 +105,11 @@ jobs:
             aws s3 cp "s3://$S3_BUCKET/$NETWORK_CONFIG_S3_PATH/$NETWORK_CONFIG_JSON" $NETWORK_CONFIG_JSON
             JQ='map({(.OutputKey): .OutputValue})|add'
             echo "VPC_ID=$(jq -r "$JQ".VpcId $NETWORK_CONFIG_JSON)" >> "$GITHUB_ENV"
-            echo "PRIVATE_SUBNET=$(jq -r "$JQ".PrivateSubnetId $NETWORK_CONFIG_JSON)" >> "$GITHUB_ENV"
-            echo "SG_PRIVATE=$(jq -r "$JQ".SGPrivate $NETWORK_CONFIG_JSON)" >> "$GITHUB_ENV"
+            echo "SGHTTP=$(jq -r "$JQ".SGHTTP $NETWORK_CONFIG_JSON)" >> "$GITHUB_ENV"
             echo "VPCE_ID=$(jq -r "$JQ".VPCExecuteApiId $NETWORK_CONFIG_JSON)" >> "$GITHUB_ENV"
+            echo "PUBLIC_SUB1=$(jq -r "$JQ".PublicSubnet1Id $NETWORK_CONFIG_JSON)" >> "$GITHUB_ENV"
+            echo "PUBLIC_SUB2=$(jq -r "$JQ".PublicSubnet2Id $NETWORK_CONFIG_JSON)" >> "$GITHUB_ENV"
+            echo "PUBLIC_SUBNETS=\"$PUBLIC_SUB1\",\"$PUBLIC_SUB2\"" >> "$GITHUB_ENV"
 
       - name: Install jq
         id: install_jq
@@ -276,8 +278,8 @@ jobs:
           TASK_DEF=$TESTER_TASK \
           CONTAINER_NAME=$TESTER_CONTAINER \
           DB_API_URL=$DB_API_URL \
-          SUBNETS_CSV=$PRIVATE_SUBNET \
-          SECURITY_GROUPS_CSV=$SG_PRIVATE \
+          SUBNETS_CSV=$PUBLIC_SUBNETS \
+          SECURITY_GROUPS_CSV=$SGHTTP \
           S3_BUCKET="$S3_BUCKET" \
           TESTS_S3_DIR="$TESTER_S3_PREFIX" \
           LOGGING_LEVEL="$LOGGING_LEVEL" \
