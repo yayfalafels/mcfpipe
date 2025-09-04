@@ -6,8 +6,11 @@ release documentation `docs/releases/011_dbapi.md`
 
 session logs are timestamped to Singapore timezone in reverse chronological order, with latest entries at the top, and earlier entries at the bottom.
 
-### high costs VPCE [Developer] 2025-09-04 <>:<>
+### high costs VPCE [Developer] 2025-09-04 13:19
 __tester run in public subnet__
+
+Network stack
+ - remove 3x unused VPCE
 
 DB API GHA
  - location: `.github/workflows/db_api_gha.yml`
