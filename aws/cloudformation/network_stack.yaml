@@ -217,45 +217,6 @@ Resources:
         - Key: Name
           Value: mcfpipe-vpce-executeapi
 
-  VpceLogs:
-    Type: AWS::EC2::VPCEndpoint
-    Properties:
-      VpcEndpointType: Interface
-      PrivateDnsEnabled: true
-      ServiceName: !Sub "com.amazonaws.${AWS::Region}.logs"
-      VpcId: !Ref VPC
-      SecurityGroupIds: [!Ref SGVpce]
-      SubnetIds: [!Ref PrivateSubnet]
-      Tags:
-        - Key: Name
-          Value: mcfpipe-vpce-logs
-
-  VpceEcrApi:
-    Type: AWS::EC2::VPCEndpoint
-    Properties:
-      VpcEndpointType: Interface
-      PrivateDnsEnabled: true
-      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ecr.api"
-      VpcId: !Ref VPC
-      SecurityGroupIds: [!Ref SGVpce]
-      SubnetIds: [!Ref PrivateSubnet]
-      Tags:
-        - Key: Name
-          Value: mcfpipe-vpce-ecrapi
-
-  VpceEcrDkr:
-    Type: AWS::EC2::VPCEndpoint
-    Properties:
-      VpcEndpointType: Interface
-      PrivateDnsEnabled: true
-      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ecr.dkr"
-      VpcId: !Ref VPC
-      SecurityGroupIds: [!Ref SGVpce]
-      SubnetIds: [!Ref PrivateSubnet]
-      Tags:
-        - Key: Name
-          Value: mcfpipe-vpce-ecrdkr
-
 Outputs:
   VpcId:
     Value: !Ref VPC
@@ -279,12 +240,6 @@ Outputs:
     Value: !Ref SGVpce
   VPCExecuteApiId:
     Value: !Ref VpceEndpointDBApi
-  VpceLogsId:
-    Value: !Ref VpceLogs
-  VpceEcrApiId:
-    Value: !Ref VpceEcrApi
-  VpceEcrDkrId:
-    Value: !Ref VpceEcrDkr
   VpceS3Id:
     Value: !Ref VPCEndpointS3
   VpceDynamoDBId:

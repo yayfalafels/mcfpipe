@@ -250,7 +250,7 @@ __Network CF stack__
 - **Keep** only `VPCExecuteApiId` for **API Gateway Execute-API**.  
 - Regenerate and re-upload `aws/network/network_config.json` without ECR/Logs endpoint outputs.
 
-__DB API stack__
+__DB API CF stack__
 
 - **No policy change** needed; continue restricting the private API to your **Execute-API VPCE**.  
 - Confirm stack outputs (URL, stage, RestApiId) remain intact after network changes.
@@ -272,8 +272,16 @@ __Tester run__
 - In the **GHA `run-task`** call, set:
  - `awsvpcConfiguration.subnets=[PublicSubnetXId]`
  - `awsvpcConfiguration.assignPublicIp=ENABLED`
- - SG with outbound egress only (e.g., `SGHTTP` or a dedicated egress SG).  
+ - SG with outbound egress only e.g., `SGHTTP` 
  - Ensure the **task execution role** keeps `AmazonECSTaskExecutionRolePolicy` for ECR auth/logs drivers.
+
+DB API GHA
+ - location: `.github/workflows/db_api_gha.yml`
+ - pass public subnet and SG HTTP to ECS task run script 
+
+ECS task run script
+ - location: `tester/tester_task_execute.sh`
+ - set default value `ASSIGN_PUBLIC_IP`=ENABLED
 
 __CICD updates__
 
