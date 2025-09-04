@@ -104,12 +104,20 @@ jobs:
             set -euo pipefail
             aws s3 cp "s3://$S3_BUCKET/$NETWORK_CONFIG_S3_PATH/$NETWORK_CONFIG_JSON" $NETWORK_CONFIG_JSON
             JQ='map({(.OutputKey): .OutputValue})|add'
+
             echo "VPC_ID=$(jq -r "$JQ".VpcId $NETWORK_CONFIG_JSON)" >> "$GITHUB_ENV"
             echo "SGHTTP=$(jq -r "$JQ".SGHTTP $NETWORK_CONFIG_JSON)" >> "$GITHUB_ENV"
             echo "VPCE_ID=$(jq -r "$JQ".VPCExecuteApiId $NETWORK_CONFIG_JSON)" >> "$GITHUB_ENV"
-            echo "PUBLIC_SUB1=$(jq -r "$JQ".PublicSubnet1Id $NETWORK_CONFIG_JSON)" >> "$GITHUB_ENV"
-            echo "PUBLIC_SUB2=$(jq -r "$JQ".PublicSubnet2Id $NETWORK_CONFIG_JSON)" >> "$GITHUB_ENV"
-            echo "PUBLIC_SUBNETS=\"$PUBLIC_SUB1\",\"$PUBLIC_SUB2\"" >> "$GITHUB_ENV"
+
+            PUBLIC_SUB1=$(jq -r "$JQ".PublicSubnet1Id $NETWORK_CONFIG_JSON)
+            PUBLIC_SUB2=$(jq -r "$JQ".PublicSubnet2Id $NETWORK_CONFIG_JSON)
+            PUBLIC_SUBNETS=\"$PUBLIC_SUB1\",\"$PUBLIC_SUB2\"
+
+            {
+              echo "PUBLIC_SUB1=$PUBLIC_SUB1"
+              echo "PUBLIC_SUB2=$PUBLIC_SUB2"
+              echo "PUBLIC_SUBNETS=$PUBLIC_SUBNETS"
+            } >> "$GITHUB_ENV"            
 
       - name: Install jq
         id: install_jq
