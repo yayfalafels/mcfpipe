@@ -14,7 +14,7 @@ on:
       - 'aws/cloudformation/cfn_stack_diagnostics.sh'
       - 'aws/cloudformation/export_stack_outputs.sh'
       - 'tester/**'
-#trigger
+
 jobs:
   tester-deploy:
     name: Tester Image Build and Stack Deploy
