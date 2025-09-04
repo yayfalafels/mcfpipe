@@ -1,0 +1,15 @@
+{
+  "routes": [
+    { "name": "root", "method": "GET", "path": "/", "op": "version" },
+    { "name": "get-item", "method": "GET", "path": "/{table}/{id}", "op": "get" },
+    { "name": "create-item", "method": "POST", "path": "/{table}", "op": "create" },
+    { "name": "put-item", "method": "PUT", "path": "/{table}/{id}", "op": "put" },
+    { "name": "delete-item", "method": "DELETE", "path": "/{table}/{id}", "op": "delete" },
+    { "name": "batch-write", "method": "POST", "path": "/{table}/batch", "op": "batch_write" },
+    { "name": "batch-delete", "method": "POST", "path": "/{table}/delete", "op": "batch_delete" },
+    { "name": "search", "method": "GET", "path": "/{table}/search", "op": "search" },
+    { "name": "admin-reload", "method": "GET", "path": "/__admin/refresh", "op": "reload" },
+    { "name": "health", "method": "GET", "path": "/__admin/health", "op": "health" }
+  ]
+}
+

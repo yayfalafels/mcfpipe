@@ -6,6 +6,22 @@ release documentation `docs/releases/011_dbapi.md`
 
 session logs are timestamped to Singapore timezone in reverse chronological order, with latest entries at the top, and earlier entries at the bottom.
 
+### JobDB API [Codex] 2025-09-04 16:42:04
+Implemented config-driven jobdb API per design.
+
+- Core: added `jobdb/core/{engine,router,table,validators,expressions,responses,logging,util}.py`
+- Domain: added stubs `jobdb/domain/{hooks,search_maps,policies,auth}.py`
+- Config: added `jobdb/config/{routes.json,settings.json,policies.json,schema_map.json}`
+- Schemas: added fallback `jobdb/schemas/db_schema.json` (S3 primary remains authoritative)
+- Handler: wired router/engine in `jobdb/handler.py` with root, health, CRUD, batch, search, admin-refresh
+- Version: bumped `jobdb/VERSION` to `0.1.1`
+
+Notes:
+- Physical table naming derived as `<stage>_<prefix>_<table>` (e.g., `prod_mcfpipe_job`); env var `DDB_TABLE_PREFIX` overrides prefix (default `mcfpipe`).
+- Validation: basic required/type checks from schema; allow extra attributes for now.
+- Search: supports `index`, `limit`, `pk/sk` equality, otherwise limited scan (internal use only).
+- Error model: standardized JSON envelope; logs are single-line structured.
+
 ### high costs VPCE [Developer] 2025-09-04 13:19
 __tester run in public subnet__
 

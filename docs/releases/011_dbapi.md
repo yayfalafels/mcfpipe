@@ -22,6 +22,14 @@ The current scope includes the **Database API**, deployed via CICD Github Action
 - **DB API** API Gateway + Lambda functions
 - **Tester** Tester fargate container to validate the DB API and the Network infrastructure
 
+## App Implementation (0.1.1)
+
+- Config-driven router and reusable core implemented under `jobdb/core/*` with domain stubs in `jobdb/domain/*`.
+- Default routes defined in `jobdb/config/routes.json` covering CRUD, batch, search, health and admin reload.
+- Fallback schema bundled at `jobdb/schemas/db_schema.json`; primary schema source remains S3 `storage/db_schema.json`.
+- Physical DynamoDB table names derived as `<stage>_<prefix>_<table>`; default prefix `mcfpipe` and stage from env `ENV_STAGE`.
+- Lambda entrypoint `jobdb/handler.py` wires router/engine and serves version at `/`.
+
 ## AWS Infrastructure
 The AWS infrastructure is organized into layered CloudFormation stacks, segregated by function and coupled through the repository via parameters and configuration files.
 

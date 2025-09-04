@@ -1,0 +1,6 @@
+{
+  "auth": { "mode": "none" },
+  "limits": { "payload_max_bytes": 1048576, "default_page_size": 100, "max_page_size": 1000 },
+  "table_prefix": "mcfpipe"
+}
+
