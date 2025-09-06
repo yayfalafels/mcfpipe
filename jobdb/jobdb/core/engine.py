@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
+
+# dependencies ------------------------------------------------------------------------------
 import json
 import os
 from typing import Any, Dict
 
 import boto3
 
-from .logging import Log
+#from .logging import Log
 from .responses import Responses
 from .table import Table
 
 
+# classes ------------------------------------------------------------------------------------
 class DBEngine:
     def __init__(self, app_name: str, version: str, stage: str, region: str = "", commit: str = ""):
         self.app_name = app_name
@@ -17,12 +20,12 @@ class DBEngine:
         self.stage = stage
         self.region = region
         self.commit = commit
-        self.log = Log(service=app_name, stage=stage, version=version, commit=commit)
+        #self.log = Log(service=app_name, stage=stage, version=version, commit=commit)
         self.responses = Responses()
 
         # Settings
         self.s3_bucket = os.getenv('S3_BUCKET')
-        self.db_schema_s3_path = os.getenv('DB_SCHEMA_S3', 'storage/db_schema.json')
+        self.db_schema_s3_path = os.getenv('DB_SCHEMA_S3', 'schemas/db_schema.json')
         self.table_prefix = os.getenv('DDB_TABLE_PREFIX', 'mcfpipe')
 
         # Loaded state
@@ -41,7 +44,7 @@ class DBEngine:
             data = obj['Body'].read()
             return json.loads(data)
         except Exception as e:
-            self.log.error('schema_s3_load_failed', error=str(e), bucket=self.s3_bucket, key=self.db_schema_s3_path)
+            #self.log.error('schema_s3_load_failed', error=str(e), bucket=self.s3_bucket, key=self.db_schema_s3_path)
             return None
 
     def _load_schema_from_bundle(self) -> Dict[str, Any]:
@@ -63,7 +66,7 @@ class DBEngine:
             logical = t.get('table_name')
             physical = self._physical_name(logical)
             self._tables[logical] = Table(name=physical, spec=t, region=self.region)
-        self.log.info('engine_reloaded', tables=len(self._tables))
+        #self.log.info('engine_reloaded', tables=len(self._tables))
         return {'reloaded_at': self.version}
 
     # Accessors ---------------------------------------------------------------------------

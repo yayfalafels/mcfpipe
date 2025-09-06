@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
+# dependencies -------------------------------------------------------------------------------------
 import json
 from typing import Any, Dict, Optional
 
 
+# helper methods -------------------------------------------------------------------------------------
 def json_resp(status: int, body: Any, headers: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
     h = {
         'Content-Type': 'application/json',
@@ -32,6 +34,7 @@ def error(status: int, code: str, message: str, request_id: str | None = None, h
     return json_resp(status, body)
 
 
+# classes -------------------------------------------------------------------------------------
 class Responses:
     json = staticmethod(json_resp)
     error = staticmethod(error)

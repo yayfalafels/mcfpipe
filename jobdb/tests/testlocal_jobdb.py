@@ -3,9 +3,11 @@
 """
 # dependencies ------------------------------------------------------------------------
 import os
+import pathlib, sys
 import unittest
-import requests
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2]))
+from jobdb import handler
 
 # constants --------------------------------------------------------------------------
 SAMPLE_TEST_RECORD = {
@@ -21,6 +23,17 @@ SAMPLE_TEST_RECORD = {
 BASE_URL = os.environ.get('DB_API_URL', 'http://localhost:8000')  # Use env var for flexibility
 
 
+# helper method --------------------------------------------------------------------
+def url_handle(url, method:str = 'GET', payload: dict ={}):
+    event = {
+        'httpMethod': method,
+        'path': url,
+        'body': payload
+    }
+    context = {}
+    return handler.lambda_handler(event, context)
+
+
 # classes -----------------------------------------------------------------------------
 class TestDatabaseAPI(unittest.TestCase):
     @classmethod
@@ -31,13 +44,16 @@ class TestDatabaseAPI(unittest.TestCase):
         cls.test_record = SAMPLE_TEST_RECORD
 
     def test_00_endpoint_valid(self):
-        response = requests.get(f"{BASE_URL}")
+        print(__name__)
+        url = f"{BASE_URL}"
+        response = url_handle(url)
         self.assertEqual(response.status_code, 200, f'expected status code 200, got {response.status_code}. {response.text} from BASE_URL: {BASE_URL}')
 
     def test_01_post_valid(self):
         """POST Create new job (positive)"""
         payload = self.__class__.test_record.copy()
-        response = requests.post(f"{BASE_URL}/{self.table}", json=payload)
+        url = f"{BASE_URL}/{self.table}"
+        response = url_handle(url, method='POST', payload=payload)
         self.assertEqual(response.status_code, 200, f'expected status code 200, got {response.status_code}. {response.text}')
         response_body = response.json()
         self.assertIn('ids', response_body)
@@ -46,7 +62,8 @@ class TestDatabaseAPI(unittest.TestCase):
 
     def test_02_get_existing(self):
         """GET Fetch a single job (positive)"""
-        response = requests.get(f"{BASE_URL}/{self.table}/{self.job_id}")
+        url = f"{BASE_URL}/{self.table}/{self.job_id}"
+        response = url_handle(url)
         self.assertEqual(response.status_code, 200, f'expected status code 200, got {response.status_code}. {response.text}')
         job_record = response.json()
         for f in [
@@ -165,13 +182,6 @@ class TestDatabaseAPI(unittest.TestCase):
         response_body = response.json()
         self.assertEqual(response_body.get('status', ''), 1)
 
-    @classmethod
-    def tearDownClass(cls):
-        # Clean up all test jobs
-        test_ids = [x for x in [cls.job_id] + cls.batch_ids if x]
-        response = requests.post(f"{BASE_URL}/{cls.table}/delete", json=test_ids)
-        if response.status_code not in [200, 204]:
-            raise AssertionError(f"Cleanup failed: {response.status_code} {response.text}")
 
 if __name__ == "__main__":
     unittest.main()

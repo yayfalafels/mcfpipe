@@ -4,6 +4,8 @@ site
 .agent_env
 *client_secret.json
 .pytest_cache*
+__pycache__
 s3-mcfpipe*
 bot_ec2_key
 bot_ec2_key.pub
+pytest.init

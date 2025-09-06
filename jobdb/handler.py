@@ -5,73 +5,95 @@ Wires together the config-driven router with the DB engine and domain hooks.
 Follows docs/database_api/design.md.
 """
 
-import json
+# dependencies ---------------------------------------------------------------------------
 import os
 import datetime
 from typing import Any, Dict
+from .jobdb.core.engine import DBEngine
+from .jobdb.core.router import Router
+from .jobdb.core.logging import init_logging
 
-# Constants -------------------------------------------------------------------------------
+
+# constants ----------------------------------------------------------------------------------
 APP_NAME = 'mcfpipe-dbapi'
 VERSION_FILE = 'VERSION'
 
-# Env -------------------------------------------------------------------------------------
+
+# environment variables ----------------------------------------------------------------------
+LOGGING_LEVEL = os.getenv('LOGGING_LEVEL', 'INFO')
 ENV_STAGE = os.getenv('ENV_STAGE', 'dev')
 AWS_REGION = os.getenv('AWS_REGION', os.getenv('AWS_DEFAULT_REGION', ''))
 GITHUB_SHA = os.getenv('GITHUB_SHA', '')[:7]
 
 
-def _get_version() -> str:
-    v = os.getenv('VERSION')
-    if v:
-        return v
-    try:
-        here = os.path.dirname(__file__)
-        with open(os.path.join(here, 'VERSION'), 'r', encoding='utf-8') as f:
-            return f.read().strip()
-    except Exception:
-        return '0.0.0-dev'
-
-
-def _utcnow_iso() -> str:
-    return datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='seconds') + 'Z'
-
-
-# Lazy import after cold start for faster init ------------------------------------------------
+# module variables ----------------------------------------------------------------------------
 _ENGINE = None
 _ROUTER = None
 
 
+# helper functions ----------------------------------------------------------------------------------
+def _get_version() -> str:
+    v = os.getenv(VERSION_FILE)
+    if v:
+        return v
+    try:
+        here = os.path.dirname(__file__)
+        with open(os.path.join(here, VERSION_FILE), 'r', encoding='utf-8') as f:
+            return f.read().strip()
+    except Exception:
+        return '0.0.0-dev'
+
+# initialization --------------------------------------------------------------------------------
 def _bootstrap():
     global _ENGINE, _ROUTER
     if _ENGINE is None:
-        from jobdb.core.engine import DBEngine
-        _ENGINE = DBEngine(app_name=APP_NAME, version=_get_version(), stage=ENV_STAGE, region=AWS_REGION, commit=GITHUB_SHA)
+        init_logging(
+            level=LOGGING_LEVEL,
+            service=APP_NAME,
+            stage=ENV_STAGE,
+            version=_get_version(),
+        )
+
+        _ENGINE = DBEngine(
+            app_name=APP_NAME, version=_get_version(), 
+            stage=ENV_STAGE, region=AWS_REGION, commit=GITHUB_SHA
+        )
+        
     if _ROUTER is None:
-        from jobdb.core.router import Router
         _ROUTER = Router(engine=_ENGINE)
 
 
-def _about() -> Dict[str, Any]:
-    return {
-        'service': APP_NAME,
-        'version': _get_version(),
-        'stage': ENV_STAGE,
-        'region': AWS_REGION,
-        'commit': GITHUB_SHA,
-        'time_utc': _utcnow_iso(),
-    }
-
-
+# entry point -------------------------------------------------------------------------------------
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
-    _bootstrap()
 
-    # Normalize minimal API Gateway proxy shape
-    method = event.get('httpMethod') or event.get('requestContext', {}).get('http', {}).get('method', 'GET')
-    path = event.get('path') or event.get('rawPath') or '/'
+    try:
+        _bootstrap()
+    except Exception as e:
+        ex_msg = f"Unhandled at handler: {type(e).__name__}"
+        return _ROUTER.fail({'path': '/', 'httpMethod': 'GET'}, context, 500, "internal_error", ex_msg) 
+    else:
+        if not isinstance(event, dict):
+            ex_msg = "Event must be a JSON object"
+            return _ROUTER.fail({'path': '/', 'httpMethod': 'GET'}, context,  400, "bad_request", ex_msg)
 
-    if path in ('/', '') and method in ['GET', 'HEAD']:
-        # Root: version payload
-        return _ROUTER.responses.json(200, _about())
+        # Normalize method/path across REST/HTTP API shapes
+        method = (event.get("httpMethod")
+                  or event.get("requestContext", {}).get("http", {}).get("method"))
+        path = (event.get("path")
+                or event.get("rawPath")
+                or "/")
 
-    # Delegate to config-driven router
-    return _ROUTER.dispatch(event, context)
+        if not method or not isinstance(method, str):
+            ex_msg = f"Missing or invalid HTTP method {method}"
+            return _ROUTER.fail({"path": path or "/", "httpMethod": method or ""}, context,  400, "bad_request", ex_msg)
+
+        if not isinstance(path, str):
+            ex_msg = f"Invalid path: {path}"
+            return _ROUTER.fail({"path": "/", "httpMethod": method}, context, 400, "bad_request", ex_msg)
+
+        if event.get("isBase64Encoded") and event.get("body") is None:
+            ex_msg = "isBase64Encoded=True but body is null"
+            return _ROUTER.fail({"path": path, "httpMethod": method}, context, 400, "bad_request", ex_msg)
+
+        # else
+        return _ROUTER.dispatch({"httpMethod": method, "path": path, **event}, context)
