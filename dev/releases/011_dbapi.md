@@ -6,6 +6,41 @@ release documentation `docs/releases/011_dbapi.md`
 
 session logs are timestamped to Singapore timezone in reverse chronological order, with latest entries at the top, and earlier entries at the bottom.
 
+### JobDB API [Developer] issue logging 2025-09-07 16:30:00
+force reset logging handler
+- remove the `if not root.handlers:` and replace with a forced reset
+
+location: `jobdb/jobdb/core/logging.py`
+
+```python
+def init_logging(level: str, service: str, stage: str, version: str):
+    root = logging.getLogger()
+
+    for h in list(root.handlers):
+        root.removeHandler(h)
+    root.handlers.clear()
+
+    h = logging.StreamHandler(sys.stdout)
+    h.setFormatter(JsonFormatter())
+    root.addHandler(h)
+
+```
+
+### JobDB API [Developer] 2025-09-07 15:38:00
+jobdb codex review
+
+__validation__
+
+- **default route `/`**:
+  - created local validation script `testscript_jobdb.py`
+  - ran unit test on ECS container
+
+__review__
+
+- **review**:reviewed Codex implementation, summarized issues `docs/database_api/issues.md`
+- **logging**: refactored `handle.py` and `router.py` to consolidate  to `router.Router` class
+  - use python `logging` package instead of custom `Log` class
+
 ### JobDB API [Codex] 2025-09-04 16:42:04
 Implemented config-driven jobdb API per design.
 

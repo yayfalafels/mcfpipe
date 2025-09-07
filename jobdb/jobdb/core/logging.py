@@ -52,10 +52,13 @@ class JsonFormatter(logging.Formatter):
 def init_logging(level: str, service: str, stage: str, version: str):
     root = logging.getLogger()
 
-    if not root.handlers:
-        h = logging.StreamHandler(sys.stdout)
-        h.setFormatter(JsonFormatter())
-        root.addHandler(h)
+    for h in list(root.handlers):
+        root.removeHandler(h)
+    root.handlers.clear()
+
+    h = logging.StreamHandler(sys.stdout)
+    h.setFormatter(JsonFormatter())
+    root.addHandler(h)
 
     # quiet noisy deps if desired
     logging.getLogger("botocore").setLevel(logging.WARNING)

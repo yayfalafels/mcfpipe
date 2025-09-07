@@ -34,6 +34,7 @@ __issues__
 | 14 | open | BUG | search query params | |
 | 15 | open | BUG | settings keys mismatch | |
 | 16 | open | BUG | tests error mapping | |
+| 20 | open | BUG | logging to CW log | |
 | 17 | open | ENHANCEMENT | consolidated response build | |
 | 18 | open | ENHANCEMENT | logging format | |
 | 19 | open | ENHANCEMENT | auth placeholder | |
@@ -176,6 +177,10 @@ Settings keys. Your `config/settings.json` uses payload_max_bytes; spec shows ma
 _16 (open) BUG tests error mapping_
 
 Error mapping. Add tests that assert 400/401/403/404/409/413/429/500 mappings with the standardized error envelope.
+
+_20 (open) BUG logging to CW log_
+
+unable to find CW logs for event handling
 
 __Coding style, parameterization and design patterns__
 
