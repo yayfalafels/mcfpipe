@@ -7,7 +7,7 @@ Follows docs/database_api/design.md.
 
 # dependencies ---------------------------------------------------------------------------
 import os
-import datetime
+import logging
 from typing import Any, Dict
 from .jobdb.core.engine import DBEngine
 from .jobdb.core.router import Router
@@ -72,6 +72,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         ex_msg = f"Unhandled at handler: {type(e).__name__}"
         return _ROUTER.fail({'path': '/', 'httpMethod': 'GET'}, context, 500, "internal_error", ex_msg) 
     else:
+        logging.info(f'post boostrap, handling request...')
         if not isinstance(event, dict):
             ex_msg = "Event must be a JSON object"
             return _ROUTER.fail({'path': '/', 'httpMethod': 'GET'}, context,  400, "bad_request", ex_msg)
