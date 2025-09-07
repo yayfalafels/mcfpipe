@@ -62,7 +62,7 @@ def init_logging(level: str, service: str, stage: str, version: str):
 
     # quiet noisy deps if desired
     logging.getLogger("botocore").setLevel(logging.WARNING)
-    logging.getLogger("boto3").setLevel(logging.Warning if level.upper() == "DEBUG" else logging.ERROR)
+    logging.getLogger("boto3").setLevel(logging.WARNING if level.upper() == "DEBUG" else logging.ERROR)
     root.setLevel(level.upper())
 
     # inject static fields into every record
