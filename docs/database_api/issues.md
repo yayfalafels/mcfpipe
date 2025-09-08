@@ -34,7 +34,7 @@ __issues__
 | 14 | open | BUG | search query params | |
 | 15 | open | BUG | settings keys mismatch | |
 | 16 | open | BUG | tests error mapping | |
-| 20 | open | BUG | logging to CW log | |
+| 20 | closed | BUG | logging to CW log | lambda not resolve correct image digest from image tag |
 | 17 | open | ENHANCEMENT | consolidated response build | |
 | 18 | open | ENHANCEMENT | logging format | |
 | 19 | open | ENHANCEMENT | auth placeholder | |
@@ -178,7 +178,7 @@ _16 (open) BUG tests error mapping_
 
 Error mapping. Add tests that assert 400/401/403/404/409/413/429/500 mappings with the standardized error envelope.
 
-_20 (open) BUG logging to CW log_
+_20 (closed) BUG logging to CW log_
 
 unable to find CW logs for event handling
 
@@ -215,7 +215,7 @@ location: `aws/cloudformation/db_api_stack.yaml`
 
 ```
 
-(open) possible cause 02: Lambda pointing to wrong image
+root cause (closed) possible cause 02: Lambda pointing to wrong image
 
 from the ECR list, for latest image "6286dfd" last pull date shows blank
 
@@ -247,6 +247,52 @@ run: |
     --query 'imageDetails[0].imageDigest' --output text)
     DIGEST_URI="${IMAGE_REPO}@${DIGEST}"
     echo "DIGEST_URI=$DIGEST_URI" >> $GITHUB_ENV
+```
+
+and for the case of no change detected
+
+```yaml
+      - name: Set image tags and ECR URI
+        id: image_tag_name
+        env:
+          REBUILD: ${{ steps.decide.outputs.rebuild }}
+        run: |
+          set -euo pipefail
+          SHORT_SHA="${GITHUB_SHA::7}"
+          REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+          IMAGE_REPO="${REGISTRY}/${REPO_NAME}"
+
+          if [[ "${REBUILD}" == "true" ]]; then
+            IMAGE_TAG="sha-${SHORT_SHA}"
+            IMAGE_URI="${IMAGE_REPO}:sha-${SHORT_SHA}"            
+          else
+            # Pull the most recently pushed TAGGED image (any tag)
+            # If you only want sha-* tags, add a jq filter: select(.imageTags[]|test("^sha-"))
+            IMAGE_TAG="$(aws ecr describe-images \
+              --repository-name "${REPO_NAME}" \
+              --filter tagStatus=TAGGED \
+              --query 'reverse(sort_by(imageDetails,&imagePushedAt))[0].imageTags[0]' \
+              --output text)"
+            if [[ -z "${IMAGE_TAG}" || "${IMAGE_TAG}" == "None" ]]; then
+              echo "No tagged images found in ECR for ${REPO_NAME}" >&2
+              exit 1
+            fi
+            IMAGE_URI="${IMAGE_REPO}:${IMAGE_TAG}"
+            DIGEST=$(aws ecr describe-images \
+              --repository-name "$REPO_NAME" \
+              --image-ids imageTag="$IMAGE_TAG" \
+              --query 'imageDetails[0].imageDigest' --output text)
+            DIGEST_URI="${IMAGE_REPO}@${DIGEST}"
+            echo "DIGEST_URI=$DIGEST_URI" >> $GITHUB_ENV
+            fi
+
+          echo "IMAGE_URI=${IMAGE_URI}" | tee -a "$GITHUB_OUTPUT"
+          {
+            echo "IMAGE_REPO=${IMAGE_REPO}"
+            echo "IMAGE_TAG=${IMAGE_TAG}"
+            echo "IMAGE_URI=${IMAGE_URI}"
+           } >> "$GITHUB_ENV" 
+
 ```
 
 CF stack deploy
