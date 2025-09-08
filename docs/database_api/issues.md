@@ -189,7 +189,9 @@ observations
 - cannot see any logging or `print()` from lambda runtime
 - can see lambda invoke START / STOP
 
-possible cause 01: API deployment version mismatch with Lambda
+X (ruled out) possible cause 01: API deployment version mismatch with Lambda
+
+validation failed --> did not resolve the logging issue
 
 resolution
 
@@ -211,6 +213,56 @@ location: `aws/cloudformation/db_api_stack.yaml`
       Principal: apigateway.amazonaws.com
       SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RestApi}/*/*/*
 
+```
+
+(open) possible cause 02: Lambda pointing to wrong image
+
+from the ECR list, for latest image "6286dfd" last pull date shows blank
+
+from the Lambda console, it shows
+
+image URI `339953771490.dkr.ecr.ap-southeast-1.amazonaws.com/mcfpipe-dbapi:6286dfd` 
+
+Resolved Image URI `339953771490.dkr.ecr.ap-southeast-1.amazonaws.com/mcfpipe-dbapi@sha256:8828308fb75011ce096f2a344fd3ee5dcf1f66bcc28a1a9071e62bc0c5b83e98`
+
+The latest published image is 
+
+URI `339953771490.dkr.ecr.ap-southeast-1.amazonaws.com/mcfpipe-dbapi:6286dfd`
+digest `sha256:e999332cefd3b9e92b1b5e0aa9d9e40558d2e61d0de3b614cd978c70785bc22f`
+tag `6286dfd`
+
+resolution:
+
+pass `DIGEST_URI` with the full `@sha...` digest reference to CF stack deploy instead of `IMAGE_URI` which uses the tag
+
+```yaml
+- name: Push image to ECR
+id: docker_image_ecr
+if: steps.app_dir_change.outputs.app == 'true' || inputs.force_rebuild == true
+run: |
+    docker push "$IMAGE_URI"
+    DIGEST=$(aws ecr describe-images \
+    --repository-name "$REPO_NAME" \
+    --image-ids imageTag="$IMAGE_TAG" \
+    --query 'imageDetails[0].imageDigest' --output text)
+    DIGEST_URI="${IMAGE_REPO}@${DIGEST}"
+    echo "DIGEST_URI=$DIGEST_URI" >> $GITHUB_ENV
+```
+
+CF stack deploy
+
+```bash
+aws cloudformation deploy \
+--template-file $CF_TEMPLATE_DIR/$STACK_TEMPLATE_FILE \
+--stack-name $STACK_NAME \
+--capabilities CAPABILITY_NAMED_IAM \
+--no-fail-on-empty-changeset \
+--parameter-overrides \
+    VpcId=$VPC_ID \
+    PrivateSubnetIds=$PRIVATE_SUBNET \
+    DBLambdaSG=$SG_PRIVATE \
+    S3Bucket=$S3_BUCKET \
+    LambdaImageUri=$DIGEST_URI \
 ```
 
 __Coding style, parameterization and design patterns__

@@ -161,8 +161,11 @@ jobs:
           fi
 
           echo "IMAGE_URI=${IMAGE_URI}" | tee -a "$GITHUB_OUTPUT"
-          echo "IMAGE_TAG=${IMAGE_TAG}" >> "$GITHUB_ENV" 
-          echo "IMAGE_URI=${IMAGE_URI}" >> "$GITHUB_ENV" 
+          {
+            echo "IMAGE_REPO=${IMAGE_REPO}"
+            echo "IMAGE_TAG=${IMAGE_TAG}"
+            echo "IMAGE_URI=${IMAGE_URI}"
+           } >> "$GITHUB_ENV" 
 
       - name: Ensure ECR repo exists
         id: ecr_repo_exists
@@ -187,7 +190,8 @@ jobs:
             --repository-name "$REPO_NAME" \
             --image-ids imageTag="$IMAGE_TAG" \
             --query 'imageDetails[0].imageDigest' --output text)
-          echo "IMAGE_DIGEST=$DIGEST" >> $GITHUB_ENV
+          DIGEST_URI="${IMAGE_REPO}@${DIGEST}"
+          echo "DIGEST_URI=$DIGEST_URI" >> $GITHUB_ENV
 
       - name: Upload tests to S3
         id: tests_upload_s3
@@ -221,7 +225,7 @@ jobs:
               PrivateSubnetIds=$PRIVATE_SUBNET \
               DBLambdaSG=$SG_PRIVATE \
               S3Bucket=$S3_BUCKET \
-              LambdaImageUri=$IMAGE_URI \
+              LambdaImageUri=$DIGEST_URI \
               DBSchemaS3=$STORAGE_S3_DIR/$DB_SCHEMA_JSON \
               StageName=$DEV_ENV \
               GitSha="${GITHUB_SHA::7}" \
