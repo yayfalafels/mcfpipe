@@ -65,7 +65,7 @@ def _bootstrap():
 
 # entry point -------------------------------------------------------------------------------------
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
-
+    print("TEST. Handling request .. ")
     try:
         _bootstrap()
     except Exception as e:

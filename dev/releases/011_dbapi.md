@@ -6,6 +6,10 @@ release documentation `docs/releases/011_dbapi.md`
 
 session logs are timestamped to Singapore timezone in reverse chronological order, with latest entries at the top, and earlier entries at the bottom.
 
+### JobDB API [Codex] 2025-09-07 17:55:48
+- added debug print before bootstrap in `jobdb/handler.py`
+- ran tests
+
 ### JobDB API [Developer] issue logging 2025-09-07 16:30:00
 force reset logging handler
 - remove the `if not root.handlers:` and replace with a forced reset
