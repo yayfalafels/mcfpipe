@@ -5,8 +5,8 @@
 import os
 import pathlib, sys
 
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2]))
-from jobdb import handler
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
+import handler
 
 # constants --------------------------------------------------------------------------
 SAMPLE_TEST_RECORD = {

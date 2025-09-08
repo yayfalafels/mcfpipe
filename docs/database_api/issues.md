@@ -35,6 +35,7 @@ __issues__
 | 15 | open | BUG | settings keys mismatch | |
 | 16 | open | BUG | tests error mapping | |
 | 20 | closed | BUG | logging to CW log | lambda not resolve correct image digest from image tag |
+| 21 | open | BUG | lambda import error | |
 | 17 | open | ENHANCEMENT | consolidated response build | |
 | 18 | open | ENHANCEMENT | logging format | |
 | 19 | open | ENHANCEMENT | auth placeholder | |
@@ -309,6 +310,20 @@ aws cloudformation deploy \
     DBLambdaSG=$SG_PRIVATE \
     S3Bucket=$S3_BUCKET \
     LambdaImageUri=$DIGEST_URI \
+```
+
+_21 (open) BUG lambda import error_
+
+after some revisions in issue 20, now lambda pointing to the latest image digest
+now lambda is throwing exception fail to import handler module
+
+```
+2025-09-08T06:02:55.221Z
+[WARNING] 2025-09-08T06:02:55.220Z LAMBDA_WARNING: Unhandled exception. The most likely cause is an issue in the function code. However, in rare cases, a Lambda runtime update can cause unexpected function behavior. For functions using managed runtimes, runtime updates can be triggered by a function change, or can be applied automatically. To determine if the runtime has been updated, check the runtime version in the INIT_START log entry. If this error correlates with a change in the runtime version, you may be able to mitigate this error by temporarily rolling back to the previous runtime version. For more information, see https://docs.aws.amazon.com/lambda/latest/dg/runtimes-update.html
+2025-09-08T06:02:55.221Z
+[ERROR] Runtime.ImportModuleError: Unable to import module 'handler': attempted relative import with no known parent package
+Traceback (most recent call last):
+
 ```
 
 __Coding style, parameterization and design patterns__

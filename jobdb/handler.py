@@ -9,9 +9,9 @@ Follows docs/database_api/design.md.
 import os
 import logging
 from typing import Any, Dict
-from .jobdb.core.engine import DBEngine
-from .jobdb.core.router import Router
-from .jobdb.core.logging import init_logging
+from jobdb.core.engine import DBEngine
+from jobdb.core.router import Router
+from jobdb.core.logging import init_logging
 
 
 # constants ----------------------------------------------------------------------------------
