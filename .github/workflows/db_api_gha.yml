@@ -144,7 +144,7 @@ jobs:
 
           if [[ "${REBUILD}" == "true" ]]; then
             IMAGE_TAG="sha-${SHORT_SHA}"
-            IMAGE_URI="${IMAGE_REPO}:sha-${SHORT_SHA}"
+            IMAGE_URI="${IMAGE_REPO}:sha-${SHORT_SHA}"            
           else
             # Pull the most recently pushed TAGGED image (any tag)
             # If you only want sha-* tags, add a jq filter: select(.imageTags[]|test("^sha-"))
@@ -158,7 +158,13 @@ jobs:
               exit 1
             fi
             IMAGE_URI="${IMAGE_REPO}:${IMAGE_TAG}"
-          fi
+            DIGEST=$(aws ecr describe-images \
+              --repository-name "$REPO_NAME" \
+              --image-ids imageTag="$IMAGE_TAG" \
+              --query 'imageDetails[0].imageDigest' --output text)
+            DIGEST_URI="${IMAGE_REPO}@${DIGEST}"
+            echo "DIGEST_URI=$DIGEST_URI" >> $GITHUB_ENV
+            fi
 
           echo "IMAGE_URI=${IMAGE_URI}" | tee -a "$GITHUB_OUTPUT"
           {
