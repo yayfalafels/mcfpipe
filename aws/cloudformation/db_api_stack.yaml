@@ -103,7 +103,7 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       FunctionName: !Sub mcfpipe-dbapi-${StageName}
-      Description: MCFPipe DB API Lambda (routes implemented in jobdb app)
+      Description: MCFPipe DB API Lambda
       PackageType: Image
       Role: !GetAtt DBLambdaRole.Arn
       MemorySize: 512
@@ -202,7 +202,7 @@ Resources:
       Action: lambda:InvokeFunction
       FunctionName: !Ref DbLambda
       Principal: apigateway.amazonaws.com
-      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:*/*/*/*
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RestApi}/*/*/*
 
   # -------------------------
   # API Deployment & Stage

@@ -182,6 +182,37 @@ _20 (open) BUG logging to CW log_
 
 unable to find CW logs for event handling
 
+**diagnostics**
+
+observations
+
+- cannot see any logging or `print()` from lambda runtime
+- can see lambda invoke START / STOP
+
+possible cause 01: API deployment version mismatch with Lambda
+
+resolution
+
+add `${RestApi}` to the SourceArn in the CF logical resource `DbLambdaInvokeFromApiGw`
+
+```
+SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RestApi}/*/*/*
+```
+
+location: `aws/cloudformation/db_api_stack.yaml`
+
+```yaml
+  # Let API Gateway invoke the Lambda for any stage/method/path
+  DbLambdaInvokeFromApiGw:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref DbLambda
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RestApi}/*/*/*
+
+```
+
 __Coding style, parameterization and design patterns__
 
 _17 (open) ENHANCEMENT consolidated response build_
