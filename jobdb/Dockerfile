@@ -10,7 +10,7 @@ RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
 # copy working directory
-COPY . .
+COPY jobdb/ var/task/
 
 # point to the entry point
 CMD ["handler.lambda_handler"]

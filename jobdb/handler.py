@@ -13,7 +13,6 @@ from jobdb.core.engine import DBEngine
 from jobdb.core.router import Router
 from jobdb.core.logging import init_logging
 
-
 # constants ----------------------------------------------------------------------------------
 APP_NAME = 'mcfpipe-dbapi'
 VERSION_FILE = 'VERSION'
