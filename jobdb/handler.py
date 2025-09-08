@@ -7,6 +7,8 @@ Follows docs/database_api/design.md.
 
 # dependencies ---------------------------------------------------------------------------
 import os
+import sys
+import json
 import logging
 from typing import Any, Dict
 from .jobdb.core.engine import DBEngine
@@ -43,6 +45,7 @@ def _get_version() -> str:
     except Exception:
         return '0.0.0-dev'
 
+
 # initialization --------------------------------------------------------------------------------
 def _bootstrap():
     global _ENGINE, _ROUTER
@@ -63,8 +66,14 @@ def _bootstrap():
         _ROUTER = Router(engine=_ENGINE)
 
 
+def lambda_handler(event, context):
+    sys.stdout.write("STDOUT_MARK\n"); sys.stdout.flush()
+    sys.stderr.write("STDERR_MARK\n"); sys.stderr.flush()
+    return {"statusCode": 200, "headers": {"content-type": "application/json"}, "body": json.dumps({"ok": True})}
+
+
 # entry point -------------------------------------------------------------------------------------
-def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+def _lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     print("TEST. Handling request .. ")
     try:
         _bootstrap()
