@@ -2,12 +2,10 @@
 """Lambda entrypoint for jobdb API.
 
 Wires together the config-driven router with the DB engine and domain hooks.
-Follows docs/database_api/design.md.
 """
 
 # dependencies ---------------------------------------------------------------------------
 import os
-import logging
 from typing import Any, Dict
 from jobdb.core.engine import DBEngine
 from jobdb.core.router import Router
