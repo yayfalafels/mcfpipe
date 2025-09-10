@@ -57,15 +57,15 @@ All routes and behaviors are declared in routes config file `config/routes.json`
 | Name | Method |  Path |  Operation | Request | Response | 
 | - | - | - | - | - | - | 
 | root | GET | `/` | version | – | `{"service":"dbapi","version":"x.y.z","stage":"prod"}` |
-| get-item | GET | `/{table}/{id}` | Table.get(id) | – | 200 item or 404 |
-| create-item | POST | `/{table}` | Table.create(body) | JSON body | 201 {"id":…} |
-| put-item | PUT | `/{table}/{id}` | Table.put(id, body) | JSON body | 200 {"id":…} |
-| delete-item | DELETE | `/{table}/{id}` | Table.delete(id) | – | 200 {"id":…} |
-| batch-write | POST | `/{table}/batch` | Table.batch_write(items) | `{"items":[...]}` or [...] | 200 `{"success":N,"failed":[...]}` |
-| batch-delete | POST | `/{table}/delete` | Table.batch_delete(keys) | `{"keys":[{id},...]}` | 200 `{"success":N,"failed":[...]}` |
-| search | GET | `/{table}/search` | Table.search(...) | querystring | 200 `{"items":[...],"next":"token?"}` |
 | admin-reload | GET | `/__admin/refresh` | Engine.reload() | – | 200 `{"reloaded_at": epoch}` |
 | health | GET | `/__admin/health` | ping | – | 200 `{"success":true}` |
+| get-item | GET | `/table/{table}/{id}` | Table.get(id) | – | 200 item or 404 |
+| create-item | POST | `/table/{table}` | Table.create(body) | JSON body | 201 {"id":…} |
+| put-item | PUT | `/table/{table}/{id}` | Table.put(id, body) | JSON body | 200 {"id":…} |
+| delete-item | DELETE | `/table/{table}/{id}` | Table.delete(id) | – | 200 {"id":…} |
+| batch-write | POST | `/table/{table}/batch` | Table.batch_write(items) | `{"items":[...]}` or [...] | 200 `{"success":N,"failed":[...]}` |
+| batch-delete | POST | `/table/{table}/delete` | Table.batch_delete(keys) | `{"keys":[{id},...]}` | 200 `{"success":N,"failed":[...]}` |
+| search | GET | `/table/{table}/search` | Table.search(...) | querystring | 200 `{"items":[...],"next":"token?"}` |
 
 ### 3.1 Path Parameters
 
@@ -87,7 +87,7 @@ You can override/extend this mapping per table via the `search_maps` module.
 
 ### 3.3 Sample request/response bodies
 
-__POST /{table}__
+__POST /table/{table}__
 
 _Request_
 ```json
@@ -103,7 +103,7 @@ _Response_
 {"id":"abc123"}
 ```
 
-__POST /{table}/batch__
+__POST /table/{table}/batch__
 
 _Request_
 ```json
@@ -290,17 +290,17 @@ __10.2 Routes__
 {
   "routes": [
     {"name":"root","method":"GET","path":"/","op":"meta.version"},
-    {"name":"get-item","method":"GET","path":"/{table}/{id}","op":"table.get"},
-    {"name":"create-item","method":"POST","path":"/{table}","op":"table.create","body":"json"},
-    {"name":"put-item","method":"PUT","path":"/{table}/{id}","op":"table.put","body":"json"},
-    {"name":"delete-item","method":"DELETE","path":"/{table}/{id}","op":"table.delete"},
-    {"name":"batch-write","method":"POST","path":"/{table}/batch","op":"table.batch_write","body":"json"},
-    {"name":"batch-delete","method":"POST","path":"/{table}/delete","op":"table.batch_delete","body":"json"},
-    {"name":"search","method":"GET","path":"/{table}/search","op":"table.search",
+    {"name":"admin-reload","method":"GET","path":"/__admin/refresh","op":"engine.reload"},
+    {"name":"health","method":"GET","path":"/__admin/health","op":"meta.health"},
+    {"name":"get-item","method":"GET","path":"/table/{table}/{id}","op":"table.get"},
+    {"name":"create-item","method":"POST","path":"/table/{table}","op":"table.create","body":"json"},
+    {"name":"put-item","method":"PUT","path":"/table/{table}/{id}","op":"table.put","body":"json"},
+    {"name":"delete-item","method":"DELETE","path":"/table/{table}/{id}","op":"table.delete"},
+    {"name":"batch-write","method":"POST","path":"/table/{table}/batch","op":"table.batch_write","body":"json"},
+    {"name":"batch-delete","method":"POST","path":"/table/{table}/delete","op":"table.batch_delete","body":"json"},
+    {"name":"search","method":"GET","path":"/table/{table}/search","op":"table.search",
      "query_to_search": {"index":"index","limit":"limit","next":"next",
        "eq":["pk","sk"], "begins":[],"filters":[]}},
-    {"name":"admin-reload","method":"GET","path":"/__admin/refresh","op":"engine.reload"},
-    {"name":"health","method":"GET","path":"/__admin/health","op":"meta.health"}
   ]
 }
 ```
@@ -310,14 +310,14 @@ __10.3 Policies__
 ```json
 {
   "deny_in_prod": [
-    {"method":"DELETE","path":"/{table}/{id}"},
-    {"method":"POST","path":"/{table}/delete"}
+    {"method":"DELETE","path":"/table/{table}/{id}"},
+    {"method":"POST","path":"/table/{table}/delete"}
   ],
   "rate_limits": [
     {"name":"writes","match":{"method":"POST|PUT"},"rps":50,"burst":100}
   ],
   "body_size_kb": [
-    {"match":{"path":"/{table}/batch"},"max":1024}
+    {"match":{"path":"/table/{table}/batch"},"max":1024}
   ],
   "auth": {
     "mode": "none",

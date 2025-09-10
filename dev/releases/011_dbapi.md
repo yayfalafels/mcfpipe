@@ -6,6 +6,32 @@ release documentation `docs/releases/011_dbapi.md`
 
 session logs are timestamped to Singapore timezone in reverse chronological order, with latest entries at the top, and earlier entries at the bottom.
 
+### JobDB API [Developer] issues 2025-09-10 <>:<>
+
+__validation__
+
+
+__documentation__
+
+- user docs `docs/database_api/user.md`
+- list routes and error codes
+
+__issues__
+
+- **22 (closed) admin table namespace clash**:
+  - for the route GET "__admin/health" `__admin` is interpreted as a a table logical `{table}`="__admin"
+  - resolution 01: namespace the table methods `/table/{table}/*`
+
+### JobDB API [Developer] issue logging to CW logs 2025-09-08 15:03
+issue: logging to CW log
+found multiple issues
+
+  - **01 (root cause) wrong URI image mapping**:
+    - wrong mapping docker image URI to Lambda function
+    - resolution: use full digest `@sha...` instead of the shorthand tag
+  - **02 API deployment version mismatch with Lambda**: 
+    - resolution: add `${RestApi}` to the SourceArn in the CF logical resource `DbLambdaInvokeFromApiGw`
+
 ### JobDB API [Codex] 2025-09-07 17:55:48
 - added debug print before bootstrap in `jobdb/handler.py`
 - ran tests

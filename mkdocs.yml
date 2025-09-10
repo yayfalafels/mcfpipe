@@ -11,6 +11,7 @@ nav:
   - Validation: validation.md
   - Enhancements: enhancements.md
   - Database API:
+      - User: database_api/user.md
       - Design: database_api/design.md
       - Enhancements: database_api/enhancements.md
   - Releases:

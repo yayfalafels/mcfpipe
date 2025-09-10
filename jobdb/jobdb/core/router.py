@@ -14,7 +14,13 @@ from .util import parse_json_body, parse_query, norm_path
 
 # constants --------------------------------------------------------------------------------
 ROUTES_JSON_FILE = 'routes.json'
-
+META_METHODS = [
+    'meta.version', 'engine.health', 'engine.reload'
+]
+TABLE_CRUD_METHODS = [
+    'get', 'create', 'put', 'delete',
+    'batch_write', 'batch_delete', 'search'
+]
 
 # dynamic variables ----------------------------------------------------------------------
 log = logging.getLogger()
@@ -196,7 +202,20 @@ class Router:
         self.routes = [Route(r['name'], r['method'], r['path'], r['op']) for r in cfg.get('routes', [])]
 
     def _meta_engine(self, request_id, method, path, r, params, t0):
-        if r.op == 'meta.health':
+
+        if r.op not in META_METHODS:
+            return self._error_handle(
+                404, 'not_found', f'meta method {r.op} not found. allowed values {META_METHODS}',
+                request_id, method, path, route=r.name, op=r.op, t0=t0,
+            )
+
+        if r.op == 'meta.version':
+            payload = {'service': self.engine.app_name, 'version': self.engine.version, 'stage': self.engine.stage}
+            resp = self.responses.json(200, payload)
+            self._log_success(resp, request_id, method, path, r, payload, params, t0)
+            return resp
+
+        if r.op == 'engine.health':
             payload = {'success': True}
             resp = self.responses.json(200, payload)
             self._log_success(resp, request_id, method, path, r, payload, params, t0)
@@ -205,12 +224,6 @@ class Router:
         if r.op == 'engine.reload':
             data = self.engine.reload()
             payload = {'reloaded_at': data.get('reloaded_at')}
-            resp = self.responses.json(200, payload)
-            self._log_success(resp, request_id, method, path, r, payload, params, t0)
-            return resp
-
-        if r.op == 'meta.version':
-            payload = {'service': self.engine.app_name, 'version': self.engine.version, 'stage': self.engine.stage}
             resp = self.responses.json(200, payload)
             self._log_success(resp, request_id, method, path, r, payload, params, t0)
             return resp
@@ -230,9 +243,28 @@ class Router:
             )
 
         # Body / query
-        crud_method = r.op.split('.')[1]
-        body, body_err = parse_json_body(event)
-        query = parse_query(event)
+        try:
+            crud_method = r.op.split('.')[1]
+        except Exception as e:
+            return self._error_handle(
+                400, 'bad_request', f'bad request format. Could not parse table method after . from op table.<table_method>',
+                request_id, method, path, route=r.name, table=logical, op=r.op, t0=t0,
+            )
+        
+        try:
+            body, body_err = parse_json_body(event)
+            query = parse_query(event)
+        except Exception as e:
+            return self._error_handle(
+                400, 'bad_request', f'error parsing parameters from request body. {e}',
+                request_id, method, path, route=r.name, table=logical, op=r.op, t0=t0,
+            )
+        
+        if crud_method not in TABLE_CRUD_METHODS:
+            return self._error_handle(
+                404, 'not_found', f' table method {crud_method} not found. allowed values {TABLE_CRUD_METHODS}',
+                request_id, method, path, route=r.name, table=logical, op=r.op, t0=t0,
+            )
 
         if crud_method == 'get':
             id_val = params.get('id')

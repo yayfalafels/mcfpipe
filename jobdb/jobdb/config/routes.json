@@ -1,15 +1,15 @@
 {
   "routes": [
     { "name": "root", "method": "GET", "path": "/", "op": "meta.version" },
-    { "name": "get-item", "method": "GET", "path": "/{table}/{id}", "op": "table.get" },
-    { "name": "create-item", "method": "POST", "path": "/{table}", "op": "table.create" },
-    { "name": "put-item", "method": "PUT", "path": "/{table}/{id}", "op": "table.put" },
-    { "name": "delete-item", "method": "DELETE", "path": "/{table}/{id}", "op": "table.delete" },
-    { "name": "batch-write", "method": "POST", "path": "/{table}/batch", "op": "table.batch_write" },
-    { "name": "batch-delete", "method": "POST", "path": "/{table}/delete", "op": "table.batch_delete" },
-    { "name": "search", "method": "GET", "path": "/{table}/search", "op": "table.search" },
     { "name": "admin-reload", "method": "GET", "path": "/__admin/refresh", "op": "engine.reload" },
-    { "name": "health", "method": "GET", "path": "/__admin/health", "op": "engine.health" }
+    { "name": "health", "method": "GET", "path": "/__admin/health", "op": "engine.health" },
+    { "name": "get-item", "method": "GET", "path": "/table/{table}/{id}", "op": "table.get" },
+    { "name": "create-item", "method": "POST", "path": "/table/{table}", "op": "table.create" },
+    { "name": "put-item", "method": "PUT", "path": "/table/{table}/{id}", "op": "table.put" },
+    { "name": "delete-item", "method": "DELETE", "path": "/table/{table}/{id}", "op": "table.delete" },
+    { "name": "batch-write", "method": "POST", "path": "/table/{table}/batch", "op": "table.batch_write" },
+    { "name": "batch-delete", "method": "POST", "path": "/table/{table}/delete", "op": "table.batch_delete" },
+    { "name": "search", "method": "GET", "path": "/table/{table}/search", "op": "table.search" }
   ]
 }
 

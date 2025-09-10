@@ -7,7 +7,7 @@ from typing import Any, Dict
 
 import boto3
 
-#from .logging import Log
+import logging
 from .responses import Responses
 from .table import Table
 
@@ -20,6 +20,7 @@ class DBEngine:
         self.stage = stage
         self.region = region
         self.commit = commit
+        self.log = logging.getLogger()
         #self.log = Log(service=app_name, stage=stage, version=version, commit=commit)
         self.responses = Responses()
 
@@ -44,7 +45,14 @@ class DBEngine:
             data = obj['Body'].read()
             return json.loads(data)
         except Exception as e:
-            #self.log.error('schema_s3_load_failed', error=str(e), bucket=self.s3_bucket, key=self.db_schema_s3_path)
+            self.log.error(
+                'schema_s3_load_failed',
+                extra={
+                    'error': str(e),
+                    'bucket': self.s3_bucket,
+                    'key':self.db_schema_s3_path
+                }
+            )
             return None
 
     def _load_schema_from_bundle(self) -> Dict[str, Any]:
@@ -66,7 +74,12 @@ class DBEngine:
             logical = t.get('table_name')
             physical = self._physical_name(logical)
             self._tables[logical] = Table(name=physical, spec=t, region=self.region)
-        #self.log.info('engine_reloaded', tables=len(self._tables))
+        self.log.info(
+            'engine_reloaded',
+            extra={
+                'tables': len(self._tables)
+            }
+        )
         return {'reloaded_at': self.version}
 
     # Accessors ---------------------------------------------------------------------------

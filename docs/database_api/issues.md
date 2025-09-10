@@ -35,7 +35,7 @@ __issues__
 | 15 | open | BUG | settings keys mismatch | |
 | 16 | open | BUG | tests error mapping | |
 | 20 | closed | BUG | logging to CW log | lambda not resolve correct image digest from image tag |
-| 21 | open | BUG | lambda import error | |
+| 21 | closed | BUG | lambda import error | Dockerfile copy jobdb dir |
 | 17 | open | ENHANCEMENT | consolidated response build | |
 | 18 | open | ENHANCEMENT | logging format | |
 | 19 | open | ENHANCEMENT | auth placeholder | |
@@ -312,7 +312,7 @@ aws cloudformation deploy \
     LambdaImageUri=$DIGEST_URI \
 ```
 
-_21 (open) BUG lambda import error_
+_21 (closed) BUG lambda import error_
 
 after some revisions in issue 20, now lambda pointing to the latest image digest
 now lambda is throwing exception fail to import handler module
@@ -325,6 +325,25 @@ now lambda is throwing exception fail to import handler module
 Traceback (most recent call last):
 
 ```
+
+diagnostics
+
+01 cause: Lambda image wrong dir `mcfpipe/*` instead of `mcfpipe/jobdb/*`
+
+```Dockerfile
+COPY . .
+```
+update to : 
+
+```Dockerfile
+COPY jobdb/ var/task/
+```
+
+_22 (closed) admin table route clash_
+
+for the route GET "__admin/health" `__admin` is interpreted as a a table logical `{table}`="__admin"
+
+resolution 01: namespace the table methods `/table/{table}/*`
 
 __Coding style, parameterization and design patterns__
 

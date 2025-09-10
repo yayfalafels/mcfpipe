@@ -3,6 +3,7 @@
 """
 # dependencies ------------------------------------------------------------------------
 import os
+import json
 import pathlib, sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
@@ -41,13 +42,26 @@ def url_handle(url, method:str = 'GET', payload: dict ={}):
 
 # unit tests -----------------------------------------------------------------------------
 
-def test_00_endpoint_valid():
-    print(__name__)
+def test_000_endpoint_valid():
     url = f"{BASE_URL}"
     response = url_handle(url)
     assert 'statusCode' in response, f"expected key 'statusCode' in response, found {response.keys()}"
     assert response.get('statusCode', None) == 200, f'expected status code 200, got {response.get('statusCode', None)}. {response} from BASE_URL: {BASE_URL}'
-    print(response)
+    print(f'response: {response}')
+
+def test_001_health():
+    url = f"{BASE_URL}/__admin/health"
+    response = url_handle(url)
+    assert response is not None, 'response returned None'
+    assert 'statusCode' in response, f"expected key 'statusCode' in response, found {response.keys()}"
+    assert 'body' in response, f"expected key 'body' in response, found {response.keys()}"
+    assert response.get('statusCode', None) == 200, f'expected status code 200, got {response.get('statusCode', None)}. {response} from BASE_URL: {BASE_URL}'
+    response_body = json.loads(response.get('body', "{}"))
+    assert isinstance(response_body, dict), f"response body expected type dict, found {response_body} type {type(response_body)}"
+    assert response_body != {}, f"empty response body"
+    assert 'success' in response_body, f"expected key 'success' in response body, found {response_body.keys()}"
+    assert response_body.get('success', False), f'unexpected result success=False'
+    print(f'response: {response}')
 
 def test_01_post_valid():
     global PARAMS
@@ -83,7 +97,8 @@ def test_02_get_existing():
 
 # entry point ---------------------------------------------------------------------
 def run_tests():
-    test_00_endpoint_valid()
+    test_000_endpoint_valid()
+    test_001_health()
     #test_01_post_valid()
     #test_02_get_existing()
 

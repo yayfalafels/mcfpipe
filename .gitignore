@@ -1,6 +1,7 @@
 env
 site
 .env
+*.zip
 .agent_env
 *client_secret.json
 .pytest_cache*

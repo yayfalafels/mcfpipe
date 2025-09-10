@@ -65,14 +65,14 @@ def _bootstrap():
 
 # entry point -------------------------------------------------------------------------------------
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
-    print("TEST. Handling request .. ")
+
     try:
         _bootstrap()
     except Exception as e:
         ex_msg = f"Unhandled at handler: {type(e).__name__}"
         return _ROUTER.fail({'path': '/', 'httpMethod': 'GET'}, context, 500, "internal_error", ex_msg) 
     else:
-        logging.info(f'post boostrap, handling request...')
+
         if not isinstance(event, dict):
             ex_msg = "Event must be a JSON object"
             return _ROUTER.fail({'path': '/', 'httpMethod': 'GET'}, context,  400, "bad_request", ex_msg)
