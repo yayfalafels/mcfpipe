@@ -45,21 +45,31 @@ class TestDatabaseAPI(unittest.TestCase):
         self.assertIn('success',response_body, f"expected key 'success' in response body, found {response_body.keys()}")
         self.assertTrue(response_body.get('success', False), f'unexpected result success=False')
 
-    @unittest.skip("TEMPORARY SKIP TEST")
+    def test_003_engine_reload_valid(self):
+        response = requests.get(f"{BASE_URL}/__admin/refresh")
+        self.assertEqual(response.status_code, 200, f'expected status code 200, got {response.status_code}. {response.text} from BASE_URL: {BASE_URL}')
+        content_type = response.headers.get('Content-Type', '').lower()
+        self.assertEqual(content_type, 'application/json', f'expected JSON content type, received {content_type}')
+        response_body = response.json()
+        self.assertNotEqual(response_body, {}, f"empty response body")
+        self.assertIn('reloaded_at',response_body, f"expected key 'reloaded_at' in response body, found {response_body.keys()}")
+
     def test_01_post_valid(self):
         """POST Create new job (positive)"""
         payload = self.__class__.test_record.copy()
-        response = requests.post(f"{BASE_URL}/{self.table}", json=payload)
+        response = requests.post(f"{BASE_URL}/table/{self.table}", json=payload)
         self.assertEqual(response.status_code, 200, f'expected status code 200, got {response.status_code}. {response.text}')
+        content_type = response.headers.get('Content-Type', '').lower()
+        self.assertEqual(content_type, 'application/json', f'expected JSON content type, received {content_type}')
         response_body = response.json()
-        self.assertIn('ids', response_body)
-        job_id = response_body.get('id', [''])[0]
+        self.assertIn('id', response_body)
+        job_id = response_body.get('id', '')
         self.__class__.job_id = job_id  # save for later tests
 
     @unittest.skip("TEMPORARY SKIP TEST")
     def test_02_get_existing(self):
         """GET Fetch a single job (positive)"""
-        response = requests.get(f"{BASE_URL}/{self.table}/{self.job_id}")
+        response = requests.get(f"{BASE_URL}/table/{self.table}/{self.job_id}")
         self.assertEqual(response.status_code, 200, f'expected status code 200, got {response.status_code}. {response.text}')
         job_record = response.json()
         for f in [
@@ -76,7 +86,7 @@ class TestDatabaseAPI(unittest.TestCase):
         """PUT Update a single job (positive)"""
         updated = self.__class__.test_record.copy()
         updated['position'] = 'Data Engineer Contract'
-        response = requests.put(f"{BASE_URL}/{self.table}/{self.job_id}", json=updated)
+        response = requests.put(f"{BASE_URL}/table/{self.table}/{self.job_id}", json=updated)
         self.assertEqual(response.status_code, 200, f'expected status code 200, got {response.status_code}. {response.text}')
 
     @unittest.skip("TEMPORARY SKIP TEST")
@@ -86,7 +96,7 @@ class TestDatabaseAPI(unittest.TestCase):
             'posted_date': '2025-08-01',
             'load_status': 0
         }
-        response = requests.post(f"{BASE_URL}/{self.table}", json=bad_payload)
+        response = requests.post(f"{BASE_URL}/table/{self.table}", json=bad_payload)
         self.assertEqual(response.status_code, 400, f'expected status code 400, got {response.status_code}. {response.text}')
         self.assertIn('position', response.text)
 
@@ -95,7 +105,7 @@ class TestDatabaseAPI(unittest.TestCase):
         """POST with invalid data type (negative)"""
         bad_payload = self.__class__.test_record.copy()
         bad_payload['load_status'] = 'zero'
-        response = requests.post(f"{BASE_URL}/{self.table}", json=bad_payload)
+        response = requests.post(f"{BASE_URL}/table/{self.table}", json=bad_payload)
         self.assertEqual(response.status_code, 400, f'expected status code 400, got {response.status_code}. {response.text}')
         self.assertIn('load_status', response.text)
 
@@ -104,34 +114,34 @@ class TestDatabaseAPI(unittest.TestCase):
         """POST with bad date format (negative)"""
         bad_payload = self.__class__.test_record.copy()
         bad_payload['posted_date'] = 'May 24, 2025'
-        response = requests.post(f"{BASE_URL}/{self.table}", json=bad_payload)
+        response = requests.post(f"{BASE_URL}/table/{self.table}", json=bad_payload)
         self.assertEqual(response.status_code, 400, f'expected status code 400, got {response.status_code}. {response.text}')
         self.assertIn('posted_date', response.text)
 
     @unittest.skip("TEMPORARY SKIP TEST")
     def test_07_get_nonexistent_job(self):
         """GET non-existent job (negative)"""
-        response = requests.get(f"{BASE_URL}/{self.table}/nonexistent_id")
+        response = requests.get(f"{BASE_URL}/table/{self.table}/nonexistent_id")
         self.assertEqual(response.status_code, 404, f'expected status code 404, got {response.status_code}. {response.text}')
         self.assertIn('job', response.text)
 
     @unittest.skip("TEMPORARY SKIP TEST")
     def test_08_get_nonexistent_table(self):
         """GET non-existent table (negative)"""
-        response = requests.get(f"{BASE_URL}/nonexistent_table/some_id")
+        response = requests.get(f"{BASE_URL}/table/nonexistent_table/some_id")
         self.assertEqual(response.status_code, 404, f'expected status code 404, got {response.status_code}. {response.text}')
         self.assertIn('table', response.text)
 
     @unittest.skip("TEMPORARY SKIP TEST")
     def test_09_delete_existing(self):
         """DELETE existing job (positive)"""
-        response = requests.delete(f"{BASE_URL}/{self.table}/{self.job_id}")
+        response = requests.delete(f"{BASE_URL}/table/{self.table}/{self.job_id}")
         self.assertEqual(response.status_code, 200, f'expected status code 200, got {response.status_code}. {response.text}')
 
     @unittest.skip("TEMPORARY SKIP TEST")
     def test_10_confirm_deleted(self):
         """GET job after deletion (negative)"""
-        response = requests.get(f"{BASE_URL}/{self.table}/{self.job_id}")
+        response = requests.get(f"{BASE_URL}/table/{self.table}/{self.job_id}")
         self.assertEqual(response.status_code, 404, f'expected status code 404, got {response.status_code}. {response.text}')
 
     @unittest.skip("TEMPORARY SKIP TEST")
@@ -149,7 +159,7 @@ class TestDatabaseAPI(unittest.TestCase):
                 "load_status": 0
             }
         ]
-        response = requests.post(f"{BASE_URL}/{self.table}/batch", json=payload)
+        response = requests.post(f"{BASE_URL}/table/{self.table}/batch", json=payload)
         self.assertEqual(response.status_code, 200, f'expected status code 200, got {response.status_code}. {response.text}')
         response_body = response.json()
         self.assertTrue(isinstance(response_body, list), f"expected response type 'list'. ")
@@ -162,7 +172,7 @@ class TestDatabaseAPI(unittest.TestCase):
     @unittest.skip("TEMPORARY SKIP TEST")
     def test_12_get_search_by_posted_date(self):
         """GET search by posted_date (positive)"""
-        response = requests.get(f"{BASE_URL}/{self.table}/search", params={'posted_date': '2025-08-02'})
+        response = requests.get(f"{BASE_URL}/table/{self.table}/search", params={'posted_date': '2025-08-02'})
         self.assertEqual(response.status_code, 200, f'expected status code 200, got {response.status_code}. {response.text}')
         response_body = response.json()
         self.assertTrue(isinstance(response_body, list))
@@ -173,18 +183,18 @@ class TestDatabaseAPI(unittest.TestCase):
     @unittest.skip("TEMPORARY SKIP TEST")
     def test_13_post_batch_delete(self):
         """POST delete batch of jobs (positive)"""
-        response = requests.post(f"{BASE_URL}/{self.table}/delete", json=self.batch_ids)
+        response = requests.post(f"{BASE_URL}/table/{self.table}/delete", json=self.batch_ids)
         self.assertEqual(response.status_code, 200, f'expected status code 200, got {response.status_code}. {response.text}')
         response_body = response.json()
         self.assertEqual(response_body.get('status', ''), 1)
 
-    #@classmethod
-    #def tearDownClass(cls):
-    #    # Clean up all test jobs
-    #    test_ids = [x for x in [cls.job_id] + cls.batch_ids if x]
-    #    response = requests.post(f"{BASE_URL}/{cls.table}/delete", json=test_ids)
-    #    if response.status_code not in [200, 204]:
-    #        raise AssertionError(f"Cleanup failed: {response.status_code} {response.text}")
+    @classmethod
+    def tearDownClass(cls):
+        # Clean up all test jobs
+        test_ids = [x for x in [cls.job_id] + cls.batch_ids if x]
+        response = requests.post(f"{BASE_URL}/table/{cls.table}/delete", json=test_ids)
+        if response.status_code not in [200, 204]:
+            raise AssertionError(f"Cleanup failed: {response.status_code} {response.text}")
 
 if __name__ == "__main__":
     unittest.main()

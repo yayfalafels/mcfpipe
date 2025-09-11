@@ -259,7 +259,13 @@ class Router:
                 400, 'bad_request', f'error parsing parameters from request body. {e}',
                 request_id, method, path, route=r.name, table=logical, op=r.op, t0=t0,
             )
-        
+        else:
+            if body_err:
+                return self._error_handle(
+                    400, 'validation_error', body_err,
+                    request_id, method, path, route=r.name, table=logical, op=r.op, t0=t0,
+                )
+
         if crud_method not in TABLE_CRUD_METHODS:
             return self._error_handle(
                 404, 'not_found', f' table method {crud_method} not found. allowed values {TABLE_CRUD_METHODS}',
@@ -281,22 +287,12 @@ class Router:
             return resp
 
         if crud_method == 'create':
-            if body_err:
-                return self._error_handle(
-                    400, 'validation_error', body_err,
-                    request_id, method, path, route=r.name, table=logical, op=r.op, t0=t0,
-                )
             payload = table.create(body)
             resp = self.responses.json(201, payload)
             self._log_success(resp, request_id, method, path, r, payload, params, t0)
             return resp
 
         if crud_method == 'put':
-            if body_err:
-                return self._error_handle(
-                    400, 'validation_error', body_err,
-                    request_id, method, path, route=r.name, table=logical, op=r.op, t0=t0,
-                )
             id_val = params.get('id')
             sk_val = (query.get('sk') or (query.get(table.sk) if getattr(table, 'sk', None) else None))
             payload = table.put(id_val, body, sk_val)

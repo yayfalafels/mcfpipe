@@ -50,7 +50,8 @@ class JsonFormatter(logging.Formatter):
 
 
 def init_logging(level: str, service: str, stage: str, version: str):
-    root = logging.getLogger()
+    logger_name = f'{service}-{stage}'
+    root = logging.getLogger(logger_name)
 
     for h in list(root.handlers):
         root.removeHandler(h)
