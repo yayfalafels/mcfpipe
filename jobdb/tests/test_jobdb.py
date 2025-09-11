@@ -38,9 +38,9 @@ class TestDatabaseAPI(unittest.TestCase):
     def test_002_health_valid(self):
         response = requests.get(f"{BASE_URL}/__admin/health")
         self.assertEqual(response.status_code, 200, f'expected status code 200, got {response.status_code}. {response.text} from BASE_URL: {BASE_URL}')
-        self.assertIn('body', response, f"expected key 'body' in response, found {response.keys()}")
-        response_body = json.loads(response.get('body', "{}"))
-        self.assertIsInstance(response_body, dict, f"response body expected type dict, found {response_body} type {type(response_body)}")
+        content_type = response.headers.get('Content-Type', '').lower()
+        self.assertEqual(content_type, 'application/json', f'expected JSON content type, received {content_type}')
+        response_body = response.json()
         self.assertNotEqual(response_body, {}, f"empty response body")
         self.assertIn('success',response_body, f"expected key 'success' in response body, found {response_body.keys()}")
         self.assertTrue(response_body.get('success', False), f'unexpected result success=False')

@@ -328,15 +328,19 @@ Traceback (most recent call last):
 
 diagnostics
 
-01 cause: Lambda image wrong dir `mcfpipe/*` instead of `mcfpipe/jobdb/*`
+01 cause: Lambda image wrong dir 
 
 ```Dockerfile
 COPY . .
 ```
 update to : 
 
+correct dockerfile
+
 ```Dockerfile
-COPY jobdb/ var/task/
+WORKDIR /var/task
+...
+COPY . /var/task
 ```
 
 _22 (closed) admin table route clash_
