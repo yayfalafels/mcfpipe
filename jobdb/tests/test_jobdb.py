@@ -187,15 +187,18 @@ class TestDatabaseAPI(unittest.TestCase):
         response = requests.post(f"{BASE_URL}/table/{self.table}/delete", json=self.batch_ids)
         self.assertEqual(response.status_code, 200, f'expected status code 200, got {response.status_code}. {response.text}')
         response_body = response.json()
-        self.assertEqual(response_body.get('status', ''), 1)
+        self.assertEqual(response_body.get('status', ''), 1)        
 
     @classmethod
     def tearDownClass(cls):
         # Clean up all test jobs
         test_ids = [x for x in [cls.job_id] + cls.batch_ids if x]
         response = requests.post(f"{BASE_URL}/table/{cls.table}/delete", json=test_ids)
-        if response.status_code not in [200, 204]:
-            raise AssertionError(f"Cleanup failed: {response.status_code} {response.text}")
+        response_body = response.json()
+        success = response_body.get('success', 0)
+        fail_error = response_body.get('failed')
+        if response.status_code not in [200, 204] or success <= len(test_ids) or fail_error:
+            raise AssertionError(f"Cleanup failed to delete ids {test_ids}. number succeeded {success}: {response.status_code} {response.text} {fail_error}")
 
 if __name__ == "__main__":
     unittest.main()
