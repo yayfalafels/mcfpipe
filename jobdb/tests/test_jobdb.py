@@ -15,7 +15,7 @@ SAMPLE_TEST_RECORD = {
     'position': 'Data Engineer',
     'company_name': 'ACME Corp',
     'url': 'https://acme.com/jobs/abc123',
-    'load_status': 0
+    'status': 0
 }
 
 
