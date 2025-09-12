@@ -6,8 +6,17 @@ release documentation `docs/releases/011_dbapi.md`
 
 session logs are timestamped to Singapore timezone in reverse chronological order, with latest entries at the top, and earlier entries at the bottom.
 
-### JobDB API [Developer] issues 2025-09-12 <>:<>
+### JobDB API [Developer] issues skip validation auto assigned fields 2025-09-12 <>:<>
+_24 (open) s3_schema_load_failed
 
+### JobDB API [Developer] issues skip validation auto assigned fields 2025-09-12 17:33
+_23 (closed) skip validation auto assigned fields_
+
+`validator.Validator.check_items` fails validation for non-nullable auto assigned fields such as ['id', 'created', 'last_updated'].
+
+Although yes they are non-nullable, they are auto-assigned so should not be passed in by user for create.
+solution is to add properties to these columns in the spec `auto` and `readonly`.
+If either of these are true -> then they should NOT be passed by user.
 
 ### JobDB API [Developer] issues 2025-09-11 17:30
 validated route: health check

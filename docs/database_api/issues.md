@@ -36,6 +36,10 @@ __issues__
 | 16 | open | BUG | tests error mapping | |
 | 20 | closed | BUG | logging to CW log | lambda not resolve correct image digest from image tag |
 | 21 | closed | BUG | lambda import error | Dockerfile copy jobdb dir |
+| 22 | closed | BUG | admin table route clash | namespace table methods `/table` |
+| 23 | closed | BUG | skip validation auto assigned fields | |
+| 24 | open | BUG | s3_schema_load_failed | |
+| 25 | open | BUG | delete key fail | |
 | 17 | open | ENHANCEMENT | consolidated response build | |
 | 18 | open | ENHANCEMENT | logging format | |
 | 19 | open | ENHANCEMENT | auth placeholder | |
@@ -348,6 +352,22 @@ _22 (closed) admin table route clash_
 for the route GET "__admin/health" `__admin` is interpreted as a a table logical `{table}`="__admin"
 
 resolution 01: namespace the table methods `/table/{table}/*`
+
+_23 (closed) skip validation auto assigned fields_
+
+`validator.Validator.check_items` fails validation for non-nullable auto assigned fields such as ['id', 'created', 'last_updated'].
+Although yes they are non-nullable, they are auto-assigned so should not be passed in by user for create.
+solution is to add properties to these columns in the spec `auto` and `readonly`.
+If either of these are true -> then they should NOT be passed by user.
+
+_24 (open) s3_schema_load_failed
+
+_25 (open) delete key fail
+
+```
+[ERROR] ClientError: An error occurred (ValidationException) when calling the BatchWriteItem operation: The provided key element does not match the schema
+Traceback (most recent call last):
+```
 
 __Coding style, parameterization and design patterns__
 

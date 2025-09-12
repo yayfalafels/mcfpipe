@@ -98,19 +98,20 @@ class Table:
     def batch_delete(self, key_list: List[Dict[str, Any]] | List[Any]) -> Dict[str, Any]:
         success = 0
         failed = []
-        with self._dynamo().batch_writer() as bw:
-            for k in key_list:
-                if isinstance(k, dict):
-                    key = {self.pk: k.get(self.pk)}
-                    if self.sk and self.sk in k:
-                        key[self.sk] = k[self.sk]
-                else:
-                    key = {self.pk: k}
-                try:
-                    bw.delete_item(Key=key)
-                    success += 1
-                except Exception as e:
-                    failed.append({'key': key, 'error': str(e)})
+        try:
+            with self._dynamo().batch_writer() as bw:
+                for k in key_list:
+                    if isinstance(k, dict):
+                        key = {self.pk: k.get(self.pk)}
+                        if self.sk and self.sk in k:
+                            key[self.sk] = k[self.sk]
+                    else:
+                        key = {self.pk: k}
+                        bw.delete_item(Key=key)
+        except Exception as e:
+            failed = f'batch delete failed for table {self.name} primary key {self.pk} and keys {key_list} {e}'
+        else:
+            success = len(key_list)    
         return {'success': success, 'failed': failed}
 
     def search(self, params: Dict[str, Any]) -> Dict[str, Any]:
