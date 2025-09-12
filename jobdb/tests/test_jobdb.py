@@ -27,7 +27,7 @@ BASE_URL = os.environ.get('DB_API_URL', 'http://localhost:8000')  # Use env var 
 class TestDatabaseAPI(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.table = 'job'
+        cls.table = 'post'
         cls.job_id = ''
         cls.batch_ids = []
         cls.test_record = SAMPLE_TEST_RECORD
