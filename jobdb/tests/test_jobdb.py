@@ -59,7 +59,7 @@ class TestDatabaseAPI(unittest.TestCase):
         """POST Create new job (positive)"""
         payload = self.__class__.test_record.copy()
         response = requests.post(f"{BASE_URL}/table/{self.table}", json=payload)
-        self.assertEqual(response.status_code, 200, f'expected status code 200, got {response.status_code}. {response.text}')
+        self.assertEqual(response.status_code, 201, f'expected status code 201, got {response.status_code}. {response.text}')
         content_type = response.headers.get('Content-Type', '').lower()
         self.assertEqual(content_type, 'application/json', f'expected JSON content type, received {content_type}')
         response_body = response.json()
