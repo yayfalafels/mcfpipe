@@ -14,7 +14,7 @@ on:
       - 'aws/cloudformation/cfn_stack_diagnostics.sh'
       - 'aws/cloudformation/export_stack_outputs.sh'
       - 'jobdb/**'
-#trigger
+
 jobs:
   dbapi-deploy:
     name: DB API Deploy
