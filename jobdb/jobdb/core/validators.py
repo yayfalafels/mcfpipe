@@ -3,10 +3,6 @@
 """
 # dependencies ----------------------------------------------------------------------------------------
 from typing import Any, Dict, List, Tuple
-import logging
-
-
-log = logging.getLogger()
 
 
 # constants -------------------------------------------------------------------------------------------
@@ -37,11 +33,9 @@ class Validator:
 
     def check_item(self, item: Dict[str, Any], mode: str = 'create') -> Tuple[bool, List[str]]:
         errs: List[str] = []
-        log.info(f'checking item {item} compare to table spec {self.columns}')
 
         # 1) Disallow user-supplied readonly/system fields
         for name in item.keys():
-            log.info(f'checking disallow rules: {name} is readonly? {self._is_readonly(name)}')
             if self._is_readonly(name):
                 tag = 'readonly_field_update' if mode != 'create' else 'readonly_field_supplied'
                 errs.append(f"{tag}:{name}")
@@ -50,7 +44,6 @@ class Validator:
         if mode == 'create':
             for name, col in self.columns.items():
                 not_passed = name not in item or item.get(name) is None
-                log.info(f'checking required fields rules: {name} is nullable? {col.get('nullable')} is readonly? {self._is_readonly(name)} not passed by user? {not_passed}')
                 if col.get('nullable'):
                     continue
                 elif self._is_readonly(name):
