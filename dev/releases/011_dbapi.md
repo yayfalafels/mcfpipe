@@ -6,8 +6,11 @@ release documentation `docs/releases/011_dbapi.md`
 
 session logs are timestamped to Singapore timezone in reverse chronological order, with latest entries at the top, and earlier entries at the bottom.
 
-### JobDB API [Developer] issues 2025-09-11 <>:<>
+### JobDB API [Developer] issues 2025-09-12 <>:<>
 
+
+### JobDB API [Developer] issues 2025-09-11 17:30
+validated route: health check
 
 ### JobDB API [Developer] issue docker image dir 2025-09-11 16:25
 issue: container image dir not able to import `handler.py`

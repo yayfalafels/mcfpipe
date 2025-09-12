@@ -10,6 +10,7 @@ import requests
 
 # constants --------------------------------------------------------------------------
 SAMPLE_TEST_RECORD = {
+    'post_source_id': '0',
     'posted_date': '2025-08-01',
     'position': 'Data Engineer',
     'company_name': 'ACME Corp',
