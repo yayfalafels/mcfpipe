@@ -6,8 +6,19 @@ release documentation `docs/releases/011_dbapi.md`
 
 session logs are timestamped to Singapore timezone in reverse chronological order, with latest entries at the top, and earlier entries at the bottom.
 
-### JobDB API [Developer] issues skip validation auto assigned fields 2025-09-12 <>:<>
-_24 (open) s3_schema_load_failed
+### JobDB API [Developer] issues 2025-09-13 <>:<>
+
+
+### JobDB API [Developer] issues skip validation auto assigned fields 2025-09-12 18:07
+
+issue : 25 (open) delete key fail
+ - two issues 
+  - 1 catching/silencing error correctly in BatchWrite
+  - 2. underlying cause of error 
+
+multiple issues flagged
+ - 24 (open) s3_schema_load_failed
+ - 25 (open) delete key fail
 
 ### JobDB API [Developer] issues skip validation auto assigned fields 2025-09-12 17:33
 _23 (closed) skip validation auto assigned fields_

@@ -98,6 +98,7 @@ class Table:
     def batch_delete(self, key_list: List[Dict[str, Any]] | List[Any]) -> Dict[str, Any]:
         success = 0
         failed = []
+        delete_keys = []
         try:
             with self._dynamo().batch_writer() as bw:
                 for k in key_list:
@@ -107,9 +108,10 @@ class Table:
                             key[self.sk] = k[self.sk]
                     else:
                         key = {self.pk: k}
+                        delete_keys.append(key)
                         bw.delete_item(Key=key)
         except Exception as e:
-            failed = f'batch delete failed for table {self.name} primary key {self.pk} and keys {key_list} {e}'
+            failed = f'batch delete failed for table {self.name} primary key {self.pk} and keys {delete_keys} {e}'
         else:
             success = len(key_list)    
         return {'success': success, 'failed': failed}
