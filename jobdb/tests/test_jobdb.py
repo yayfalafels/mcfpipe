@@ -186,10 +186,20 @@ class TestDatabaseAPI(unittest.TestCase):
         ref_ids = [ck.get('id') for ck in self.__class__.batch_ids]
         self.assertTrue(any(i in found_ids for i in ref_ids))
 
-    @unittest.skip("TEMPORARY SKIP TEST")
+    #@unittest.skip("TEMPORARY SKIP TEST")
     def test_13_post_batch_delete(self):
         """POST delete batch of posts (positive)"""
-        response = requests.post(f"{BASE_URL}/table/{self.table}/delete", json=self.batch_ids)
+        batch_ids = [
+            {'id': '3472e1c3737746dfb92a56e408daacfd', 'posted_date': self.pk},
+            {'id': '7771d3f4b87c4d88ae3a06245e656af1', 'posted_date': self.pk},
+            {'id': '23334f3ef83c49a58cb3008470c9f29b', 'posted_date': self.pk},
+            {'id': '703a228e557244a8994d3f6490020b42', 'posted_date': self.pk},
+            {'id': '3452380d0e2f4e9494e100ed183be261', 'posted_date': self.pk},
+            {'id': '1a1f60fcb3274dc4a8c1245a33fc5a66', 'posted_date': self.pk},
+            {'id': '5dae2a431fb04c7eabd8e6f01aca1261', 'posted_date': self.pk},
+            {'id': 'a0ace42d1f0848ac9fd784de0c95c9bf', 'posted_date': self.pk}
+        ]
+        response = requests.post(f"{BASE_URL}/table/{self.table}/delete", json=batch_ids)
         self.assertEqual(response.status_code, 200, f'expected status code 200, got {response.status_code}. {response.text}')
         response_body = response.json()
         self.assertEqual(response_body.get('status', ''), 1)        
@@ -202,7 +212,7 @@ class TestDatabaseAPI(unittest.TestCase):
         response_body = response.json()
         success = response_body.get('success', 0)
         fail_error = response_body.get('failed')
-        if response.status_code not in [200, 204] or success <= len(test_ids) or fail_error:
+        if response.status_code not in [200, 204] or success < len(test_ids) or fail_error:
             raise AssertionError(f"Cleanup failed to delete ids {test_ids}. number succeeded {success}: {response.status_code} {response.text} {fail_error}")
 
 if __name__ == "__main__":
