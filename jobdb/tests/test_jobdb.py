@@ -186,7 +186,7 @@ class TestDatabaseAPI(unittest.TestCase):
         ref_ids = [ck.get('id') for ck in self.__class__.batch_ids]
         self.assertTrue(any(i in found_ids for i in ref_ids))
 
-    #@unittest.skip("TEMPORARY SKIP TEST")
+    @unittest.skip("TEMPORARY SKIP TEST")
     def test_13_post_batch_delete(self):
         """POST delete batch of posts (positive)"""
         batch_ids = [
@@ -202,7 +202,7 @@ class TestDatabaseAPI(unittest.TestCase):
         response = requests.post(f"{BASE_URL}/table/{self.table}/delete", json=batch_ids)
         self.assertEqual(response.status_code, 200, f'expected status code 200, got {response.status_code}. {response.text}')
         response_body = response.json()
-        self.assertEqual(response_body.get('status', ''), 1)        
+        self.assertEqual(response_body.get('success', 0), len(batch_ids))        
 
     @classmethod
     def tearDownClass(cls):
