@@ -22,6 +22,7 @@ class Table:
         self.pk = self.validator.pk
         self.sk = self.validator.sk
         self.region = region or os.getenv('AWS_REGION') or os.getenv('AWS_DEFAULT_REGION')
+        self._client = None
         self._resource = None
         self._table = None
 
@@ -29,8 +30,10 @@ class Table:
     def _dynamo(self):
         if self._resource is None:
             if self.region:
+                self._client = boto3.client('dynamodb', region_name=self.region)
                 self._resource = boto3.resource('dynamodb', region_name=self.region)
             else:
+                self._client = boto3.client('dynamodb')
                 self._resource = boto3.resource('dynamodb')
         if self._table is None:
             self._table = self._resource.Table(self.name)
@@ -38,14 +41,17 @@ class Table:
 
     # CRUD ------------------------------------------------------------------
     def get(self, id_val: Any, sk_val: Any | None = None) -> Dict[str, Any] | None:
+
         if not self.sk:
             resp = self._dynamo().get_item(Key={self.pk: id_val})
             return resp.get('Item')
-        if sk_val is None:
+
+        elif sk_val is None:
             # Without sort key, attempt to query by id and return first
             q = self._dynamo().query(KeyConditionExpression=Key(self.pk).eq(id_val), Limit=1)
             items = q.get('Items', [])
             return items[0] if items else None
+
         resp = self._dynamo().get_item(Key={self.pk: id_val, self.sk: sk_val})
         return resp.get('Item')
 
@@ -65,8 +71,10 @@ class Table:
         if self.sk and sk_val is not None:
             item[self.sk] = sk_val
         ok, errs = self.validator.check_item(item, mode='update')
+
         if not ok:
             raise ValueError(','.join(errs))
+
         self._dynamo().put_item(Item=item)
         return {self.pk: id_val}
 
@@ -100,7 +108,7 @@ class Table:
         failed = []
         delete_keys = []
         try:
-            with self._dynamo().batch_writer() as bw:
+            with self._dynamo().batch_write_item() as bw:
                 for k in key_list:
                     if isinstance(k, dict):
                         key = {self.pk: k.get(self.pk)}

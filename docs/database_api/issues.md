@@ -39,7 +39,8 @@ __issues__
 | 22 | closed | BUG | admin table route clash | namespace table methods `/table` |
 | 23 | closed | BUG | skip validation auto assigned fields | |
 | 24 | open | BUG | s3_schema_load_failed | |
-| 25 | open | BUG | delete key fail | |
+| 25 | open | BUG | delete key fail | Github issue BUG [DynamoDB requires sort key #17](https://github.com/yayfalafels/mcfpipe/issues/17) |
+| 26 | open | ENHANCEMENT | DynamoDB batch catch errors per item | Github issue [DB API DynamoDB batch delete catch errors per item and retry with backoff #16](https://github.com/yayfalafels/mcfpipe/issues/16)  |
 | 17 | open | ENHANCEMENT | consolidated response build | |
 | 18 | open | ENHANCEMENT | logging format | |
 | 19 | open | ENHANCEMENT | auth placeholder | |
@@ -360,14 +361,24 @@ Although yes they are non-nullable, they are auto-assigned so should not be pass
 solution is to add properties to these columns in the spec `auto` and `readonly`.
 If either of these are true -> then they should NOT be passed by user.
 
-_24 (open) s3_schema_load_failed
+_24 (open) BUG s3 schema load failed_
 
-_25 (open) delete key fail
+_25 (open) BUG delete key fail_
+Github issue BUG [DynamoDB requires sort key #17](https://github.com/yayfalafels/mcfpipe/issues/17) 
 
 ```
 [ERROR] ClientError: An error occurred (ValidationException) when calling the BatchWriteItem operation: The provided key element does not match the schema
 Traceback (most recent call last):
 ```
+
+_26 (open) ENHANCEMENT DynamoDB batch catch errors per item_
+Github issue [DB API DynamoDB batch delete catch errors per item and retry with backoff #16](https://github.com/yayfalafels/mcfpipe/issues/16) 
+
+`boto3.DynamoDB.Table.batch_writer()` only buffers writes and then sends them to DynamoDB in 25-item chunks. `try/except` around `bw.delete_item(...)` won’t catch item-specific failures because the actual API call (and any exception) happens later during `__exit__/_flush()`. The batch writer will also auto-retry `UnprocessedItems`, so by design it doesn’t expose per-item failures.
+
+suggestion from ChatGPT
+
+for item-by-item results, don’t use `batch_writer`. Use the low-level `client.batch_write_item`, inspect `UnprocessedItems`, retry with backoff, and record anything that still fails. For malformed requests that trigger a `ValidationException` for the whole batch, you can “bisect” the batch to pinpoint the bad item.
 
 __Coding style, parameterization and design patterns__
 

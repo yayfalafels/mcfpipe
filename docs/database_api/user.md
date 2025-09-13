@@ -147,12 +147,14 @@ Returns a simple success flag.
 
 ---
 
-
 ### GET /table/{table}/{id}
 __Get table item by id__
 
 **Query**
-- `sk={sort_key_value}` (or `?{sort_key}=...`)
+sort key is required for tables with composite key [partition_key, sort_key]
+`sk={sort_key_value}` (or `?{sort_key}=...`)
+
+`GET /table/{table}/{id}?<sort_key>=sort_key_value`
 
 **Example**
 ```bash
@@ -163,7 +165,7 @@ curl -s "$BASE/post/abc?sk=2025-08-01"
 
 **Response 200**
 ```json
-{ "id": "12345", "field1": "...", "field2": "...", "...": "..." }
+{ "id": "12345", "posted_date": "2025-08-01", "field1": "...", "field2": "...", "...": "..." }
 ```
 
 **Response 404**
@@ -209,7 +211,7 @@ JSON
 ### PUT /table/{table}/{id}
 Upsert/replace an item
 
-Include `sk` when the table defines one.
+Include `sk` as URL parameter when the table defines one.  See GET for details
 
 **Example**
 ```bash
@@ -239,7 +241,7 @@ JSON
 ### DELETE /table/{table}/{id} 
 __Delete an item__
 
-Include `sk` for composite‑key tables.
+Include `sk` for composite‑key tables. See GET for details
 
 **Response 200**
 ```json
@@ -278,7 +280,7 @@ JSON
 ### POST /table/{table}/delete
 __Batch delete__
 
-Accepts **either** a list of key objects or a list of ids. For composite‑key tables, each key object should include both keys.
+Accepts **either** a list of key objects or a list of ids. For composite‑key tables, each key object should include both partition and sort keys.
 
 **Example**
 ```bash

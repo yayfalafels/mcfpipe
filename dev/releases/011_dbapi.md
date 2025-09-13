@@ -6,8 +6,16 @@ release documentation `docs/releases/011_dbapi.md`
 
 session logs are timestamped to Singapore timezone in reverse chronological order, with latest entries at the top, and earlier entries at the bottom.
 
-### JobDB API [Developer] issues 2025-09-13 <>:<>
+### JobDB API [Developer] issues DynamoDB batch delete keys 2025-09-13 <>:<>
+Github issue BUG [DynamoDB requires sort key #17](https://github.com/yayfalafels/mcfpipe/issues/17) 
+update test script to include sort key `posted_date` in the batch delete request at tear down
 
+### JobDB API [Developer] issues DynamoDB batch delete catch errors per item 2025-09-13 12:58
+Github issue ENHANCEMENT [DB API DynamoDB batch delete catch errors per item and retry with backoff #16](https://github.com/yayfalafels/mcfpipe/issues/16) 
+
+**issue description**: `boto3.DynamoDB.Table.batch_writer()` only buffers writes and then sends them to DynamoDB in 25-item chunks. `try/except` around `bw.delete_item(...)` won’t catch item-specific failures because the actual API call (and any exception) happens later during `__exit__/_flush()`.
+
+captured in Github as an issue, classified as ENHANCEMENT with suggested refactored code by ChatGPT with inspecting errors per item and retry with backoff
 
 ### JobDB API [Developer] issues skip validation auto assigned fields 2025-09-12 18:07
 
