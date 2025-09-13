@@ -108,7 +108,7 @@ class Table:
         failed = []
         delete_keys = []
         try:
-            with self._dynamo().batch_write_item() as bw:
+            with self._dynamo().batch_writer() as bw:
                 for k in key_list:
                     if isinstance(k, dict):
                         key = {self.pk: k.get(self.pk)}
