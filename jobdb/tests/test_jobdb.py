@@ -71,7 +71,6 @@ class TestDatabaseAPI(unittest.TestCase):
         self.__class__.pk = post_id
         self.__class__.sk = posted_date  # save for later tests
 
-    @unittest.skip("TEMPORARY SKIP TEST")
     def test_02_get_existing(self):
         """GET Fetch a single post (positive)"""
         response = requests.get(f"{BASE_URL}/table/{self.table}/{self.pk}?{self.sort_key}={self.sk}")
@@ -86,7 +85,6 @@ class TestDatabaseAPI(unittest.TestCase):
             test_value = post_record.get(f, '')
             self.assertEqual(expected, test_value, f'expected post field {f} value {expected}, got {test_value}')
 
-    @unittest.skip("TEMPORARY SKIP TEST")
     def test_03_put_update(self):
         """PUT Update a single post (positive)"""
         updated = self.__class__.test_record.copy()

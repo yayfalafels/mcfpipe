@@ -40,6 +40,7 @@ __issues__
 | 23 | closed | BUG | skip validation auto assigned fields | |
 | 24 | open | BUG | s3_schema_load_failed | |
 | 25 | open | BUG | delete key fail | Github issue BUG [DynamoDB requires sort key #17](https://github.com/yayfalafels/mcfpipe/issues/17) |
+| 27 | open | BUG | defeated logging | |
 | 26 | open | ENHANCEMENT | DynamoDB batch catch errors per item | Github issue [DB API DynamoDB batch delete catch errors per item and retry with backoff #16](https://github.com/yayfalafels/mcfpipe/issues/16)  |
 | 17 | open | ENHANCEMENT | consolidated response build | |
 | 18 | open | ENHANCEMENT | logging format | |
@@ -363,13 +364,23 @@ If either of these are true -> then they should NOT be passed by user.
 
 _24 (open) BUG s3 schema load failed_
 
-_25 (open) BUG delete key fail_
+_25 (closed) BUG delete key fail_
 Github issue BUG [DynamoDB requires sort key #17](https://github.com/yayfalafels/mcfpipe/issues/17) 
 
 ```
 [ERROR] ClientError: An error occurred (ValidationException) when calling the BatchWriteItem operation: The provided key element does not match the schema
 Traceback (most recent call last):
 ```
+
+diagnostics
+
+DynamoDB requires sort key for get put delete operations. Documentation is consistent with the implementation and mentions to include the URL parameter for the sort key `{id}?<sort_key>=sort_key_value` but the test methods did not include the sort key.
+
+- **get**: `GET /table/{table}/{id}?<sort_key>=sort_key_value`
+- **delete**: `DELETE /table/{table}/{id}?<sort_key>=sort_key_value`
+- **batch delete**: `POST /table/{table}/delete body={"id": <pk value>, "<sort_key>":sort_key_value}`
+
+resolution: update the test methods to include the the sort key as URL parameter or key in batch operations
 
 _26 (open) ENHANCEMENT DynamoDB batch catch errors per item_
 Github issue [DB API DynamoDB batch delete catch errors per item and retry with backoff #16](https://github.com/yayfalafels/mcfpipe/issues/16) 
@@ -379,6 +390,37 @@ Github issue [DB API DynamoDB batch delete catch errors per item and retry with 
 suggestion from ChatGPT
 
 for item-by-item results, don’t use `batch_writer`. Use the low-level `client.batch_write_item`, inspect `UnprocessedItems`, retry with backoff, and record anything that still fails. For malformed requests that trigger a `ValidationException` for the whole batch, you can “bisect” the batch to pinpoint the bad item.
+
+_27 (open) BUG defeated logging_
+defeated logging in prior commits
+
+_diagnostics_
+believe cause due to inconsistent logger initiation
+
+location: `router.py`
+
+```python
+import logging
+log = logging.getLogger()
+```
+
+location: `logging.py`
+
+```python
+import logging
+logger_name = '<something other than root>'
+log = logging.getLogger(logger_name)
+```
+
+_resolution_
+use consistent logger reference
+
+```python
+from . import logging
+
+log = logging.logging.getLogger(logging.LOGGER_NAME)
+
+```
 
 __Coding style, parameterization and design patterns__
 

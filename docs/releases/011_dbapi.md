@@ -199,6 +199,9 @@ environment variables are passed to the container by Github actions at the `run-
 | 11 | closed | ENHANCEMENT | [GHA and CF conditional refresh #14](https://github.com/yayfalafels/mcfpipe/issues/14) | GHA and CF conditional refresh |
 | 12 | closed | ENHANCEMENT | [duplicate VPCE costs tester private subnet #15](https://github.com/yayfalafels/mcfpipe/issues/15) | switch tester to public subnet, delete unnecessary VPCE |
 | 13 | open | SDLC | DB API first pass review | * |
+| 14 | open | ENHANCEMENT | DynamoDB batch catch errors per item |
+Github issue [DB API DynamoDB batch delete catch errors per item and retry with backoff #16](https://github.com/yayfalafels/mcfpipe/issues/16) |
+
 
 __Issue details__
 
@@ -221,6 +224,18 @@ The current configuration refreshes the DB API ECR docker image for all GHA trig
 
 __resolution__
 update the logic in GHA to only refresh the DB API ECR docker image either no image is present OR changes that would affect the docker image, such as any change to `jobdb/*` contents.
+
+### (open) 14 DynamoDB batch catch errors per item
+Github issue [DB API DynamoDB batch delete catch errors per item and retry with backoff #16](https://github.com/yayfalafels/mcfpipe/issues/16)
+type: `ENHANCEMENT`
+
+__situation__
+
+`boto3.DynamoDB.Table.batch_writer()` only buffers writes and then sends them to DynamoDB in 25-item chunks. `try/except` around `bw.delete_item(...)` won’t catch item-specific failures because the actual API call (and any exception) happens later during `__exit__/_flush()`. The batch writer will also auto-retry `UnprocessedItems`, so by design it doesn’t expose per-item failures.
+
+__suggestion from ChatGPT__
+
+for item-by-item results, don’t use `batch_writer`. Use the low-level `client.batch_write_item`, inspect `UnprocessedItems`, retry with backoff, and record anything that still fails. For malformed requests that trigger a `ValidationException` for the whole batch, you can “bisect” the batch to pinpoint the bad item.
 
 ### (open) 13 DB API first pass review
 type: `SDLC`

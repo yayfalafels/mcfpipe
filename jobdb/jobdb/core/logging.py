@@ -31,6 +31,10 @@ STD_LOGGING_PARAMS = [
 ]
 
 
+# dynamic ----------------------------------------------------------------------------------------
+LOGGER_NAME = 'root'
+
+
 # classes ----------------------------------------------------------------------------------------
 class JsonFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
@@ -50,8 +54,9 @@ class JsonFormatter(logging.Formatter):
 
 
 def init_logging(level: str, service: str, stage: str, version: str):
-    logger_name = f'{service}-{stage}'
-    root = logging.getLogger(logger_name)
+    global LOGGER_NAME
+    LOGGER_NAME = f'{service}-{stage}'
+    root = logging.getLogger(LOGGER_NAME)
 
     for h in list(root.handlers):
         root.removeHandler(h)

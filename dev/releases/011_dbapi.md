@@ -6,7 +6,14 @@ release documentation `docs/releases/011_dbapi.md`
 
 session logs are timestamped to Singapore timezone in reverse chronological order, with latest entries at the top, and earlier entries at the bottom.
 
-### JobDB API [Developer] issues DynamoDB batch delete keys 2025-09-13 <>:<>
+### JobDB API [Developer] issues 2025-09-14 <>:<>
+_27 (open) BUG defeated logging_
+defeated logging in prior commits
+
+_diagnostics_
+believe cause due to inconsistent logger initiation
+
+### JobDB API [Developer] issues DynamoDB batch delete keys 2025-09-13 14:15
 Github issue BUG [DynamoDB requires sort key #17](https://github.com/yayfalafels/mcfpipe/issues/17) 
 update test script to include sort key `posted_date` in the batch delete request at tear down
 

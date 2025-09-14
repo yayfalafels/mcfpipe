@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 # dependencies --------------------------------------------------------------------------------
-import logging
-
 import json
 import os
 import re
 import time
 from typing import Any, Dict, List, Optional
 
+from . import logging 
 from .responses import Responses
 from .util import parse_json_body, parse_query, norm_path
 
@@ -21,10 +20,6 @@ TABLE_CRUD_METHODS = [
     'get', 'create', 'put', 'delete',
     'batch_write', 'batch_delete', 'search'
 ]
-
-# dynamic variables ----------------------------------------------------------------------
-log = logging.getLogger()
-
 
 # helper methods ------------------------------------------------------------------------
 def _infer_items_count(payload: Any) -> int:
@@ -125,6 +120,7 @@ class Route:
 class Router:
     def __init__(self, engine):
         self.engine = engine
+        self.log = logging.logging.getLogger(logging.LOGGER_NAME)
         self.responses = Responses()
         self.routes: List[Route] = []
         self._load_routes()
@@ -144,7 +140,7 @@ class Router:
         duration_ms = int((time.time() - t0) * 1000)
         status = _status_of(response, 200)
         items_count =  _infer_items_count(payload)
-        log.info(
+        self.log.info(
             "request_complete",
             extra={
                 "request_id": request_id,
@@ -175,7 +171,7 @@ class Router:
         with_stack: bool = False,
     ) -> Dict[str, Any]:
         duration_ms = int((time.time() - t0) * 1000)
-        log.error(
+        self.log.error(
             "request_error",
             extra={
                 "request_id": request_id,
@@ -342,7 +338,7 @@ class Router:
     # ---------- dispatch ----------
     def dispatch(self, event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         t0 = time.time()
-        log.info(f'dispatching request from event {event}')
+        self.log.info(f'dispatching request from event {event}')
 
         method = (event.get('httpMethod', '') or event.get('requestContext', {}).get('http', {}).get('method', 'GET')).upper()
         path = norm_path(event.get('path', '') or event.get('rawPath', '') or '/')
@@ -372,7 +368,7 @@ class Router:
             else:
                 # ------ meta engine ------
                 if route_namespace in ['meta', 'engine']:
-                    log.info(f'dispatching to _meta_engine methods for op {r.op}')
+                    self.log.info(f'dispatching to _meta_engine methods for op {r.op}')
                     return self._meta_engine(
                         request_id=request_id,
                         method=method,
