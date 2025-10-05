@@ -28,6 +28,8 @@ jobs:
       STACK_TEMPLATE_FILE: db_api_stack.yaml
       NETWORK_CONFIG_JSON: network_config.json
       NETWORK_CONFIG_S3_PATH: aws/network
+      STORAGE_S3_DIR: storage
+      DB_SCHEMA_JSON: db_schema.json
       DBAPI_APP_DIR: jobdb
       DBAPI_APP: jobdb
       REPO_NAME: mcfpipe-dbapi

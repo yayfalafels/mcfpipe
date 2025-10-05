@@ -6,8 +6,12 @@ release documentation `docs/releases/011_dbapi.md`
 
 session logs are timestamped to Singapore timezone in reverse chronological order, with latest entries at the top, and earlier entries at the bottom.
 
-### JobDB API [Developer] issues 2025-09-14 <>:<>
-_27 (open) BUG defeated logging_
+### JobDB API [Developer] issues 2025-10-04 <>:<>
+_24 (open) BUG s3 schema load failed_
+
+
+### JobDB API [Developer] issues 2025-09-14 18:19
+_27 (closed) BUG defeated logging_
 defeated logging in prior commits
 
 _diagnostics_

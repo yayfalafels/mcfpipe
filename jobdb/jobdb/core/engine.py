@@ -21,7 +21,6 @@ class DBEngine:
         self.region = region
         self.commit = commit
         self.log = logging.logging.getLogger(logging.LOGGER_NAME)
-        #self.log = Log(service=app_name, stage=stage, version=version, commit=commit)
         self.responses = Responses()
 
         # Settings

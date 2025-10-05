@@ -364,6 +364,18 @@ If either of these are true -> then they should NOT be passed by user.
 
 _24 (open) BUG s3 schema load failed_
 
+_diagnostics_
+
+```
+"An error occurred (NoSuchKey) when calling the GetObject operation: The specified key does not exist."
+
+bucket: "mcfpipe"
+key: "/"
+
+```
+
+
+
 _25 (closed) BUG delete key fail_
 Github issue BUG [DynamoDB requires sort key #17](https://github.com/yayfalafels/mcfpipe/issues/17) 
 
@@ -391,7 +403,7 @@ suggestion from ChatGPT
 
 for item-by-item results, don’t use `batch_writer`. Use the low-level `client.batch_write_item`, inspect `UnprocessedItems`, retry with backoff, and record anything that still fails. For malformed requests that trigger a `ValidationException` for the whole batch, you can “bisect” the batch to pinpoint the bad item.
 
-_27 (open) BUG defeated logging_
+_27 (closed) BUG defeated logging_
 defeated logging in prior commits
 
 _diagnostics_
