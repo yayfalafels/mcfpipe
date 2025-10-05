@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+"""DynamoDB Table CRUD 
+"""
+# dependencies ------------------------------------------------------------------------------
 import os
 import uuid
 from typing import Any, Dict, List, Optional
@@ -7,12 +10,19 @@ import boto3
 from boto3.dynamodb.conditions import Key
 
 from .validators import Validator
+from .util import json_serializable
 
 
+# constants ------------------------------------------------------------------------------
+SEARCH_MAX = 1000
+
+
+# helper ------------------------------------------------------------------------------
 def _new_id() -> str:
     return uuid.uuid4().hex
 
 
+# classes ------------------------------------------------------------------------------
 class Table:
     def __init__(self, name: str, spec: Dict[str, Any], region: Optional[str] = None):
         self.logical_name = spec.get('table_name') or name
@@ -44,16 +54,18 @@ class Table:
 
         if not self.sk:
             resp = self._dynamo().get_item(Key={self.pk: id_val})
-            return resp.get('Item')
+            item_dict = resp.get('Item')
+            return json_serializable(item_dict)
 
         elif sk_val is None:
             # Without sort key, attempt to query by id and return first
             q = self._dynamo().query(KeyConditionExpression=Key(self.pk).eq(id_val), Limit=1)
             items = q.get('Items', [])
-            return items[0] if items else None
+            return json_serializable(items[0]) if items else None
 
         resp = self._dynamo().get_item(Key={self.pk: id_val, self.sk: sk_val})
-        return resp.get('Item')
+        item_dict = resp.get('Item')
+        return json_serializable(item_dict)
 
     def create(self, item: Dict[str, Any]) -> Dict[str, Any]:
         ok, errs = self.validator.check_item(item, mode='create')
@@ -105,7 +117,7 @@ class Table:
 
     def batch_delete(self, key_list: List[Dict[str, Any]] | List[Any]) -> Dict[str, Any]:
         success = 0
-        failed = []
+        error = ''
         delete_keys = []
         try:
             with self._dynamo().batch_writer() as bw:
@@ -116,18 +128,18 @@ class Table:
                             key[self.sk] = k[self.sk]
                     else:
                         key = {self.pk: k}
-                        delete_keys.append(key)
-                        bw.delete_item(Key=key)
+                    delete_keys.append(key)
+                    bw.delete_item(Key=key)
+                    success += 1
         except Exception as e:
-            failed = f'batch delete failed for table {self.name} primary key {self.pk} and keys {delete_keys} {e}'
-        else:
-            success = len(key_list)    
-        return {'success': success, 'failed': failed}
+            error = f'batch delete failed for table {self.name} primary key {self.pk} and keys {delete_keys} {e}'
+            success = 0
+        return {'success': success, 'failed': error, 'items': delete_keys}
 
     def search(self, params: Dict[str, Any]) -> Dict[str, Any]:
         limit = int(params.get('limit', 100))
-        if limit > 1000:
-            limit = 1000
+        if limit > SEARCH_MAX:
+            limit = SEARCH_MAX
         index = params.get('index')
 
         key_expr = None
@@ -147,7 +159,7 @@ class Table:
             resp = self._dynamo().query(**kwargs)
         else:
             resp = self._dynamo().scan(Limit=limit)
-        items = resp.get('Items', [])
-        next_token = resp.get('LastEvaluatedKey')
+        ddb_items = resp.get('Items', [])
+        items = json_serializable(ddb_items)
+        next_token = json_serializable(resp.get('LastEvaluatedKey'))
         return {'items': items, 'next': next_token}
-

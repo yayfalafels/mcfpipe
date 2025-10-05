@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import decimal
 import base64
 import json
 from typing import Any, Dict, Tuple
@@ -39,3 +40,18 @@ def norm_path(p: str) -> str:
         return p[:-1]
     return p
 
+
+def json_serializable(obj):
+    if isinstance(obj, decimal.Decimal):
+        # int if safe, else float
+        return int(obj) if obj % 1 == 0 else float(obj)
+    elif isinstance(obj, set):
+        return list(obj)
+    elif isinstance(obj, bytes):
+        return base64.b64encode(obj).decode('utf-8')
+    elif isinstance(obj, dict):
+        return {k: json_serializable(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [json_serializable(v) for v in obj]
+    else:
+        return obj

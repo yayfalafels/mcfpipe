@@ -38,9 +38,10 @@ __issues__
 | 21 | closed | BUG | lambda import error | Dockerfile copy jobdb dir |
 | 22 | closed | BUG | admin table route clash | namespace table methods `/table` |
 | 23 | closed | BUG | skip validation auto assigned fields | |
-| 24 | open | BUG | s3_schema_load_failed | |
-| 25 | open | BUG | delete key fail | Github issue BUG [DynamoDB requires sort key #17](https://github.com/yayfalafels/mcfpipe/issues/17) |
-| 27 | open | BUG | defeated logging | |
+| 24 | closed | BUG | s3_schema_load_failed | set db schema variables in GHA |
+| 25 | closed | BUG | delete key fail | Github issue BUG [DynamoDB requires sort key #17](https://github.com/yayfalafels/mcfpipe/issues/17) |
+| 27 | closed | BUG | defeated logging | set logger by name |
+| 28 | open | BUG | GET table item Decimal is not JSON serializable |  |
 | 26 | open | ENHANCEMENT | DynamoDB batch catch errors per item | Github issue [DB API DynamoDB batch delete catch errors per item and retry with backoff #16](https://github.com/yayfalafels/mcfpipe/issues/16)  |
 | 17 | open | ENHANCEMENT | consolidated response build | |
 | 18 | open | ENHANCEMENT | logging format | |
@@ -362,7 +363,7 @@ Although yes they are non-nullable, they are auto-assigned so should not be pass
 solution is to add properties to these columns in the spec `auto` and `readonly`.
 If either of these are true -> then they should NOT be passed by user.
 
-_24 (open) BUG s3 schema load failed_
+_24 (closed) BUG s3 schema load failed_
 
 _diagnostics_
 
@@ -374,7 +375,42 @@ key: "/"
 
 ```
 
+--> variables not set 
 
+ - STORAGE_S3_DIR
+ - DB_SCHEMA_JSON
+
+_resolution_
+
+set variables
+
+```yaml
+STORAGE_S3_DIR: storage
+DB_SCHEMA_JSON: db_schema.json
+```
+
+fails at this line in step "Deploy CloudFormation Stack"
+
+```bash
+DBSchemaS3=$STORAGE_S3_DIR/$DB_SCHEMA_JSON
+```
+
+location: `.github/workflows/db_api_gha.yml`
+
+```yaml
+  - name: Deploy CloudFormation Stack
+    id: stack_deploy
+```
+
+```bash
+aws cloudformation deploy \
+  --template-file $CF_TEMPLATE_DIR/$STACK_TEMPLATE_FILE \
+  --stack-name $STACK_NAME \
+    ...
+    DBSchemaS3=$STORAGE_S3_DIR/$DB_SCHEMA_JSON \
+    ...
+
+```
 
 _25 (closed) BUG delete key fail_
 Github issue BUG [DynamoDB requires sort key #17](https://github.com/yayfalafels/mcfpipe/issues/17) 
@@ -431,6 +467,111 @@ use consistent logger reference
 from . import logging
 
 log = logging.logging.getLogger(logging.LOGGER_NAME)
+
+```
+
+_28 (open) BUG table item update Decimal is not JSON serializable_
+
+exception
+
+```
+[ERROR] TypeError: Object of type Decimal is not JSON serializable 
+```
+
+_diagnostics_
+DynamoDB uses types that are not JSON serializable. specifically: `Decimal`
+
+_resolution_
+
+- add a utility function  `json_serializable` to convert native DynamoDB dict to JSON serializable
+- use the utility function in `Table` methods to convert to JSON serializable format
+
+location: `jobdb/jobdb/core/table.py`
+
+```python
+from .util import json_serializable
+...
+
+    # CRUD ------------------------------------------------------------------
+    def get(self, id_val: Any, sk_val: Any | None = None) -> Dict[str, Any] | None:
+
+        if not self.sk:
+            resp = self._dynamo().get_item(Key={self.pk: id_val})
+            item_dict = resp.get('Item')
+            return json_serializable(item_dict)
+
+    ...
+
+```
+
+location: `jobdb/jobdb/core/util.py`
+
+```python
+import decimal
+ ...
+
+def json_serializable(obj):
+    if isinstance(obj, decimal.Decimal):
+        # int if safe, else float
+        return int(obj) if obj % 1 == 0 else float(obj)
+    elif isinstance(obj, set):
+        return list(obj)
+    elif isinstance(obj, bytes):
+        return base64.b64encode(obj).decode('utf-8')
+    elif isinstance(obj, dict):
+        return {k: json_serializable(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [json_serializable(v) for v in obj]
+    else:
+        return obj
+
+```
+
+_diagnostics details_
+
+full traceback
+
+```
+[ERROR] TypeError: Object of type Decimal is not JSON serializable
+Traceback (most recent call last):
+  File "/var/task/handler.py", line 98, in lambda_handler
+    return _ROUTER.dispatch({"httpMethod": method, "path": path, **event}, context)
+  File "/var/task/jobdb/core/router.py", line 384, in dispatch
+    return self._table_crud(
+  File "/var/task/jobdb/core/router.py", line 281, in _table_crud
+    resp = self.responses.json(200, payload)
+  File "/var/task/jobdb/core/responses.py", line 18, in json_resp
+    'body': json.dumps(body, separators=(',', ':'), ensure_ascii=False),
+  File "/var/lang/lib/python3.12/json/__init__.py", line 238, in dumps
+    **kw).encode(obj)
+  File "/var/lang/lib/python3.12/json/encoder.py", line 200, in encode
+    chunks = self.iterencode(o, _one_shot=True)
+  File "/var/lang/lib/python3.12/json/encoder.py", line 258, in iterencode
+    return _iterencode(o, 0)
+  File "/var/lang/lib/python3.12/json/encoder.py", line 180, in default
+    raise TypeError(f'Object of type {o.__class__.__name__} '
+
+```
+
+location: `jobdb/jobdb/core/table.py`
+method: `Table.get`
+
+```python
+    # CRUD ------------------------------------------------------------------
+    def get(self, id_val: Any, sk_val: Any | None = None) -> Dict[str, Any] | None:
+
+        if not self.sk:
+            resp = self._dynamo().get_item(Key={self.pk: id_val})
+            return resp.get('Item')
+
+        elif sk_val is None:
+            # Without sort key, attempt to query by id and return first
+            q = self._dynamo().query(KeyConditionExpression=Key(self.pk).eq(id_val), Limit=1)
+            items = q.get('Items', [])
+            return items[0] if items else None
+
+        resp = self._dynamo().get_item(Key={self.pk: id_val, self.sk: sk_val})
+        return resp.get('Item')
 
 ```
 

@@ -7,8 +7,24 @@ release documentation `docs/releases/011_dbapi.md`
 session logs are timestamped to Singapore timezone in reverse chronological order, with latest entries at the top, and earlier entries at the bottom.
 
 ### JobDB API [Developer] issues 2025-10-04 <>:<>
-_24 (open) BUG s3 schema load failed_
+_28 (open) BUG table item update Decimal is not JSON serializable_
 
+
+_24 (closed) BUG s3 schema load failed_
+
+--> variables not set 
+
+ - STORAGE_S3_DIR
+ - DB_SCHEMA_JSON
+
+_resolution_
+
+set variables
+
+```yaml
+STORAGE_S3_DIR: storage
+DB_SCHEMA_JSON: db_schema.json
+```
 
 ### JobDB API [Developer] issues 2025-09-14 18:19
 _27 (closed) BUG defeated logging_
