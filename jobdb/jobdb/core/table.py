@@ -78,16 +78,17 @@ class Table:
         return {self.pk: item.get(self.pk)}
 
     def put(self, id_val: Any, item: Dict[str, Any], sk_val: Any | None = None) -> Dict[str, Any]:
-        # Merge keys into item
-        item[self.pk] = id_val
-        if self.sk and sk_val is not None:
-            item[self.sk] = sk_val
         ok, errs = self.validator.check_item(item, mode='update')
-
         if not ok:
             raise ValueError(','.join(errs))
 
-        self._dynamo().put_item(Item=item)
+        # Merge keys into item
+        with_keys = item.copy()
+        with_keys[self.pk] = id_val
+        if self.sk and sk_val is not None:
+            with_keys[self.sk] = sk_val
+
+        self._dynamo().put_item(Item=with_keys)
         return {self.pk: id_val}
 
     def delete(self, id_val: Any, sk_val: Any | None = None) -> Dict[str, Any]:

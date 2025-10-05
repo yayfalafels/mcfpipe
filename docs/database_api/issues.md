@@ -470,7 +470,7 @@ log = logging.logging.getLogger(logging.LOGGER_NAME)
 
 ```
 
-_28 (open) BUG table item update Decimal is not JSON serializable_
+_28 (closed) BUG table item update Decimal is not JSON serializable_
 
 exception
 
@@ -572,6 +572,75 @@ method: `Table.get`
 
         resp = self._dynamo().get_item(Key={self.pk: id_val, self.sk: sk_val})
         return resp.get('Item')
+
+```
+
+_29 (open) BUG validator skip id_
+
+exception
+
+```
+[ERROR] ValueError: readonly_field_update:id
+```
+
+_diagnostics_
+In the method `Table.put` the keys, which are read-only, are added to the items before validation 
+
+_resolution_
+swap the order to add the keys AFTER validation
+
+locaiton: `jobdb/jobdb/core/table.py`
+method: `Table.put`
+
+wrong order, 1) merge keys and then 2) validate
+
+```python
+    def put(self, id_val: Any, item: Dict[str, Any], sk_val: Any | None = None) -> Dict[str, Any]:
+        # Merge keys into item
+        item[self.pk] = id_val
+        if self.sk and sk_val is not None:
+            item[self.sk] = sk_val
+        ok, errs = self.validator.check_item(item, mode='update')
+
+        if not ok:
+            raise ValueError(','.join(errs))
+
+        self._dynamo().put_item(Item=item)
+        return {self.pk: id_val}
+```
+
+updated order 1) validate 2) merge keys
+
+```python
+    def put(self, id_val: Any, item: Dict[str, Any], sk_val: Any | None = None) -> Dict[str, Any]:
+        ok, errs = self.validator.check_item(item, mode='update')
+        if not ok:
+            raise ValueError(','.join(errs))
+
+        # Merge keys into item
+        with_keys = item.copy()
+        with_keys[self.pk] = id_val
+        if self.sk and sk_val is not None:
+            with_keys[self.sk] = sk_val
+
+        self._dynamo().put_item(Item=with_keys)
+        return {self.pk: id_val}
+
+```
+
+full exception
+
+```
+[ERROR] ValueError: readonly_field_update:id
+Traceback (most recent call last):
+  File "/var/task/handler.py", line 98, in lambda_handler
+    return _ROUTER.dispatch({"httpMethod": method, "path": path, **event}, context)
+  File "/var/task/jobdb/core/router.py", line 384, in dispatch
+    return self._table_crud(
+  File "/var/task/jobdb/core/router.py", line 294, in _table_crud
+    payload = table.put(id_val, body, sk_val)
+  File "/var/task/jobdb/core/table.py", line 88, in put
+    raise ValueError(','.join(errs))
 
 ```
 
