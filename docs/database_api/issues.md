@@ -41,7 +41,8 @@ __issues__
 | 24 | closed | BUG | s3_schema_load_failed | set db schema variables in GHA |
 | 25 | closed | BUG | delete key fail | Github issue BUG [DynamoDB requires sort key #17](https://github.com/yayfalafels/mcfpipe/issues/17) |
 | 27 | closed | BUG | defeated logging | set logger by name |
-| 28 | open | BUG | GET table item Decimal is not JSON serializable |  |
+| 28 | closed | BUG | GET table item Decimal is not JSON serializable | add util json_serialize |
+| 29 | closed | BUG | PUT table passes readonly id to validator | swap order validate then merge |
 | 26 | open | ENHANCEMENT | DynamoDB batch catch errors per item | Github issue [DB API DynamoDB batch delete catch errors per item and retry with backoff #16](https://github.com/yayfalafels/mcfpipe/issues/16)  |
 | 17 | open | ENHANCEMENT | consolidated response build | |
 | 18 | open | ENHANCEMENT | logging format | |
@@ -575,7 +576,7 @@ method: `Table.get`
 
 ```
 
-_29 (open) BUG validator skip id_
+_29 (closed) BUG Table put passes readonly id to validator_
 
 exception
 

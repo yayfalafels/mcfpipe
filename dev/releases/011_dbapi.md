@@ -7,8 +7,12 @@ release documentation `docs/releases/011_dbapi.md`
 session logs are timestamped to Singapore timezone in reverse chronological order, with latest entries at the top, and earlier entries at the bottom.
 
 ### JobDB API [Developer] issues 2025-10-04 <>:<>
-_28 (open) BUG table item update Decimal is not JSON serializable_
 
+| id | status | type | issue | description |
+| - | - | - | - | - |
+| 24 | closed | BUG | s3_schema_load_failed | set db schema variables in GHA |
+| 28 | closed | BUG | GET table item Decimal is not JSON serializable | add util json_serialize |
+| 29 | closed | BUG | PUT table passes readonly id to validator | swap order validate then merge |
 
 _24 (closed) BUG s3 schema load failed_
 
@@ -25,6 +29,37 @@ set variables
 STORAGE_S3_DIR: storage
 DB_SCHEMA_JSON: db_schema.json
 ```
+
+_28 (closed) BUG table item update Decimal is not JSON serializable_
+
+exception
+
+```
+[ERROR] TypeError: Object of type Decimal is not JSON serializable 
+```
+
+_diagnostics_
+DynamoDB uses types that are not JSON serializable. specifically: `Decimal`
+
+_resolution_
+
+- add a utility function  `json_serializable` to convert native DynamoDB dict to JSON serializable
+- use the utility function in `Table` methods to convert to JSON serializable format
+
+_29 (closed) BUG Table put passes readonly id to validator_
+
+exception
+
+```
+[ERROR] ValueError: readonly_field_update:id
+```
+
+_diagnostics_
+In the method `Table.put` the keys, which are read-only, are added to the items before validation 
+
+_resolution_
+swap the order to add the keys AFTER validation
+
 
 ### JobDB API [Developer] issues 2025-09-14 18:19
 _27 (closed) BUG defeated logging_
