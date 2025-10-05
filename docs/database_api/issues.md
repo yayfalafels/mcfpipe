@@ -43,6 +43,7 @@ __issues__
 | 27 | closed | BUG | defeated logging | set logger by name |
 | 28 | closed | BUG | GET table item Decimal is not JSON serializable | add util json_serialize |
 | 29 | closed | BUG | PUT table passes readonly id to validator | swap order validate then merge |
+| 30 | open | BUG | catch validation errors | |
 | 26 | open | ENHANCEMENT | DynamoDB batch catch errors per item | Github issue [DB API DynamoDB batch delete catch errors per item and retry with backoff #16](https://github.com/yayfalafels/mcfpipe/issues/16)  |
 | 17 | open | ENHANCEMENT | consolidated response build | |
 | 18 | open | ENHANCEMENT | logging format | |
@@ -643,6 +644,42 @@ Traceback (most recent call last):
   File "/var/task/jobdb/core/table.py", line 88, in put
     raise ValueError(','.join(errs))
 
+```
+
+_30 (open) BUG catch validation errors_
+
+also related to issue 29
+
+situation
+validation errors not catched and returned to user, fails with 500 internal error.
+
+_diagnostics_
+
+
+
+_resolution_
+
+_detailed diagnostics_
+
+exception
+
+```
+[ERROR] ValueError: missing_required:post_source_id,missing_required:position,missing_required:status
+```
+
+full exception
+
+```
+[ERROR] ValueError: missing_required:post_source_id,missing_required:position,missing_required:status
+Traceback (most recent call last):
+  File "/var/task/handler.py", line 98, in lambda_handler
+    return _ROUTER.dispatch({"httpMethod": method, "path": path, **event}, context)
+  File "/var/task/jobdb/core/router.py", line 384, in dispatch
+    return self._table_crud(
+  File "/var/task/jobdb/core/router.py", line 286, in _table_crud
+    payload = table.create(body)
+  File "/var/task/jobdb/core/table.py", line 73, in create
+    raise ValueError(','.join(errs))
 ```
 
 __Coding style, parameterization and design patterns__

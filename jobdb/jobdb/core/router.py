@@ -283,6 +283,14 @@ class Router:
             return resp
 
         if crud_method == 'create':
+            ok, validation_errors = table.item_validate(body, mode='create')
+            if not ok:
+                errors = ','.join(validation_errors)
+                return self._error_handle(
+                    400, 'validation_error', f'invalid {logical} item. {errors}',
+                    request_id, method, path, route=r.name, table=logical, op=r.op, t0=t0,
+                )
+
             payload = table.create(body)
             resp = self.responses.json(201, payload)
             self._log_success(resp, request_id, method, path, r, payload, params, t0)
@@ -291,6 +299,14 @@ class Router:
         if crud_method == 'put':
             id_val = params.get('id')
             sk_val = (query.get('sk') or (query.get(table.sk) if getattr(table, 'sk', None) else None))
+            ok, validation_errors = table.item_validate(body, mode='create')
+            if not ok:
+                errors = ','.join(validation_errors)
+                return self._error_handle(
+                    400, 'validation_error', f'invalid {logical} item. {errors}',
+                    request_id, method, path, route=r.name, table=logical, op=r.op, t0=t0,
+                )
+
             payload = table.put(id_val, body, sk_val)
             resp = self.responses.json(200, payload)
             self._log_success(resp, request_id, method, path, r, payload, params, t0)
@@ -299,7 +315,13 @@ class Router:
         if crud_method == 'delete':
             id_val = params.get('id')
             sk_val = (query.get('sk') or (query.get(table.sk) if getattr(table, 'sk', None) else None))
-            payload = table.delete(id_val, sk_val)
+            try:
+                payload = table.delete(id_val, sk_val)
+            except Exception as e:
+                return self._error_handle(
+                    400, 'bad_request', f'delete failed for {logical} item {table.pk}={id_val}. {e}',
+                    request_id, method, path, route=r.name, table=logical, op=r.op, t0=t0,
+                )
             resp = self.responses.json(200, payload)
             self._log_success(resp, request_id, method, path, r, payload, params, t0)
             return resp
@@ -309,6 +331,12 @@ class Router:
             if not isinstance(items, list):
                 return self._error_handle(
                     400, 'validation_error', 'expected list of items',
+                    request_id, method, path, route=r.name, table=logical, op=r.op, t0=t0,
+                )
+            ok, failed = table.items_validate(items, mode='create')
+            if not ok:
+                return self._error_handle(
+                    400, 'validation_error', f'invalid {logical} items. {failed}',
                     request_id, method, path, route=r.name, table=logical, op=r.op, t0=t0,
                 )
             payload = table.batch_write(items)
@@ -323,7 +351,14 @@ class Router:
                     400, 'validation_error', 'expected list of keys/ids',
                     request_id, method, path, route=r.name, table=logical, op=r.op, t0=t0,
                 )
-            payload = table.batch_delete(keys)
+            try:
+                payload = table.batch_delete(keys)
+            except Exception as e:
+                return self._error_handle(
+                    400, 'bad_request', f'delete failed for {logical} items {table.pk}={keys}. {e}',
+                    request_id, method, path, route=r.name, table=logical, op=r.op, t0=t0,
+                )
+
             resp = self.responses.json(200, payload)
             self._log_success(resp, request_id, method, path, r, payload, params, t0)
             return resp

@@ -49,6 +49,19 @@ class Table:
             self._table = self._resource.Table(self.name)
         return self._table
 
+    def item_validate(self, item, mode='create'):
+        return self.validator.check_item(item, mode=mode)
+
+    def items_validate(self, items, mode='create'):
+        failed = []
+        for item in items:
+            ok, item_errors = self.item_validate(item, mode=mode)
+            if not ok:
+                error_item = item.copy()
+                error_item.update({'errors': ','.join(item_errors)})
+                failed.append(error_item)
+        return len(failed) == 0, failed
+
     # CRUD ------------------------------------------------------------------
     def get(self, id_val: Any, sk_val: Any | None = None) -> Dict[str, Any] | None:
 
@@ -68,7 +81,7 @@ class Table:
         return json_serializable(item_dict)
 
     def create(self, item: Dict[str, Any]) -> Dict[str, Any]:
-        ok, errs = self.validator.check_item(item, mode='create')
+        ok, errs = self.item_validate(item, mode='create')
         if not ok:
             raise ValueError(','.join(errs))
         # Auto id if present in schema but not provided
@@ -78,7 +91,7 @@ class Table:
         return {self.pk: item.get(self.pk)}
 
     def put(self, id_val: Any, item: Dict[str, Any], sk_val: Any | None = None) -> Dict[str, Any]:
-        ok, errs = self.validator.check_item(item, mode='update')
+        ok, errs = self.item_validate(item, mode='update')
         if not ok:
             raise ValueError(','.join(errs))
 
@@ -103,7 +116,7 @@ class Table:
         failed = []
         with self._dynamo().batch_writer(overwrite_by_pkeys=[self.pk] if not self.sk else [self.pk, self.sk]) as bw:
             for it in items:
-                ok, errs = self.validator.check_item(it, mode='create')
+                ok, errs = self.item_validate(it, mode='create')
                 if not ok:
                     failed.append({'item': it, 'error': ','.join(errs)})
                     continue

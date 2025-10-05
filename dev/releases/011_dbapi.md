@@ -13,6 +13,7 @@ session logs are timestamped to Singapore timezone in reverse chronological orde
 | 24 | closed | BUG | s3_schema_load_failed | set db schema variables in GHA |
 | 28 | closed | BUG | GET table item Decimal is not JSON serializable | add util json_serialize |
 | 29 | closed | BUG | PUT table passes readonly id to validator | swap order validate then merge |
+| 30 | open | BUG | catch validation errors | |
 
 _24 (closed) BUG s3 schema load failed_
 
