@@ -6,14 +6,15 @@ release documentation `docs/releases/011_dbapi.md`
 
 session logs are timestamped to Singapore timezone in reverse chronological order, with latest entries at the top, and earlier entries at the bottom.
 
-### JobDB API [Developer] issues 2025-10-04 <>:<>
+### JobDB API [Developer] issues 2025-10-04 20:54
 
 | id | status | type | issue | description |
 | - | - | - | - | - |
 | 24 | closed | BUG | s3_schema_load_failed | set db schema variables in GHA |
 | 28 | closed | BUG | GET table item Decimal is not JSON serializable | add util json_serialize |
 | 29 | closed | BUG | PUT table passes readonly id to validator | swap order validate then merge |
-| 30 | open | BUG | catch validation errors | |
+| 30 | closed | BUG | catch validation errors | add validation a router before calling table method |
+| 31 | open | BUG | data type validation | |
 
 _24 (closed) BUG s3 schema load failed_
 
@@ -61,6 +62,18 @@ In the method `Table.put` the keys, which are read-only, are added to the items 
 _resolution_
 swap the order to add the keys AFTER validation
 
+_30 (closed) BUG catch validation errors_
+
+also related to issue 29
+
+situation
+validation errors not catched and returned to user, fails with 500 internal error.
+
+_resolution_
+
+1. add two methods `Table.item_validate` and `Table.items_validate`
+2. use the validation methods in `Router` [create, put, batch_write, etc..] and raise exceptions if found BEFORE calling `Table` CRUD methods
+3. catch and raise errors in `Router` when calling `Table.delete`
 
 ### JobDB API [Developer] issues 2025-09-14 18:19
 _27 (closed) BUG defeated logging_

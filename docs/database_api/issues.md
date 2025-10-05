@@ -43,7 +43,8 @@ __issues__
 | 27 | closed | BUG | defeated logging | set logger by name |
 | 28 | closed | BUG | GET table item Decimal is not JSON serializable | add util json_serialize |
 | 29 | closed | BUG | PUT table passes readonly id to validator | swap order validate then merge |
-| 30 | open | BUG | catch validation errors | |
+| 30 | closed | BUG | catch validation errors | add validation a router before calling table method |
+| 31 | open | BUG | data type validation | |
 | 26 | open | ENHANCEMENT | DynamoDB batch catch errors per item | Github issue [DB API DynamoDB batch delete catch errors per item and retry with backoff #16](https://github.com/yayfalafels/mcfpipe/issues/16)  |
 | 17 | open | ENHANCEMENT | consolidated response build | |
 | 18 | open | ENHANCEMENT | logging format | |
@@ -646,18 +647,57 @@ Traceback (most recent call last):
 
 ```
 
-_30 (open) BUG catch validation errors_
+_30 (closed) BUG catch validation errors_
 
 also related to issue 29
 
 situation
 validation errors not catched and returned to user, fails with 500 internal error.
 
-_diagnostics_
-
-
-
 _resolution_
+
+1. add two methods `Table.item_validate` and `Table.items_validate`
+2. use the validation methods in `Router` [create, put, batch_write, etc..] and raise exceptions if found BEFORE calling `Table` CRUD methods
+3. catch and raise errors in `Router` when calling `Table.delete`
+
+location: `jobdb/jobdb/core/table.py`
+class: `Table`
+
+```python
+    def item_validate(self, item, mode='create'):
+        return self.validator.check_item(item, mode=mode)
+
+    def items_validate(self, items, mode='create'):
+        failed = []
+        for item in items:
+            ok, item_errors = self.item_validate(item, mode=mode)
+            if not ok:
+                error_item = item.copy()
+                error_item.update({'errors': ','.join(item_errors)})
+                failed.append(error_item)
+        return len(failed) == 0, failed
+
+```
+
+location: `jobdb/jobdb/core/router.py`
+class: `Router`
+
+```python
+        if crud_method == 'create':
+            ok, validation_errors = table.item_validate(body, mode='create')
+            if not ok:
+                errors = ','.join(validation_errors)
+                return self._error_handle(
+                    400, 'validation_error', f'invalid {logical} item. {errors}',
+                    request_id, method, path, route=r.name, table=logical, op=r.op, t0=t0,
+                )
+
+            payload = table.create(body)
+            resp = self.responses.json(201, payload)
+            self._log_success(resp, request_id, method, path, r, payload, params, t0)
+            return resp
+
+```
 
 _detailed diagnostics_
 
@@ -681,6 +721,15 @@ Traceback (most recent call last):
   File "/var/task/jobdb/core/table.py", line 73, in create
     raise ValueError(','.join(errs))
 ```
+
+_31 BUG data type validation_
+
+_situation_
+
+data type errors are not caught, writes bad formatted data to database X
+
+- test 05 post.load_status = 'zero' X
+- test 06 invalid date post.posted_date = 'May 24, 2025' X
 
 __Coding style, parameterization and design patterns__
 
